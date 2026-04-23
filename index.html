@@ -457,32 +457,18 @@ li{font-size:10px;margin-bottom:2px}
 </div><!-- /poster -->
 
 <style>
-html,body{margin:0;padding:0;width:100%;overflow-x:hidden}
-#wrap{position:relative;width:100%;overflow:hidden}
-.poster{transform-origin:top left;position:absolute;top:0;left:0}
-
-
+html,body{margin:0;padding:8px;background:#444;display:flex;justify-content:center;align-items:flex-start;min-height:100vh}
+.poster{width:1188px;transform-origin:top center;flex-shrink:0}
 </style>
 <script>
-(function(){
-  function fit(){
-    var p=document.querySelector('.poster');
-    var w=document.querySelector('#wrap');
-    var s=window.innerWidth/1188;
-    p.style.transform='scale('+s+')';
-    w.style.height=(p.scrollHeight*s)+'px';
-  }
-  document.addEventListener('DOMContentLoaded',function(){
-    var p=document.querySelector('.poster');
-    var d=document.createElement('div');
-    d.id='wrap';
-    p.parentNode.insertBefore(d,p);
-    d.appendChild(p);
-    fit();
-    window.addEventListener('load',fit);
-    window.addEventListener('resize',fit);
-  });
-})();
+function fitPoster(){
+  var p=document.querySelector('.poster');
+  var s=Math.min(1,(window.innerWidth-16)/1188);
+  p.style.transform='scale('+s+')';
+  p.style.marginBottom=((p.offsetHeight*s)-p.offsetHeight)+'px';
+}
+window.addEventListener('load',fitPoster);
+window.addEventListener('resize',fitPoster);
 </script>
 </body>
 </html>

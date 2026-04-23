@@ -201,66 +201,44 @@ li{font-size:10px;margin-bottom:2px}
 <div class="card" style="flex:1">
   <div class="ch b">System Concept — Safety-First Autonomy Pipeline</div>
   <div class="cb" style="padding:6px">
-    <svg width="100%" viewBox="0 0 240 195" style="display:block">
+    <svg width="100%" viewBox="0 0 220 200" style="display:block">
       <defs>
         <marker id="da" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#888"/></marker>
         <marker id="dm" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#8C1D40"/></marker>
-        <marker id="dg" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2E7D32"/></marker>
-        <marker id="dt" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#004D40"/></marker>
       </defs>
-      <!-- VLA -->
-      <rect x="70" y="4" width="100" height="26" rx="5" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1.5"/>
-      <text x="120" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="#4A148C">VLA Model</text>
-      <text x="120" y="26" text-anchor="middle" font-size="8.5" fill="#555">SmolVLM2 · Strategic Planner</text>
-      <line x1="120" y1="30" x2="120" y2="40" stroke="#888" stroke-width="1.5" marker-end="url(#da)"/>
-
-      <!-- RL -->
-      <rect x="70" y="41" width="100" height="26" rx="5" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
-      <text x="120" y="53" text-anchor="middle" font-size="10" font-weight="700" fill="#0D47A1">PPO RL Policy</text>
-      <text x="120" y="63" text-anchor="middle" font-size="8.5" fill="#555">Actor 13-dim · ONNX 22KB · 2M steps</text>
-      <line x1="120" y1="67" x2="120" y2="77" stroke="#888" stroke-width="1.5" marker-end="url(#da)"/>
-
-      <!-- HOCBF highlighted -->
-      <rect x="50" y="78" width="140" height="28" rx="5" fill="#8C1D40" stroke="#FFC627" stroke-width="2.5"/>
-      <text x="120" y="90" text-anchor="middle" font-size="11" font-weight="900" fill="#FFC627">HOCBF Safety Filter</text>
-      <text x="120" y="101" text-anchor="middle" font-size="8.5" fill="rgba(255,255,255,.9)">T_safe = clamp(T_nom, T_lb, T_max) · WCET 2,725ns</text>
-      <line x1="120" y1="106" x2="120" y2="116" stroke="#8C1D40" stroke-width="1.5" marker-end="url(#dm)"/>
-
-      <!-- EKF left -->
-      <rect x="2" y="84" width="44" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
-      <text x="24" y="94" text-anchor="middle" font-size="9" font-weight="700" fill="#1B5E20">15-State</text>
-      <text x="24" y="103" text-anchor="middle" font-size="9" font-weight="700" fill="#1B5E20">EKF</text>
-      <line x1="46" y1="95" x2="50" y2="95" stroke="#2E7D32" stroke-width="1.2" marker-end="url(#dg)"/>
-
-      <!-- Consensus right -->
-      <rect x="194" y="84" width="44" height="22" rx="4" fill="#E0F2F1" stroke="#004D40" stroke-width="1.2"/>
-      <text x="216" y="94" text-anchor="middle" font-size="9" font-weight="700" fill="#004D40">BFT</text>
-      <text x="216" y="103" text-anchor="middle" font-size="9" font-weight="700" fill="#004D40">Consensus</text>
-      <line x1="194" y1="95" x2="190" y2="95" stroke="#004D40" stroke-width="1.2" marker-end="url(#dt)"/>
-
-      <!-- FSM -->
-      <rect x="70" y="117" width="100" height="22" rx="5" fill="#FCE4EC" stroke="#880E4F" stroke-width="1.5"/>
-      <text x="120" y="127" text-anchor="middle" font-size="10" font-weight="700" fill="#880E4F">DO-178C FSM</text>
-      <text x="120" y="136" text-anchor="middle" font-size="8.5" fill="#555">P1–P7 · 7 states · 24 transitions</text>
-      <line x1="120" y1="139" x2="120" y2="149" stroke="#888" stroke-width="1.5" marker-end="url(#da)"/>
-
-      <!-- Plant -->
-      <rect x="70" y="150" width="100" height="22" rx="5" fill="#FFF8E1" stroke="#F57F17" stroke-width="1.5"/>
-      <text x="120" y="160" text-anchor="middle" font-size="10" font-weight="700" fill="#E65100">SE(3) Physics Plant</text>
-      <text x="120" y="170" text-anchor="middle" font-size="8.5" fill="#555">RK4 · SO(3) · Isaac Sim 4.5</text>
-
-      <!-- Feedback arc -->
-      <path d="M 170 161 Q 232 161 232 95 Q 232 54 170 54" fill="none" stroke="#bbb" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#da)"/>
-      <text x="236" y="110" text-anchor="middle" font-size="8" fill="#aaa" transform="rotate(90,236,110)">state feedback</text>
-
-      <!-- Battery -->
-      <rect x="2" y="150" width="44" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
-      <text x="24" y="160" text-anchor="middle" font-size="9" font-weight="700" fill="#1B5E20">Battery</text>
-      <text x="24" y="170" text-anchor="middle" font-size="8.5" fill="#555">SOC&lt;15%→RTL</text>
-      <line x1="46" y1="161" x2="70" y2="161" stroke="#2E7D32" stroke-width="1" stroke-dasharray="2,2"/>
-
-      <!-- VLA label -->
-      <text x="120" y="192" text-anchor="middle" font-size="8" fill="#888">vx,vy,vz → T_nom → T_safe → actuators</text>
+      <rect x="55" y="4" width="110" height="24" rx="5" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1.5"/>
+      <text x="110" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#4A148C">VLA Model</text>
+      <text x="110" y="23" text-anchor="middle" font-size="8" fill="#555">SmolVLM2 · Strategic Planner</text>
+      <line x1="110" y1="28" x2="110" y2="38" stroke="#888" stroke-width="1.5" marker-end="url(#da)"/>
+      <rect x="55" y="39" width="110" height="24" rx="5" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+      <text x="110" y="49" text-anchor="middle" font-size="10" font-weight="700" fill="#0D47A1">PPO RL Policy</text>
+      <text x="110" y="58" text-anchor="middle" font-size="8" fill="#555">ONNX 22KB · 2M steps trained</text>
+      <line x1="110" y1="63" x2="110" y2="73" stroke="#888" stroke-width="1.5" marker-end="url(#da)"/>
+      <rect x="2" y="76" width="50" height="20" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
+      <text x="27" y="84" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1B5E20">15-State EKF</text>
+      <text x="27" y="93" text-anchor="middle" font-size="7.5" fill="#555">pz,vz,φ,θ,ω</text>
+      <line x1="52" y1="86" x2="62" y2="86" stroke="#2E7D32" stroke-width="1.2" marker-end="url(#da)"/>
+      <rect x="63" y="74" width="94" height="26" rx="5" fill="#8C1D40" stroke="#FFC627" stroke-width="2"/>
+      <text x="110" y="85" text-anchor="middle" font-size="11" font-weight="900" fill="#FFC627">HOCBF Filter</text>
+      <text x="110" y="95" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.9)">WCET = 2,725 ns</text>
+      <line x1="110" y1="100" x2="110" y2="110" stroke="#8C1D40" stroke-width="1.5" marker-end="url(#dm)"/>
+      <rect x="168" y="76" width="50" height="20" rx="4" fill="#E0F2F1" stroke="#004D40" stroke-width="1.2"/>
+      <text x="193" y="84" text-anchor="middle" font-size="8.5" font-weight="700" fill="#004D40">BFT Consensus</text>
+      <text x="193" y="93" text-anchor="middle" font-size="7.5" fill="#555">w=exp(−σ²/2σ²)</text>
+      <line x1="168" y1="86" x2="157" y2="86" stroke="#004D40" stroke-width="1.2" marker-end="url(#da)"/>
+      <rect x="55" y="111" width="110" height="22" rx="5" fill="#FCE4EC" stroke="#880E4F" stroke-width="1.5"/>
+      <text x="110" y="121" text-anchor="middle" font-size="10" font-weight="700" fill="#880E4F">DO-178C FSM</text>
+      <text x="110" y="130" text-anchor="middle" font-size="8" fill="#555">P1–P7 · 7 states · 24 transitions</text>
+      <line x1="110" y1="133" x2="110" y2="143" stroke="#888" stroke-width="1.5" marker-end="url(#da)"/>
+      <rect x="55" y="144" width="110" height="22" rx="5" fill="#FFF8E1" stroke="#F57F17" stroke-width="1.5"/>
+      <text x="110" y="154" text-anchor="middle" font-size="10" font-weight="700" fill="#E65100">SE(3) Physics Plant</text>
+      <text x="110" y="163" text-anchor="middle" font-size="8" fill="#555">RK4 · SO(3) · Isaac Sim 4.5</text>
+      <rect x="2" y="144" width="50" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
+      <text x="27" y="154" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1B5E20">Battery</text>
+      <text x="27" y="163" text-anchor="middle" font-size="7.5" fill="#555">SOC&lt;15%→RTL</text>
+      <line x1="52" y1="155" x2="55" y2="155" stroke="#2E7D32" stroke-width="1" stroke-dasharray="2,2"/>
+      <path d="M 165 155 Q 210 155 210 87 Q 210 50 165 50" fill="none" stroke="#ccc" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#da)"/>
+      <text x="110" y="192" text-anchor="middle" font-size="8" fill="#888" font-style="italic">vx,vy,vz → T_nom → T_safe → actuators → state feedback</text>
     </svg>
   </div>
 </div>
@@ -323,7 +301,7 @@ li{font-size:10px;margin-bottom:2px}
 </div>
 
 <div class="card img-card grow">
-  <div class="ch dk">WCET + EVT Analysis · 100k Trials · SCHED_FIFO · CPU Core 2</div>
+  <div class="ch dk">WCET + EVT · 100k Trials · SCHED_FIFO · Core 2</div>
   <div class="cb">
     <div class="mg4" style="margin-bottom:5px">
       <div class="m g"><div class="mv">31ns</div><div class="ml">P99</div></div>
@@ -376,7 +354,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m o"><div class="mv">4/15</div><div class="ml">IMU+Baro only</div></div>
       <div class="m g"><div class="mv">6/15</div><div class="ml">+VIO restored</div></div>
     </div>
-    <img src="experiments/results/observability_gramian.png" alt="Observability Gramian">
+    <img src="experiments/results/observability_panel2.png" alt="Observability Gramian">
     <div class="cap">GPS denial drops rank 6→4 (px, py unobservable). VIO restores rank to 6. Yaw remains unobservable.</div>
   </div>
 </div>
@@ -422,7 +400,7 @@ li{font-size:10px;margin-bottom:2px}
 <div class="card img-card" style="flex:2;min-height:0">
   <div class="ch g">Battery Aging — NASA PCoE Validation</div>
   <div class="cb">
-    <img src="experiments/results/battery_validation.png" alt="Battery Validation">
+    <img src="experiments/results/battery_panel1.png" alt="Battery Validation">
     <div class="cap">Poly-4 fit RMSE &lt;0.03Ah. Spec linear model predicts EOL at cycle 600 — real cells fail at 100–165 (4–6× error).</div>
     <table class="rt" style="margin-top:4px">
       <tr><th>Cell</th><th class="nr">RMSE Poly-4</th><th class="nr">EOL Actual→Spec</th></tr>

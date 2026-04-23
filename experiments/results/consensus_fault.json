@@ -1,0 +1,13 @@
+{
+  "config": {
+    "n_nodes": 5,
+    "n_rounds": 100,
+    "packet_loss_rate": 0.2,
+    "max_latency_ms": 50.0
+  },
+  "commit_rate": 1.0,
+  "byzantine_rejection_rate": 1.0,
+  "mean_commit_latency_ms": 0.043285590945743024,
+  "p99_commit_latency_ms": 0.13373961468460044,
+  "mean_quorum_fraction": 0.9974137011619894
+}

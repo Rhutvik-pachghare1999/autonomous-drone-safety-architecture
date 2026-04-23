@@ -1,0 +1,46 @@
+name: TitanSec AISP CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: sudo apt-get install -y cmake pybind11-dev python3-pybind11
+
+      - name: Install Python dependencies
+        run: pip install numpy scipy casadi pyzmq osqp pytest pybind11
+
+      - name: Build C++ HOCBF extension
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          make -j$(nproc)
+          make install
+
+      - name: Lint (Ruff)
+        run: pip install ruff && ruff check . --select E,F,W --ignore E501
+        continue-on-error: true
+
+      - name: HOCBF tests
+        run: PYTHONPATH=. pytest tests/test_hocbf.py -v
+
+      - name: EKF gating smoke test
+        run: PYTHONPATH=. python src/estimation/ekf_gating.py
+
+      - name: Consensus unit test
+        run: PYTHONPATH=. python services/consensus_node.py --test
+
+      - name: SE(3) plant smoke test
+        run: PYTHONPATH=. python -c "from sim.domain_rand import test_rigid_body_plant; test_rigid_body_plant()"

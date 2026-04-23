@@ -1,0 +1,9 @@
+{
+  "n_trials": 1000,
+  "vz_min": -100.0,
+  "vz_max": -0.1,
+  "survival_rate": 1.0,
+  "hocbf_rate": 0.907,
+  "collision_free": true,
+  "max_correction_N": 397.2496
+}

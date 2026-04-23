@@ -1,0 +1,78 @@
+{
+  "symbolic_expressions": {
+    "Lf3h": "@1=(T/2), (-((cos(theta)*(@1*(sin(phi)*((omega_x+((sin(phi)*tan(theta))*omega_y))+((cos(phi)*tan(theta))*omega_z)))))+((@1*cos(phi))*(sin(theta)*((cos(phi)*omega_y)-(sin(phi)*omega_z))))))",
+    "Lf4h_drift": "@1=(T/2), @2=sin(phi), @3=tan(theta), @4=(@2*@3), @5=cos(phi), @6=tan(theta), @7=((omega_x+(@4*omega_y))+((@5*@6)*omega_z)), @8=sin(phi), @9=cos(phi), @10=((@9*omega_y)-(sin(phi)*omega_z)), @11=((-1.37555*omega_x)*omega_z), @12=sin(theta), (-(((cos(theta)*(@1*((@7*(cos(phi)*@7))+(@8*((((omega_y*((@3*(cos(phi)*@7))+(@2*(@10/sq(cos(theta))))))-(@4*@11))-((1.49568*omega_y)*omega_z))+(omega_z*((@5*(@10/sq(cos(theta))))-(@6*(sin(phi)*@7)))))))))-((@1*(@8*@7))*(sin(theta)*@10)))+(((@1*cos(phi))*((@10*(cos(theta)*@10))-(@12*(((@9*@11)+(omega_y*(sin(phi)*@7)))+(omega_z*(cos(phi)*@7))))))-((@12*@10)*(@1*(sin(phi)*@7))))))",
+    "g_tau_x": "(-(cos(theta)*((T/2)*(28.8184*sin(phi)))))",
+    "g_tau_y": "@1=(T/2), @2=21.8341, (-((cos(theta)*(@1*(sin(phi)*(@2*(sin(phi)*tan(theta))))))+((@1*cos(phi))*(sin(theta)*(@2*cos(phi))))))"
+  },
+  "hover_verification": {
+    "psi0": 2.0,
+    "psi1": 0.0,
+    "psi2": 0.0,
+    "psi3": -0.0,
+    "Lf4h": -0.0
+  },
+  "invariant_set_proof": {
+    "test_cases": [
+      {
+        "state": "hover",
+        "T_lb": 17.62,
+        "T_max": 78.48,
+        "margin_N": 60.86,
+        "feasible": true
+      },
+      {
+        "state": "max_descent",
+        "T_lb": 27.62,
+        "T_max": 78.48,
+        "margin_N": 50.86,
+        "feasible": true
+      },
+      {
+        "state": "max_tilt_roll",
+        "T_lb": 20.077882999458556,
+        "T_max": 78.48,
+        "margin_N": 58.40211700054145,
+        "feasible": true
+      },
+      {
+        "state": "max_tilt_pitch",
+        "T_lb": 20.077882999458556,
+        "T_max": 78.48,
+        "margin_N": 58.40211700054145,
+        "feasible": true
+      },
+      {
+        "state": "worst_case_combined",
+        "T_lb": 78.48,
+        "T_max": 78.48,
+        "margin_N": 0.0,
+        "feasible": true
+      },
+      {
+        "state": "near_ground",
+        "T_lb": 21.520000000000003,
+        "T_max": 78.48,
+        "margin_N": 56.96,
+        "feasible": true
+      },
+      {
+        "state": "near_ground_tilt",
+        "T_lb": 50.27678800457216,
+        "T_max": 78.48,
+        "margin_N": 28.203211995427843,
+        "feasible": true
+      }
+    ],
+    "invariant_set_exists": true
+  },
+  "parameters": {
+    "mass": 2.0,
+    "g": 9.81,
+    "Ixx": 0.0347,
+    "Iyy": 0.0458,
+    "Izz": 0.0977,
+    "T_max": 78.48,
+    "tau_max": 5.0
+  }
+}

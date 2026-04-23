@@ -1,0 +1,59 @@
+# ── Build artifacts ──────────────────────────────────────────────────────────
+build/
+build310/
+*.so
+*.o
+*.a
+*.out
+*.bin
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+install_manifest.txt
+Makefile
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+*.egg-info/
+dist/
+*.egg
+
+# ── Large data files (too big for GitHub, downloadable) ──────────────────────
+experiments/results/nasa_pcoe_discharge.csv
+experiments/results/latency_raw.csv
+experiments/results/ppo_quadrotor.zip
+
+# ── Compiled model (keep .onnx — it's small 22KB, useful for reproducibility) ─
+# experiments/results/ppo_policy.onnx  ← KEEP (22KB, needed for RT hot-path)
+
+# ── Secrets / environment ─────────────────────────────────────────────────────
+.env
+*.key
+*.pem
+*.secret
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── pytest cache ──────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Shared memory (runtime only, never committed) ─────────────────────────────
+/dev/shm/
+poster.html

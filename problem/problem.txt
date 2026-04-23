@@ -1,0 +1,31 @@
+The Problem Statement (The "Feasibility Gap")
+Problem: The integration of Vision-Language-Action (VLA) foundation models into robotics provides immense semantic reasoning capabilities, but introduces a fatal "Feasibility Gap." Foundation models are fundamentally non-deterministic and prone to hallucinations; they frequently generate commands (e.g., "fly directly into the ground to inspect the dirt") that violate the kinodynamic boundaries of the physical drone. Current edge-compute architectures either rely on slow middleware (ROS2/Python) that fails to catch these errors in real-time, or use simplistic safety filters (1st-order CBFs) that cause mathematical instability when applied to the 2nd-order dynamics of a quadrotor.
+
+The Objectives
+To solve this, your Master's research will execute the following four objectives:
+
+Mathematical Safety via HOCBF: Mathematically derive and implement a relative-degree-2 High-Order Control Barrier Function (HOCBF) that dynamically maps non-deterministic semantic velocity commands into strictly bounded, physically safe thrust and attitude limits.
+Deterministic Edge Latency ($<100\mu s$ WCET): Prove that safety filters can operate with strict hard real-time deadlines on constrained edge hardware (Raspberry Pi 5) by utilizing PREEMPT_RT CPU core isolation, memory locking (mlockall), and atomic mmap zero-copy shared memory, entirely bypassing Python/ROS serialization overhead.
+Zero-Shot Sim-to-Real via Asymmetric RL: Replace brittle PID controllers with a robust Reinforcement Learning (RL) policy trained via Proximal Policy Optimization (PPO) in Isaac Sim under massive domain randomization (e.g., $\pm 30%$ mass variation), proving the safety kernel holds even when the physical plant degrades.
+Hardware-in-the-Loop (HIL) Hallucination Stress Testing: Empirically validate the architecture by intentionally feeding adversarial prompts to a PaliGemma-3B VLA model, demonstrating 100% collision-free survival rates when the AI generates hostile flight paths.
+Reference Research Papers (Your Literature Review)
+To position this project at the bleeding edge of 2026, these are the core papers you must cite and contrast your work against:
+
+1. On High-Order Control Barrier Functions (The Math):
+
+Ames, A. D., et al. (2019). "Control Barrier Functions: Theory and Applications." IEEE Transactions on Automatic Control. (The foundational text for modern CBFs).
+Xiao, W., & Belta, C. (2022). "High-Order Control Barrier Functions." IEEE Transactions on Automatic Control. (Critical for proving why your 2nd-order quadrotor dynamics require $L_f^2 h(x)$ instead of a standard 1st-order CBF).
+2. On Vision-Language-Action Models in Robotics (The AI):
+
+Brohan, A., et al. (2023). "RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control." arXiv. (The paper that started the VLA robotics movement).
+Kim, J., et al. (2024). "OpenVLA: An Open-Source Vision-Language-Action Model." arXiv. (The benchmark for open-source VLAs, highlighting the need for safety wrappers since VLAs cannot guarantee collision-free output).
+Beyer, L., et al. (2024). "PaliGemma: A versatile, lightweight vision-language model." (The architecture we are using for the Pi 5's ARM cores).
+3. On Sim-to-Real and RL Domain Randomization (The Control):
+
+Makoviychuk, V., et al. (2021). "Isaac Gym: High Performance GPU-Based Physics Simulation For Robot Learning." (The engine powering your asymmetric actor-critic RL).
+Zhao, W., et al. (2024). "Neural Control Barrier Functions for Autonomous Flight." IEEE Robotics and Automation Letters. (Relevant if you extend your HOCBF to learn aerodynamic disturbances like ground effect).
+4. On Deterministic Timing and Edge Robotics (The Systems Engineering):
+
+Preiss, J. A., et al. (2017). "Crazyswarm: A Large Nano-Quadcopter Swarm." IEEE ICRA. (The baseline paper for measuring OS scheduler jitter and latency in Python-based drones).
+Pöhnl, T., et al. (2022). "Eclipse Iceoryx: True Zero-Copy Inter-Process Communication." (The theoretical basis for why our mmap shared memory bridge is mandatory to hit the $<100\mu s$ WCET).
+This framework firmly establishes your project not just as a "cool drone," but as a rigorous solution to the single most critical bottleneck in modern AI robotics: Trusting neural networks in physical space.

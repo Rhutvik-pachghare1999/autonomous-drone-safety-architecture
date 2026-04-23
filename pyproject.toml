@@ -1,0 +1,98 @@
+[tool.poetry]
+name = "aisp-neurosymbolic"
+version = "2.0.0"
+description = "Neurosymbolic Safety Kernels for VLA-Driven Drone Swarms — ASU MS Research"
+authors = ["Rhutvik Prashant Pachghare <rpachgha@asu.edu>"]
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/titansec/aisp"
+keywords = ["robotics", "control-barrier-functions", "reinforcement-learning", "vision-language-action", "formal-verification"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+# Core numerical computing
+numpy = "^1.26.0"
+scipy = "^1.12.0"
+
+# Control & Optimization
+osqp = "^1.1.0"
+cvxpy = "^1.4.0"
+
+# State Estimation
+filterpy = "^1.4.5"
+
+# Reinforcement Learning (Isaac Gym/Sim integration)
+torch = {version = "^2.2.0", optional = true}
+stable-baselines3 = {version = "^2.2.0", optional = true}
+
+# Vision-Language-Action Models
+transformers = {version = "^4.38.0", optional = true}
+pillow = "^10.2.0"
+
+# Formal Verification
+z3-solver = "^4.13.0"
+
+# Consensus & Networking
+pydantic = "^2.6.0"
+fastapi = "^0.109.0"
+uvicorn = "^0.27.0"
+
+# Data & Logging
+pandas = "^2.2.0"
+h5py = "^3.10.0"
+
+# MAVLink Interface
+pymavlink = "^2.4.0"
+
+# Utilities
+python-dotenv = "^1.0.0"
+pyyaml = "^6.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.0"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.23.0"
+hypothesis = "^6.98.0"
+mypy = "^1.8.0"
+ruff = "^0.2.0"
+black = "^24.2.0"
+
+[tool.poetry.extras]
+rl = ["torch", "stable-baselines3"]
+vla = ["transformers"]
+full = ["torch", "stable-baselines3", "transformers"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: integration tests",
+    "formal: formal verification tests",
+    "adversarial: adversarial/hallucination stress tests",
+]
+addopts = "-v --strict-markers"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

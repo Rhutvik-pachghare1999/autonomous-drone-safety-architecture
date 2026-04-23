@@ -25,7 +25,7 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:11px;li
 
 /* BODY */
 .body{display:grid;grid-template-columns:272px 288px 340px 272px;align-items:stretch}
-.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f9f9f9}
+.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f9f9f9;min-height:0}
 .col:nth-child(even){background:#f4f4f4}
 .col:last-child{border-right:none}
 
@@ -90,9 +90,9 @@ li{font-size:10px;margin-bottom:2px}
 .pt.b{background:#1565C0}
 
 /* IMAGE CARDS */
-.card.img-card{flex:1 1 auto}
-.img-card .cb{padding:5px;display:flex;flex-direction:column;gap:3px;flex:1}
-.img-card img{width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain;min-height:140px;flex:1}
+.card.img-card{flex:1 1 0;min-height:0}
+.img-card .cb{padding:5px;display:flex;flex-direction:column;gap:3px;flex:1;min-height:0}
+.img-card img{width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain;flex:1;min-height:0;height:0}
 .img-card .cap{font-size:7.5px;color:#666;text-align:center;font-style:italic}
 
 /* HIGHLIGHT */
@@ -356,7 +356,7 @@ li{font-size:10px;margin-bottom:2px}
 <!-- COL 4 -->
 <div class="col">
 
-<div class="card img-card grow">
+<div class="card img-card" style="flex:2;min-height:0">
   <div class="ch g">Battery Aging — NASA PCoE Validation</div>
   <div class="cb">
     <img src="experiments/results/battery_validation.png" alt="Battery Validation">
@@ -370,7 +370,7 @@ li{font-size:10px;margin-bottom:2px}
   </div>
 </div>
 
-<div class="card" style="flex:1">
+<div class="card" style="flex:1;display:flex;flex-direction:column">
   <div class="ch" style="background:#FFC627;color:#8C1D40;">Research Contributions</div>
   <div class="cb">
     <div class="ct"><div class="cn">1</div><div class="cx"><strong>Formally verified FSM</strong> — 7 states, P1–P7, WCET=2,725ns, EVT P=10⁻⁹ bound=1,733ns</div></div>

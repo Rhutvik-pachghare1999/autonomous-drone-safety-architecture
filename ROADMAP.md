@@ -1,6 +1,6 @@
 # AISP Neurosymbolic Swarm Architecture — Development Roadmap
 
-**Target Publication:** ICRA / IROS / RSS 2026  
+
 **Research Question:** How to mathematically bound foundation model hallucinations in safety-critical flight using microsecond-latency deterministic safety filters?
 
 ---

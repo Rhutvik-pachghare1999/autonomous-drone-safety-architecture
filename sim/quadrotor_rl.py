@@ -207,7 +207,7 @@ class QuadrotorHoverEnv(gym.Env):
 from stable_baselines3 import PPO
 
 
-def train(total_timesteps: int = 200_000,
+def train(total_timesteps: int = 2_000_000,
           save_path: str = "experiments/results/ppo_quadrotor"):
     world = World(physics_dt=QuadrotorHoverEnv.DT, rendering_dt=QuadrotorHoverEnv.DT)
     env   = QuadrotorHoverEnv(world)
@@ -281,7 +281,7 @@ if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser()
     p.add_argument("--mode",  choices=["train", "eval", "both"], default="both")
-    p.add_argument("--steps", type=int, default=200_000)
+    p.add_argument("--steps", type=int, default=2_000_000)
     args = p.parse_args()
 
     if args.mode in ("train", "both"):

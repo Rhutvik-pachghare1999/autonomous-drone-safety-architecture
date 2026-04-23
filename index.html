@@ -488,7 +488,7 @@ html,body{margin:0;padding:0;background:#333;width:100%;overflow-x:hidden}
       <tr><td>Actor obs</td><td>13-dim: pos(3)+vel(3)+quat(4)+ω(3) + noise σ=0.05/0.10m</td></tr>
       <tr><td>Critic obs</td><td>17-dim: ground truth + mass + motor_gain + wind(3)</td></tr>
       <tr><td>Policy</td><td>MlpPolicy · lr=3e-4 · γ=0.99 · λ=0.95 · clip=0.2</td></tr>
-      <tr><td>Training</td><td>200k steps · Isaac Sim 4.5 · PhysX · headless</td></tr>
+      <tr><td>Training</td><td>2M steps · Isaac Sim 4.5 · PhysX · headless</td></tr>
       <tr><td>Deployment</td><td>ONNX 22KB · ONNXRuntime C API · single-threaded RT</td></tr>
       <tr><td>Domain rand</td><td>mass ±40% · motor ±25% · wind σ=2.0 m/s · inertia ±15%</td></tr>
     </table>

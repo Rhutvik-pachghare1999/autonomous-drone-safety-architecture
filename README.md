@@ -169,3 +169,5 @@ Integrated service: Observability-weighted HotStuff consensus (services/consensu
   Burri et al. (2016). The EuRoC MAV Datasets. IJRR.
   Makoviychuk et al. (2021). Isaac Gym. NeurIPS.
   Tobin et al. (2017). Domain Randomization for Transferring Deep Neural Networks.
+  Yin et al. (2019). HotStuff: BFT Consensus with Linearity and Responsiveness. PODC.
+  Mahony et al. (2012). Multirotor Aerial Vehicles: Modeling, Estimation and Control. IEEE RAM.

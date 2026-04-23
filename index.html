@@ -135,7 +135,8 @@ html,body{margin:0;padding:0;background:#333;width:100%;overflow-x:hidden}
     var w=document.querySelector('#wrap');
     var s=window.innerWidth/1188;
     p.style.transform='scale('+s+')';
-    w.style.height=(p.offsetHeight*s)+'px';
+    // Use scrollHeight to capture full content including footer
+    w.style.height=(p.scrollHeight*s)+'px';
   }
   document.addEventListener('DOMContentLoaded',function(){
     var p=document.querySelector('.poster');
@@ -144,6 +145,8 @@ html,body{margin:0;padding:0;background:#333;width:100%;overflow-x:hidden}
     p.parentNode.insertBefore(d,p);
     d.appendChild(p);
     fit();
+    // Refit after all images load so footer is included
+    window.addEventListener('load',fit);
     window.addEventListener('resize',fit);
   });
 })();

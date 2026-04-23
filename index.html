@@ -205,69 +205,66 @@ li{font-size:10px;margin-bottom:2px}
 <div class="card" style="flex:1">
   <div class="ch b">System Concept — Safety-First Autonomy Pipeline</div>
   <div class="cb" style="padding:6px">
-    <svg width="100%" viewBox="0 0 250 210" style="display:block">
-      <!-- Title -->
-      <text x="125" y="12" text-anchor="middle" font-size="8" font-weight="700" fill="#555">VLA Foundation Model → Safety Filter → Physical Plant</text>
+    <svg width="100%" viewBox="0 0 240 195" style="display:block">
+      <defs>
+        <marker id="da" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#888"/></marker>
+        <marker id="dm" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#8C1D40"/></marker>
+        <marker id="dg" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2E7D32"/></marker>
+        <marker id="dt" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#004D40"/></marker>
+      </defs>
+      <!-- VLA -->
+      <rect x="70" y="4" width="100" height="26" rx="5" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1.5"/>
+      <text x="120" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="#4A148C">VLA Model</text>
+      <text x="120" y="26" text-anchor="middle" font-size="8.5" fill="#555">SmolVLM2 · Strategic Planner</text>
+      <line x1="120" y1="30" x2="120" y2="40" stroke="#888" stroke-width="1.5" marker-end="url(#da)"/>
 
-      <!-- Row 1: VLA -->
-      <rect x="80" y="18" width="90" height="26" rx="5" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1.5"/>
-      <text x="125" y="29" text-anchor="middle" font-size="8" font-weight="700" fill="#4A148C">VLA Model</text>
-      <text x="125" y="39" text-anchor="middle" font-size="7" fill="#555">SmolVLM2-500M · Strategic Planner</text>
-      <line x1="125" y1="44" x2="125" y2="54" stroke="#888" stroke-width="1.2" marker-end="url(#da)"/>
-      <text x="135" y="51" font-size="7" fill="#888">vx,vy,vz</text>
+      <!-- RL -->
+      <rect x="70" y="41" width="100" height="26" rx="5" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+      <text x="120" y="53" text-anchor="middle" font-size="10" font-weight="700" fill="#0D47A1">PPO RL Policy</text>
+      <text x="120" y="63" text-anchor="middle" font-size="8.5" fill="#555">Actor 13-dim · ONNX 22KB · 2M steps</text>
+      <line x1="120" y1="67" x2="120" y2="77" stroke="#888" stroke-width="1.5" marker-end="url(#da)"/>
 
-      <!-- Row 2: RL Policy -->
-      <rect x="80" y="55" width="90" height="26" rx="5" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
-      <text x="125" y="66" text-anchor="middle" font-size="8" font-weight="700" fill="#0D47A1">PPO RL Policy</text>
-      <text x="125" y="76" text-anchor="middle" font-size="7" fill="#555">Actor 13-dim · ONNX 22KB · 2M steps</text>
-      <line x1="125" y1="81" x2="125" y2="91" stroke="#888" stroke-width="1.2" marker-end="url(#da)"/>
-      <text x="135" y="88" font-size="7" fill="#888">T_nom</text>
+      <!-- HOCBF highlighted -->
+      <rect x="50" y="78" width="140" height="28" rx="5" fill="#8C1D40" stroke="#FFC627" stroke-width="2.5"/>
+      <text x="120" y="90" text-anchor="middle" font-size="11" font-weight="900" fill="#FFC627">HOCBF Safety Filter</text>
+      <text x="120" y="101" text-anchor="middle" font-size="8.5" fill="rgba(255,255,255,.9)">T_safe = clamp(T_nom, T_lb, T_max) · WCET 2,725ns</text>
+      <line x1="120" y1="106" x2="120" y2="116" stroke="#8C1D40" stroke-width="1.5" marker-end="url(#dm)"/>
 
-      <!-- Row 3: HOCBF (highlighted) -->
-      <rect x="60" y="92" width="130" height="30" rx="5" fill="#8C1D40" stroke="#FFC627" stroke-width="2"/>
-      <text x="125" y="104" text-anchor="middle" font-size="9" font-weight="900" fill="#FFC627">HOCBF Safety Filter</text>
-      <text x="125" y="115" text-anchor="middle" font-size="7.5" fill="rgba(255,255,255,.85)">T_safe = clamp(T_nom, T_lb, T_max) · &lt;2,725ns</text>
-      <line x1="125" y1="122" x2="125" y2="132" stroke="#8C1D40" stroke-width="1.5" marker-end="url(#dm)"/>
+      <!-- EKF left -->
+      <rect x="2" y="84" width="44" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
+      <text x="24" y="94" text-anchor="middle" font-size="9" font-weight="700" fill="#1B5E20">15-State</text>
+      <text x="24" y="103" text-anchor="middle" font-size="9" font-weight="700" fill="#1B5E20">EKF</text>
+      <line x1="46" y1="95" x2="50" y2="95" stroke="#2E7D32" stroke-width="1.2" marker-end="url(#dg)"/>
 
-      <!-- EKF feeds HOCBF -->
-      <rect x="2" y="98" width="54" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
-      <text x="29" y="108" text-anchor="middle" font-size="7.5" font-weight="700" fill="#1B5E20">15-State EKF</text>
-      <text x="29" y="116" text-anchor="middle" font-size="7" fill="#555">pz,vz,φ,θ,ω</text>
-      <line x1="56" y1="109" x2="60" y2="109" stroke="#2E7D32" stroke-width="1.2" marker-end="url(#dg)"/>
+      <!-- Consensus right -->
+      <rect x="194" y="84" width="44" height="22" rx="4" fill="#E0F2F1" stroke="#004D40" stroke-width="1.2"/>
+      <text x="216" y="94" text-anchor="middle" font-size="9" font-weight="700" fill="#004D40">BFT</text>
+      <text x="216" y="103" text-anchor="middle" font-size="9" font-weight="700" fill="#004D40">Consensus</text>
+      <line x1="194" y1="95" x2="190" y2="95" stroke="#004D40" stroke-width="1.2" marker-end="url(#dt)"/>
 
-      <!-- Consensus feeds EKF -->
-      <rect x="194" y="98" width="54" height="22" rx="4" fill="#E0F2F1" stroke="#004D40" stroke-width="1.2"/>
-      <text x="221" y="108" text-anchor="middle" font-size="7.5" font-weight="700" fill="#004D40">BFT Consensus</text>
-      <text x="221" y="116" text-anchor="middle" font-size="7" fill="#555">w=exp(−σ²/2σ²)</text>
-      <line x1="194" y1="109" x2="190" y2="109" stroke="#004D40" stroke-width="1.2" marker-end="url(#dt)"/>
+      <!-- FSM -->
+      <rect x="70" y="117" width="100" height="22" rx="5" fill="#FCE4EC" stroke="#880E4F" stroke-width="1.5"/>
+      <text x="120" y="127" text-anchor="middle" font-size="10" font-weight="700" fill="#880E4F">DO-178C FSM</text>
+      <text x="120" y="136" text-anchor="middle" font-size="8.5" fill="#555">P1–P7 · 7 states · 24 transitions</text>
+      <line x1="120" y1="139" x2="120" y2="149" stroke="#888" stroke-width="1.5" marker-end="url(#da)"/>
 
-      <!-- Row 4: FSM -->
-      <rect x="80" y="133" width="90" height="22" rx="5" fill="#FCE4EC" stroke="#880E4F" stroke-width="1.5"/>
-      <text x="125" y="143" text-anchor="middle" font-size="8" font-weight="700" fill="#880E4F">DO-178C FSM</text>
-      <text x="125" y="152" text-anchor="middle" font-size="7" fill="#555">P1–P7 · 7 states · 24 transitions</text>
-      <line x1="125" y1="155" x2="125" y2="165" stroke="#888" stroke-width="1.2" marker-end="url(#da)"/>
+      <!-- Plant -->
+      <rect x="70" y="150" width="100" height="22" rx="5" fill="#FFF8E1" stroke="#F57F17" stroke-width="1.5"/>
+      <text x="120" y="160" text-anchor="middle" font-size="10" font-weight="700" fill="#E65100">SE(3) Physics Plant</text>
+      <text x="120" y="170" text-anchor="middle" font-size="8.5" fill="#555">RK4 · SO(3) · Isaac Sim 4.5</text>
 
-      <!-- Row 5: Physics Plant -->
-      <rect x="80" y="166" width="90" height="22" rx="5" fill="#FFF8E1" stroke="#F57F17" stroke-width="1.5"/>
-      <text x="125" y="176" text-anchor="middle" font-size="8" font-weight="700" fill="#E65100">SE(3) Physics Plant</text>
-      <text x="125" y="185" text-anchor="middle" font-size="7" fill="#555">RK4 · SO(3) · Isaac Sim 4.5</text>
-
-      <!-- Feedback arrow -->
-      <path d="M 170 177 Q 240 177 240 109 Q 240 68 170 68" fill="none" stroke="#aaa" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#da)"/>
-      <text x="243" y="125" font-size="6.5" fill="#aaa" transform="rotate(90,243,125)">state feedback</text>
+      <!-- Feedback arc -->
+      <path d="M 170 161 Q 232 161 232 95 Q 232 54 170 54" fill="none" stroke="#bbb" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#da)"/>
+      <text x="236" y="110" text-anchor="middle" font-size="8" fill="#aaa" transform="rotate(90,236,110)">state feedback</text>
 
       <!-- Battery -->
-      <rect x="2" y="166" width="54" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
-      <text x="29" y="176" text-anchor="middle" font-size="7.5" font-weight="700" fill="#1B5E20">Battery</text>
-      <text x="29" y="184" text-anchor="middle" font-size="7" fill="#555">SOC&lt;15%→RTL</text>
-      <line x1="56" y1="177" x2="80" y2="177" stroke="#2E7D32" stroke-width="1" stroke-dasharray="2,2"/>
+      <rect x="2" y="150" width="44" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
+      <text x="24" y="160" text-anchor="middle" font-size="9" font-weight="700" fill="#1B5E20">Battery</text>
+      <text x="24" y="170" text-anchor="middle" font-size="8.5" fill="#555">SOC&lt;15%→RTL</text>
+      <line x1="46" y1="161" x2="70" y2="161" stroke="#2E7D32" stroke-width="1" stroke-dasharray="2,2"/>
 
-      <defs>
-        <marker id="da" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#888"/></marker>
-        <marker id="dm" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#8C1D40"/></marker>
-        <marker id="dg" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#2E7D32"/></marker>
-        <marker id="dt" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#004D40"/></marker>
-      </defs>
+      <!-- VLA label -->
+      <text x="120" y="192" text-anchor="middle" font-size="8" fill="#888">vx,vy,vz → T_nom → T_safe → actuators</text>
     </svg>
   </div>
 </div>
@@ -290,26 +287,32 @@ li{font-size:10px;margin-bottom:2px}
   <div class="cb">
     <p style="font-size:9px;"><strong>Safety constraint:</strong> h(x) = p_z ≥ 0 &nbsp;|&nbsp; Relative degree 2 (kinematic) and 4 (rigid-body)</p>
     <!-- HOCBF flow diagram -->
-    <svg width="268" height="72" viewBox="0 0 268 72">
-      <rect x="2"   y="20" width="52" height="32" rx="4" fill="#FFF3E0" stroke="#E65100" stroke-width="1.5"/>
-      <text x="28"  y="34" text-anchor="middle" font-size="8" font-weight="700" fill="#BF360C">VLA / RL</text>
-      <text x="28"  y="44" text-anchor="middle" font-size="7.5" fill="#555">T_nom</text>
-      <line x1="54" y1="36" x2="74" y2="36" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
-      <rect x="75"  y="20" width="70" height="32" rx="4" fill="#FCE4EC" stroke="#880E4F" stroke-width="1.5"/>
-      <text x="110" y="33" text-anchor="middle" font-size="8" font-weight="700" fill="#880E4F">HOCBF Filter</text>
-      <text x="110" y="43" text-anchor="middle" font-size="7" fill="#555">clamp(T_nom, T_lb, T_max)</text>
-      <line x1="145" y1="36" x2="165" y2="36" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
-      <rect x="166" y="20" width="52" height="32" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5"/>
-      <text x="192" y="34" text-anchor="middle" font-size="8" font-weight="700" fill="#1B5E20">T_safe</text>
-      <text x="192" y="44" text-anchor="middle" font-size="7.5" fill="#555">to plant</text>
-      <!-- EKF state feeds HOCBF -->
-      <rect x="75" y="2" width="70" height="14" rx="3" fill="#E3F2FD" stroke="#1565C0" stroke-width="1"/>
-      <text x="110" y="12" text-anchor="middle" font-size="7.5" font-weight="600" fill="#0D47A1">EKF: pz, vz, φ, θ, ω</text>
-      <line x1="110" y1="16" x2="110" y2="20" stroke="#1565C0" stroke-width="1" marker-end="url(#ab)"/>
+    <svg width="100%" viewBox="0 0 240 80" style="display:block;margin-bottom:4px">
       <defs>
-        <marker id="a2" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#555"/></marker>
-        <marker id="ab" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#1565C0"/></marker>
+        <marker id="a2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#555"/></marker>
+        <marker id="ab" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1565C0"/></marker>
       </defs>
+      <!-- EKF top -->
+      <rect x="80" y="2" width="80" height="18" rx="4" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+      <text x="120" y="11" text-anchor="middle" font-size="9" font-weight="700" fill="#0D47A1">EKF State</text>
+      <text x="120" y="18" text-anchor="middle" font-size="8" fill="#555">pz, vz, φ, θ, ω</text>
+      <line x1="120" y1="20" x2="120" y2="30" stroke="#1565C0" stroke-width="1.5" marker-end="url(#ab)"/>
+      <!-- VLA/RL -->
+      <rect x="2" y="30" width="60" height="22" rx="4" fill="#FFF3E0" stroke="#E65100" stroke-width="1.5"/>
+      <text x="32" y="42" text-anchor="middle" font-size="9" font-weight="700" fill="#BF360C">VLA / RL</text>
+      <text x="32" y="50" text-anchor="middle" font-size="8" fill="#555">T_nom</text>
+      <line x1="62" y1="41" x2="78" y2="41" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+      <!-- HOCBF -->
+      <rect x="79" y="28" width="82" height="26" rx="4" fill="#8C1D40" stroke="#FFC627" stroke-width="2"/>
+      <text x="120" y="40" text-anchor="middle" font-size="10" font-weight="900" fill="#FFC627">HOCBF</text>
+      <text x="120" y="50" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.85)">clamp(T_nom, T_lb, T_max)</text>
+      <line x1="161" y1="41" x2="177" y2="41" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+      <!-- T_safe -->
+      <rect x="178" y="30" width="60" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5"/>
+      <text x="208" y="42" text-anchor="middle" font-size="9" font-weight="700" fill="#1B5E20">T_safe</text>
+      <text x="208" y="50" text-anchor="middle" font-size="8" fill="#555">→ plant</text>
+      <!-- WCET label -->
+      <text x="120" y="68" text-anchor="middle" font-size="8" fill="#8C1D40" font-weight="700">WCET = 2,725 ns · T_max = 78.48 N</text>
     </svg>
     <div class="div"></div>
     <table class="rt">
@@ -341,24 +344,24 @@ li{font-size:10px;margin-bottom:2px}
   <div class="ch b">EKF Covariance Gating — Property P7</div>
   <div class="cb">
     <!-- Mode ladder diagram -->
-    <svg width="268" height="52" viewBox="0 0 268 52">
-      <rect x="2"   y="10" width="78" height="32" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5"/>
-      <text x="41"  y="24" text-anchor="middle" font-size="8" font-weight="700" fill="#1B5E20">NOMINAL</text>
-      <text x="41"  y="34" text-anchor="middle" font-size="7" fill="#555">σ² &lt; 5.0 m²</text>
-      <line x1="80" y1="26" x2="96" y2="26" stroke="#E65100" stroke-width="1.5" marker-end="url(#ao)"/>
-      <rect x="97"  y="10" width="78" height="32" rx="4" fill="#FFF8E1" stroke="#F57F17" stroke-width="1.5"/>
-      <text x="136" y="24" text-anchor="middle" font-size="8" font-weight="700" fill="#E65100">DEGRADED</text>
-      <text x="136" y="34" text-anchor="middle" font-size="7" fill="#555">VIO injected · cy.9</text>
-      <line x1="175" y1="26" x2="191" y2="26" stroke="#C62828" stroke-width="1.5" marker-end="url(#ared)"/>
-      <rect x="192" y="10" width="74" height="32" rx="4" fill="#FFEBEE" stroke="#C62828" stroke-width="1.5"/>
-      <text x="229" y="24" text-anchor="middle" font-size="8" font-weight="700" fill="#C62828">COLLAPSED</text>
-      <text x="229" y="34" text-anchor="middle" font-size="7" fill="#555">P7→RTL · cy.26</text>
-      <text x="88" y="8" text-anchor="middle" font-size="7" fill="#E65100">GPS lost</text>
-      <text x="183" y="8" text-anchor="middle" font-size="7" fill="#C62828">σ²≥25m²</text>
+    <svg width="100%" viewBox="0 0 240 58" style="display:block;margin-bottom:4px">
       <defs>
-        <marker id="ao" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#E65100"/></marker>
-        <marker id="ared" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C62828"/></marker>
+        <marker id="ao" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#E65100"/></marker>
+        <marker id="ared" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C62828"/></marker>
       </defs>
+      <rect x="2"   y="14" width="70" height="30" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5"/>
+      <text x="37"  y="27" text-anchor="middle" font-size="10" font-weight="700" fill="#1B5E20">NOMINAL</text>
+      <text x="37"  y="38" text-anchor="middle" font-size="8.5" fill="#555">σ² &lt; 5.0 m²</text>
+      <text x="85"  y="10" text-anchor="middle" font-size="8" fill="#E65100" font-weight="600">GPS lost</text>
+      <line x1="72" y1="29" x2="86" y2="29" stroke="#E65100" stroke-width="1.5" marker-end="url(#ao)"/>
+      <rect x="87"  y="14" width="70" height="30" rx="4" fill="#FFF8E1" stroke="#F57F17" stroke-width="1.5"/>
+      <text x="122" y="27" text-anchor="middle" font-size="10" font-weight="700" fill="#E65100">DEGRADED</text>
+      <text x="122" y="38" text-anchor="middle" font-size="8.5" fill="#555">VIO · cycle 9</text>
+      <text x="170" y="10" text-anchor="middle" font-size="8" fill="#C62828" font-weight="600">σ²≥25m²</text>
+      <line x1="157" y1="29" x2="171" y2="29" stroke="#C62828" stroke-width="1.5" marker-end="url(#ared)"/>
+      <rect x="172" y="14" width="66" height="30" rx="4" fill="#FFEBEE" stroke="#C62828" stroke-width="1.5"/>
+      <text x="205" y="27" text-anchor="middle" font-size="10" font-weight="700" fill="#C62828">COLLAPSED</text>
+      <text x="205" y="38" text-anchor="middle" font-size="8.5" fill="#555">P7→RTL · cy.26</text>
     </svg>
     <p style="font-size:8.5px;color:#555;margin-top:3px;">VIO σ_v=0.10 m/s (OpenVINS EuRoC). Air-gap: physics plant writes ground-truth [vx,vy] to <span class="mono">/dev/shm/aisp_gt_state</span> — EKF reads only.</p>
   </div>

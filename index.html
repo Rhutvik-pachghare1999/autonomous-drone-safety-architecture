@@ -221,28 +221,35 @@ li{font-size:10px;margin-bottom:2px}
 <div class="card" style="flex:1">
   <div class="ch b">System Concept — Safety-First Autonomy Pipeline</div>
   <div class="cb" style="padding:6px">
-    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;font-size:9px">
-      <div style="background:#F3E5F5;border:1.5px solid #6A1B9A;border-radius:5px;padding:5px 12px;text-align:center;width:80%"><strong style="color:#4A148C">VLA Model</strong><br><span style="color:#555">SmolVLM2 · Strategic Planner</span></div>
-      <div style="color:#888;font-size:11px">↓ vx,vy,vz</div>
-      <div style="background:#E3F2FD;border:1.5px solid #1565C0;border-radius:5px;padding:5px 12px;text-align:center;width:80%"><strong style="color:#0D47A1">PPO RL Policy</strong><br><span style="color:#555">ONNX 22KB · 2M steps · Actor 13-dim</span></div>
-      <div style="color:#888;font-size:11px">↓ T_nom</div>
-      <div style="display:flex;align-items:center;gap:4px;width:100%">
-        <div style="background:#E8F5E9;border:1.2px solid #2E7D32;border-radius:4px;padding:3px 4px;text-align:center;flex:1;font-size:7.5px;min-width:0"><strong style="color:#1B5E20">EKF</strong><br><span style="color:#555">pz,vz,φ,θ</span></div>
-        <div style="color:#2E7D32;font-size:11px">→</div>
-        <div style="background:#8C1D40;border:2px solid #FFC627;border-radius:5px;padding:5px 6px;text-align:center;flex:2;min-width:0"><strong style="color:#FFC627;font-size:9px">HOCBF</strong><br><span style="color:rgba(255,255,255,.85);font-size:7.5px">2,725 ns WCET</span></div>
-        <div style="color:#004D40;font-size:11px">←</div>
-        <div style="background:#E0F2F1;border:1.2px solid #004D40;border-radius:4px;padding:4px 6px;text-align:center;flex:1;font-size:8.5px"><strong style="color:#004D40">BFT Consensus</strong><br><span style="color:#555">w=exp(−σ²)</span></div>
-      </div>
-      <div style="color:#888;font-size:11px">↓ T_safe</div>
-      <div style="background:#FCE4EC;border:1.5px solid #880E4F;border-radius:5px;padding:5px 12px;text-align:center;width:80%"><strong style="color:#880E4F">DO-178C FSM</strong><br><span style="color:#555">P1–P7 · 7 states · 24 transitions</span></div>
-      <div style="color:#888;font-size:11px">↓</div>
-      <div style="display:flex;align-items:center;gap:4px;width:100%">
-        <div style="background:#E8F5E9;border:1.2px solid #2E7D32;border-radius:4px;padding:3px 4px;text-align:center;flex:1;font-size:7.5px;min-width:0"><strong style="color:#1B5E20">Battery</strong><br><span style="color:#555">SOC&lt;15%→RTL</span></div>
-        <div style="color:#888;font-size:11px">→</div>
-        <div style="background:#FFF8E1;border:1.5px solid #F57F17;border-radius:5px;padding:4px 6px;text-align:center;flex:2;min-width:0"><strong style="color:#E65100;font-size:9px">SE(3) Plant</strong><br><span style="color:#555;font-size:7.5px">RK4·SO(3)·Isaac Sim</span></div>
-      </div>
-      <div style="color:#aaa;font-size:8px;margin-top:2px;font-style:italic">↑ state feedback loop</div>
-    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:9px">
+      <tr><td style="text-align:center;padding:2px 0">
+        <div style="background:#F3E5F5;border:1.5px solid #6A1B9A;border-radius:5px;padding:4px;margin:0 10%"><strong style="color:#4A148C">VLA Model</strong> · SmolVLM2 · Strategic Planner</div>
+      </td></tr>
+      <tr><td style="text-align:center;color:#888;font-size:10px;padding:1px">↓ vx,vy,vz</td></tr>
+      <tr><td style="text-align:center;padding:2px 0">
+        <div style="background:#E3F2FD;border:1.5px solid #1565C0;border-radius:5px;padding:4px;margin:0 10%"><strong style="color:#0D47A1">PPO RL Policy</strong> · ONNX 22KB · 2M steps</div>
+      </td></tr>
+      <tr><td style="text-align:center;color:#888;font-size:10px;padding:1px">↓ T_nom</td></tr>
+      <tr><td style="padding:2px 0">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+          <tr>
+            <td style="background:#E8F5E9;border:1.2px solid #2E7D32;border-radius:4px;padding:3px;text-align:center;width:28%;font-size:8px"><strong style="color:#1B5E20">15-State EKF</strong><br>pz,vz,φ,θ,ω</td>
+            <td style="text-align:center;color:#2E7D32;font-size:10px;width:5%">→</td>
+            <td style="background:#8C1D40;border:2px solid #FFC627;border-radius:5px;padding:5px;text-align:center;width:34%"><strong style="color:#FFC627;font-size:10px">HOCBF</strong><br><span style="color:rgba(255,255,255,.85);font-size:8px">2,725 ns WCET</span></td>
+            <td style="text-align:center;color:#004D40;font-size:10px;width:5%">←</td>
+            <td style="background:#E0F2F1;border:1.2px solid #004D40;border-radius:4px;padding:3px;text-align:center;width:28%;font-size:8px"><strong style="color:#004D40">BFT Consensus</strong><br>w=exp(−σ²)</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="text-align:center;color:#888;font-size:10px;padding:1px">↓ T_safe</td></tr>
+      <tr><td style="text-align:center;padding:2px 0">
+        <div style="background:#FCE4EC;border:1.5px solid #880E4F;border-radius:5px;padding:4px;margin:0 10%"><strong style="color:#880E4F">DO-178C FSM</strong> · P1–P7 · 7 states</div>
+      </td></tr>
+      <tr><td style="text-align:center;color:#888;font-size:10px;padding:1px">↓</td></tr>
+      <tr><td style="text-align:center;padding:2px 0">
+        <div style="background:#FFF8E1;border:1.5px solid #F57F17;border-radius:5px;padding:4px;margin:0 10%"><strong style="color:#E65100">SE(3) Physics Plant</strong> · RK4 · SO(3) · Isaac Sim 4.5</div>
+      </td></tr>
+    </table>
   </div>
 </div>
 
@@ -305,13 +312,15 @@ li{font-size:10px;margin-bottom:2px}
   <div class="ch b">EKF Covariance Gating — Property P7</div>
   <div class="cb">
     <!-- Mode ladder diagram -->
-    <div style="display:flex;align-items:center;gap:3px;margin-bottom:5px">
-      <div style="background:#E8F5E9;border:1.5px solid #2E7D32;border-radius:4px;padding:4px 3px;text-align:center;flex:1;font-size:8px;white-space:nowrap"><strong style="color:#1B5E20">NOMINAL</strong><br><span style="color:#555;font-size:7.5px">σ²&lt;5m²</span></div>
-      <div style="text-align:center;font-size:8px;color:#E65100">GPS lost<br>→</div>
-      <div style="background:#FFF8E1;border:1.5px solid #F57F17;border-radius:4px;padding:4px 3px;text-align:center;flex:1;font-size:8px;white-space:nowrap"><strong style="color:#E65100">DEGRADED</strong><br><span style="color:#555;font-size:7.5px">VIO·cy.9</span></div>
-      <div style="text-align:center;font-size:8px;color:#C62828">σ²≥25m²<br>→</div>
-      <div style="background:#FFEBEE;border:1.5px solid #C62828;border-radius:4px;padding:4px 3px;text-align:center;flex:1;font-size:8px;white-space:nowrap"><strong style="color:#C62828">COLLAPSED</strong><br><span style="color:#555;font-size:7.5px">P7→RTL·cy.26</span></div>
-    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:5px;table-layout:fixed">
+      <tr>
+        <td style="background:#E8F5E9;border:1.5px solid #2E7D32;border-radius:4px;padding:4px;text-align:center;font-size:9px;width:33%"><strong style="color:#1B5E20">NOMINAL</strong><br><span style="color:#555;font-size:8px">σ² &lt; 5.0 m²</span></td>
+        <td style="text-align:center;font-size:8px;color:#E65100;width:8%">GPS<br>lost<br>→</td>
+        <td style="background:#FFF8E1;border:1.5px solid #F57F17;border-radius:4px;padding:4px;text-align:center;font-size:9px;width:33%"><strong style="color:#E65100">DEGRADED</strong><br><span style="color:#555;font-size:8px">VIO · cy.9</span></td>
+        <td style="text-align:center;font-size:8px;color:#C62828;width:8%">σ²≥25<br>→</td>
+        <td style="background:#FFEBEE;border:1.5px solid #C62828;border-radius:4px;padding:4px;text-align:center;font-size:9px;width:33%"><strong style="color:#C62828">COLLAPSED</strong><br><span style="color:#555;font-size:8px">P7→RTL cy.26</span></td>
+      </tr>
+    </table>
     <p style="font-size:8.5px;color:#555;margin-top:3px;">VIO σ_v=0.10 m/s (OpenVINS EuRoC). Air-gap: physics plant writes ground-truth [vx,vy] to <span class="mono">/dev/shm/aisp_gt_state</span> — EKF reads only.</p>
   </div>
 </div>

@@ -1,18 +1,8 @@
-"""
-Domain Randomization — Sim-to-Real Transfer via Massive Variation
-
-Implements aggressive domain randomization for zero-shot sim-to-real transfer.
-Randomizes physical parameters, sensor noise, and environmental conditions
-to train robust RL policies.
-
-Author: Rhutvik Prashant Pachghare
-Institution: Arizona State University — Robotics & Autonomous Systems
-Date: 2026-04-22
-
-References:
-    - Tobin et al. (2017). Domain Randomization for Transferring Deep Neural Networks
-    - Peng et al. (2018). Sim-to-Real Transfer of Robotic Control with Dynamics Randomization
-"""
+# Domain randomization and SE(3) rigid-body plant for sim-to-real transfer.
+# Randomizes mass (±40%), motor gain (±25%), inertia (±15%), wind (σ=2 m/s).
+# RigidBodyPlant integrates full Euler rotational dynamics with RK4 and SO(3) projection.
+#
+# Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
 
 from typing import Dict, Tuple
 import numpy as np

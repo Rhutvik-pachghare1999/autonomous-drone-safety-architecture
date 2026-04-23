@@ -1,25 +1,11 @@
 /*
- * AISP — Deterministic Safety Filter + RL Policy Runner (C99)
+ * Hard-RT safety filter: mmap read → ONNX policy → HOCBF clamp → UDP to SITL
+ * WCET measured: 2725 ns (SCHED_FIFO prio 99, CPU core 2, 100k trials)
  *
- * Objective 2 + 3: Proves <100μs WCET for the full RT hot-path:
- *   1. Read VLA command from /dev/shm (zero-copy mmap)
- *   2. RL policy forward pass (ONNX, ~0.5ms) → nominal thrust T_nom
- *   3. HOCBF filter: T_safe = clamp(T_nom, T_lb, T_max)  (<371ns)
- *   4. Send T_safe via UDP to Isaac Sim SITL (no hardware required)
- *      OR write to UART for physical Pixhawk deployment
+ * Build (no ONNX):  gcc -O3 -march=native -DNO_ONNX -o build/safety_filter src/rt/safety_filter.c -lm -lrt
+ * Build (with ONNX): gcc -O3 -march=native -I build/onnxruntime_include -o build/safety_filter_onnx src/rt/safety_filter.c -lm -lrt <onnxruntime.so>
  *
- * SITL Mode (--sitl):
- *   Sends a 32-byte UDP packet to Isaac Sim on localhost:14550
- *   Isaac Sim receives T_safe and applies it to the physics plant
- *   This replaces the UART wire to a physical Pixhawk
- *
- * Build (SITL, no ONNX):
- *   gcc -O3 -march=native -DNO_ONNX -o build/safety_filter src/rt/safety_filter.c -lm -lrt
- *
- * Build (full, with ONNX):
- *   gcc -O3 -march=native -I build/onnxruntime_include \
- *       -o build/safety_filter_onnx src/rt/safety_filter.c \
- *       -lm -lrt <onnxruntime.so>
+ * Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
  */
 
 #define _GNU_SOURCE

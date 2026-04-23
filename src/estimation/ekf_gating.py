@@ -1,48 +1,10 @@
-"""
-EKF Covariance Gating + VIO Factor (OpenVINS-derived noise model)
-=================================================================
-Implements the observability-aware safe mode logic for the 15-state EKF
-during GPS denial.  Adds formal property P7 alongside P1–P6.
-
-Observability analysis (GPS-denied, IMU + baro only):
-    Observable   : p_z, v_z, roll (φ), pitch (θ), and their derivatives
-    Unobservable : p_x, p_y, yaw (ψ), horizontal velocity (degraded)
-
-The health scalar σ²_pos = tr(P[p_x, p_y, ψ]) captures the collapse of
-the observable subspace.  Three thresholds define the safe mode ladder:
-
-    NOMINAL    : σ²_pos < σ_warn²   — full 15-state estimate trusted
-    DEGRADED   : σ_warn² ≤ σ²_pos < σ_critical²  — horizontal hold
-    COLLAPSED  : σ²_pos ≥ σ_critical²  — RTL on altitude + attitude only
-
-Formal Property P7 (new, extends P1–P6):
-    tr(P[p_x, p_y, ψ]) ≥ σ_critical² → RTL within 1 control cycle (≤100ms)
-
-VIO Factor (OpenVINS-derived noise model):
-    When GPS is denied, a horizontal velocity measurement is injected:
-        y_VIO = v_xy + η,  η ~ N(0, R_VIO)
-
-    R_VIO is derived from published OpenVINS benchmarks on the EuRoC MAV
-    dataset (Geneva et al. 2020, ICRA 2020):
-        - Reported velocity RMSE: 0.05–0.10 m/s on MH_01–MH_05 sequences
-        - Camera: Aptina MT9V034 global shutter, 20 Hz, sigma_pix = 1.0 px
-        - IMU: ADIS16448, gyro noise = 0.005 rad/s/√Hz
-        - At UAV hover speeds (0–3 m/s), optical flow velocity noise ≈ 0.07 m/s
-
-    Conservative value used: σ_v = 0.10 m/s (1-σ), giving R_VIO = diag([0.01, 0.01]) m²/s²
-    This is 10× tighter than the previous placeholder (0.1 m²/s²) and
-    consistent with the published OpenVINS EuRoC velocity RMSE.
-
-    Yaw remains unobservable without a magnetometer — stated explicitly.
-
-References:
-    Geneva et al. (2020). OpenVINS: A Research Platform for VIO. ICRA 2020.
-    Markovic et al. (2021). ES-EKF for GPS-Denied UAV Navigation. arXiv:2109.04908.
-    Burri et al. (2016). The EuRoC MAV Datasets. IJRR.
-    Springer Open (2025). GNSS-Denied UAV Navigation Review. Satellite Navigation.
-
-Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems
-"""
+# EKF covariance gating for GPS-denied flight.
+# Implements the NOMINAL / DEGRADED / COLLAPSED mode ladder and formal property P7.
+# VIO noise model derived from OpenVINS EuRoC benchmarks (Geneva et al. ICRA 2020).
+# σ_v = 0.10 m/s → R_VIO = diag([0.01, 0.01]) m²/s²
+# Yaw is unobservable without a magnetometer regardless of VIO.
+#
+# Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
 
 from __future__ import annotations
 

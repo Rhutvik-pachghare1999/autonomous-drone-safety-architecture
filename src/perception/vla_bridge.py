@@ -1,18 +1,8 @@
-"""
-VLA Bridge — Vision-Language-Action Model Interface
-====================================================
-Loads a VLM (SmolVLM2-2.2B or PaliGemma-3B when HF access is granted),
-feeds adversarial text+image prompts, and parses velocity commands from
-the model's free-text output.
-
-Swap MODEL_ID to 'google/paligemma-3b-pt-224' once HF token is configured:
-    huggingface-cli login   # or set HF_TOKEN env var
-
-References:
-    Brohan et al. (2023). RT-2: Vision-Language-Action Models. arXiv.
-    Kim et al. (2024). OpenVLA: Open-Source VLA Model. arXiv.
-    Beyer et al. (2024). PaliGemma: A versatile, lightweight VLM.
-"""
+# VLA bridge: loads SmolVLM2-500M (INT8 + TurboQuant 4-bit KV cache),
+# feeds image+text prompts, parses free-text output into [vx, vy, vz] commands.
+# Swap MODEL_ID to google/paligemma-3b-pt-224 once HF token is set.
+#
+# Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
 
 import re
 import time

@@ -1,35 +1,9 @@
-"""
-Observability-Weighted HotStuff Consensus Node
-===============================================
-Causally links the EKF covariance matrix to the consensus voting weight,
-so that GPS-denied nodes with high position uncertainty are automatically
-silenced in the quorum calculation.
-
-Protocol: Streamlined HotStuff (Abraham et al. 2020) — linear message
-complexity O(n) per round via threshold signatures (simulated here with
-a weighted quorum rule).
-
-Trust weight for node i:
-    w_i = exp(-tr(P_i[p_x, p_y]) / (2 * SIGMA_WARN_SQ))
-
-Weighted quorum rule (BFT threshold):
-    Commit iff  sum(w_i for i in quorum) >= (2/3) * sum(w_i for all i)
-
-This means a GPS-denied node (high covariance) contributes near-zero
-weight to the quorum — it cannot swing consensus even if Byzantine.
-
-Integration with flight system:
-    - Reads EKF state + covariance from /dev/shm/aisp_ekf_state (mmap)
-    - Publishes consensus messages over ZMQ PUB/SUB
-    - Consensus result (agreed state) written back to /dev/shm/aisp_consensus
-
-References:
-    Yin et al. (2019). HotStuff: BFT Consensus with Linearity and Responsiveness. PODC.
-    arxiv:2410.21923 — Weighted Voting in HotStuff (2024).
-    MDPI Drones (May 2025) — Chained HotStuff in UAV ad-hoc networks.
-
-Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems
-"""
+# Observability-weighted HotStuff consensus for drone swarms.
+# Trust weight w_i = exp(-σ²_pos / (2·σ_warn²)) links EKF covariance to vote weight.
+# GPS-denied nodes get w≈0 and cannot corrupt the quorum even if Byzantine.
+# Reads from /dev/shm/aisp_ekf_state, writes agreed state to /dev/shm/aisp_consensus.
+#
+# Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
 
 from __future__ import annotations
 

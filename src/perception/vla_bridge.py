@@ -1,4 +1,4 @@
-# VLA bridge: loads SmolVLM2-500M (INT8 + TurboQuant 4-bit KV cache),
+# VLA bridge: loads SmolVLM2-500M (INT8 bitsandbytes + HF QuantoQuantizedCache 4-bit KV),
 # feeds image+text prompts, parses free-text output into [vx, vy, vz] commands.
 # Swap MODEL_ID to google/paligemma-3b-pt-224 once HF token is set.
 #
@@ -12,10 +12,10 @@ from dataclasses import dataclass
 from typing import Optional
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForImageTextToText, BitsAndBytesConfig
-from turboquant import TurboQuantCache
+from transformers import QuantoQuantizedCache, QuantizedCacheConfig
 
 # ── Model selection ───────────────────────────────────────────────────────────
-# SmolVLM2-500M: fits in 3.7GB VRAM (0.74GB weights + TurboQuant KV cache)
+# SmolVLM2-500M: fits in 3.7GB VRAM (0.74GB weights + 4-bit quantized KV cache)
 # Swap to 'google/paligemma-3b-pt-224' once HF access is granted (needs ~3GB VRAM standalone)
 MODEL_ID = "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"
 
@@ -48,7 +48,7 @@ class VLABridge:
         self._load_model()
 
     def _load_model(self):
-        print(f"Loading {MODEL_ID} (INT8 + TurboQuant 4-bit KV cache)...")
+        print(f"Loading {MODEL_ID} (INT8 bitsandbytes + 4-bit quantized KV cache)...")
         quant_cfg = BitsAndBytesConfig(load_in_8bit=True)
         self.processor = AutoProcessor.from_pretrained(MODEL_ID)
         self.model = AutoModelForImageTextToText.from_pretrained(
@@ -138,7 +138,7 @@ class VLABridge:
                 **inputs,
                 max_new_tokens=40,
                 do_sample=False,
-                past_key_values=TurboQuantCache(bits=4),  # fresh cache per query
+                cache_implementation="quantized",  # HF native 4-bit KV cache (QuantoQuantizedCache)
             )
 
         latency_ms = (time.perf_counter() - t0) * 1000

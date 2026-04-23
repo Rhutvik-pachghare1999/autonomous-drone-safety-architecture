@@ -497,7 +497,7 @@ html,body{margin:0;padding:0;background:#333;width:100%;overflow-x:hidden}
     <table class="rt">
       <tr><th>Parameter</th><th>Value</th></tr>
       <tr><td>Model</td><td>HuggingFaceTB/SmolVLM2-500M-Video-Instruct</td></tr>
-      <tr><td>Quantization</td><td>INT8 (bitsandbytes) + TurboQuant 4-bit KV cache</td></tr>
+      <tr><td>Quantization</td><td>INT8 (bitsandbytes) + 4-bit quantized KV cache (HF Quanto)</td></tr>
       <tr><td>VRAM</td><td>~3.7 GB · fits single consumer GPU</td></tr>
       <tr><td>Latency</td><td>~2.5s/query (best-effort core, NOT in RT loop)</td></tr>
       <tr><td>Role</td><td>Strategic planner only — outputs goal waypoints, never thrust</td></tr>

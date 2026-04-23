@@ -24,13 +24,13 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:11px;li
 .rq span{color:#FFC627;font-weight:700;font-style:normal}
 
 /* BODY */
-.body{display:grid;grid-template-columns:372px 388px 452px 372px;align-items:stretch}
-.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f8f8f8;min-height:820px}
+.body{display:grid;grid-template-columns:23fr 24fr 28fr 23fr;align-items:start;width:1600px}
+.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f8f8f8;min-width:0}
 .col:nth-child(even){background:#f2f2f2}
 .col:last-child{border-right:none}
 
 /* CARDS */
-.card{border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+.card{border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 6px rgba(0,0,0,.07);min-width:0}
 .card.grow{flex:1}
 .ch{padding:6px 10px;font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#fff;background:#8C1D40;flex-shrink:0}
 .ch.b{background:#1565C0}.ch.g{background:#2E7D32}.ch.o{background:#BF360C}
@@ -90,9 +90,9 @@ li{font-size:10px;margin-bottom:2px}
 .pt.b{background:#1565C0}
 
 /* IMAGE CARDS */
-.card.img-card{flex:1 1 0;min-height:200px}
-.img-card .cb{padding:5px;display:flex;flex-direction:column;gap:3px;flex:1;min-height:0}
-.img-card img{width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain;min-height:180px}
+.card.img-card{min-width:0}
+.img-card .cb{padding:5px;display:flex;flex-direction:column;gap:3px}
+.img-card img{width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain;max-height:220px}
 .img-card .cap{font-size:8px;color:#555;text-align:center;font-style:italic;padding:2px 4px;line-height:1.4}
 
 /* HIGHLIGHT */
@@ -110,21 +110,7 @@ li{font-size:10px;margin-bottom:2px}
 
 
 /* ── Content containment fix ── */
-.card{overflow:hidden !important}
-.cb{overflow:hidden;min-width:0;min-height:0}
-.card.grow,.card.img-card{flex:1 1 0 !important;min-height:0}
-
-/* Images fill their card body */
-.img-card .cb{display:flex;flex-direction:column;padding:5px;gap:4px}
-.img-card img{flex:1;width:100%;min-height:0;object-fit:contain;display:block;border-radius:3px;border:1px solid #ddd}
-
-/* Column gap between cards */
-.col{gap:10px !important}
-
-/* All text wraps, never overflows */
 .cb *{max-width:100%;word-break:break-word;box-sizing:border-box}
-
-/* Metric boxes never overflow */
 .mg,.mg3,.mg4{overflow:hidden}
 .m{min-width:0;overflow:hidden}
 .mv{font-size:clamp(11px,2.5vw,17px)}
@@ -218,7 +204,7 @@ li{font-size:10px;margin-bottom:2px}
   </div>
 </div>
 
-<div class="card" style="flex:1">
+<div class="card">
   <div class="ch b">System Concept — Safety-First Autonomy Pipeline</div>
   <div class="cb" style="padding:6px">
     <div style="font-size:9.5px">
@@ -289,7 +275,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">1,733ns</div><div class="ml">EVT P=10⁻⁹</div></div>
       <div class="m t"><div class="mv">9.5µs</div><div class="ml">OS Jitter Max</div></div>
     </div>
-    <img src="experiments/results/wcet_panel2.png" alt="WCET EVT" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;min-height:180px;object-fit:contain">
+    <img src="experiments/results/wcet_panel2.png" alt="WCET EVT" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
     <div class="cap">CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1.733µs (57× below 100µs deadline)</div>
   </div>
 </div>
@@ -338,7 +324,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">397N</div><div class="ml">Max Correction at vz=−100m/s</div></div>
       <div class="m p"><div class="mv">−380N</div><div class="ml">T_nom at vz=−100m/s</div></div>
     </div>
-    <img src="experiments/results/hallucination_panel1.png" alt="Hallucination" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;min-height:180px;object-fit:contain">
+    <img src="experiments/results/hallucination_panel1.png" alt="Hallucination" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
     <div class="cap">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−380N → T_safe=78.5N.</div>
   </div>
 </div>
@@ -357,7 +343,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">0.043ms</div><div class="ml">Mean Commit Latency</div></div>
       <div class="m p"><div class="mv">0.997</div><div class="ml">Mean Quorum Fraction</div></div>
     </div>
-    <img src="experiments/results/consensus_panel3.png" alt="Consensus Trust Weights" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;min-height:180px;object-fit:contain">
+    <img src="experiments/results/consensus_panel3.png" alt="Consensus Trust Weights" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
     <div class="cap">Node trust weights from EKF covariance. Byzantine node w=0.008 cannot reach 2/3 quorum threshold.</div>
   </div>
 </div>
@@ -367,7 +353,7 @@ li{font-size:10px;margin-bottom:2px}
 <!-- COL 4 -->
 <div class="col">
 
-<div class="card img-card" style="flex:2;min-height:0">
+<div class="card img-card">
   <div class="ch g">Battery Aging — NASA PCoE Validation</div>
   <div class="cb">
     <img src="experiments/results/battery_panel1.png" alt="Battery Validation">
@@ -381,7 +367,7 @@ li{font-size:10px;margin-bottom:2px}
   </div>
 </div>
 
-<div class="card" style="flex:1;display:flex;flex-direction:column">
+<div class="card">
   <div class="ch" style="background:#FFC627;color:#8C1D40;">Research Contributions</div>
   <div class="cb">
     <div class="ct"><div class="cn">1</div><div class="cx"><strong>Formally verified FSM</strong> — 7 states, P1–P7, WCET=2,725ns, EVT P=10⁻⁹ bound=1,733ns</div></div>

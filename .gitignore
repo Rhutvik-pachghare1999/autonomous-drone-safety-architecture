@@ -57,3 +57,9 @@ htmlcov/
 # ── Shared memory (runtime only, never committed) ─────────────────────────────
 /dev/shm/
 poster.html
+
+# ── Sensitive / internal files ────────────────────────────────────────────────
+CLAUDE.md
+problem/
+pyrightconfig.json
+.vscode/

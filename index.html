@@ -202,15 +202,73 @@ li{font-size:10px;margin-bottom:2px}
   </div>
 </div>
 
-<div class="card">
-  <div class="ch dk">Key Results Summary</div>
-  <div class="cb">
-    <div class="mg">
-      <div class="m g"><div class="mv">2,725ns</div><div class="ml">HOCBF WCET</div></div>
-      <div class="m g"><div class="mv">100%</div><div class="ml">Survival Rate</div></div>
-      <div class="m g"><div class="mv">100%</div><div class="ml">BFT Commit Rate</div></div>
-      <div class="m g"><div class="mv">13/13</div><div class="ml">Tests Passed</div></div>
-    </div>
+<div class="card" style="flex:1">
+  <div class="ch b">System Concept — Safety-First Autonomy Pipeline</div>
+  <div class="cb" style="padding:6px">
+    <svg width="100%" viewBox="0 0 250 210" style="display:block">
+      <!-- Title -->
+      <text x="125" y="12" text-anchor="middle" font-size="8" font-weight="700" fill="#555">VLA Foundation Model → Safety Filter → Physical Plant</text>
+
+      <!-- Row 1: VLA -->
+      <rect x="80" y="18" width="90" height="26" rx="5" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1.5"/>
+      <text x="125" y="29" text-anchor="middle" font-size="8" font-weight="700" fill="#4A148C">VLA Model</text>
+      <text x="125" y="39" text-anchor="middle" font-size="7" fill="#555">SmolVLM2-500M · Strategic Planner</text>
+      <line x1="125" y1="44" x2="125" y2="54" stroke="#888" stroke-width="1.2" marker-end="url(#da)"/>
+      <text x="135" y="51" font-size="7" fill="#888">vx,vy,vz</text>
+
+      <!-- Row 2: RL Policy -->
+      <rect x="80" y="55" width="90" height="26" rx="5" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+      <text x="125" y="66" text-anchor="middle" font-size="8" font-weight="700" fill="#0D47A1">PPO RL Policy</text>
+      <text x="125" y="76" text-anchor="middle" font-size="7" fill="#555">Actor 13-dim · ONNX 22KB · 2M steps</text>
+      <line x1="125" y1="81" x2="125" y2="91" stroke="#888" stroke-width="1.2" marker-end="url(#da)"/>
+      <text x="135" y="88" font-size="7" fill="#888">T_nom</text>
+
+      <!-- Row 3: HOCBF (highlighted) -->
+      <rect x="60" y="92" width="130" height="30" rx="5" fill="#8C1D40" stroke="#FFC627" stroke-width="2"/>
+      <text x="125" y="104" text-anchor="middle" font-size="9" font-weight="900" fill="#FFC627">HOCBF Safety Filter</text>
+      <text x="125" y="115" text-anchor="middle" font-size="7.5" fill="rgba(255,255,255,.85)">T_safe = clamp(T_nom, T_lb, T_max) · &lt;2,725ns</text>
+      <line x1="125" y1="122" x2="125" y2="132" stroke="#8C1D40" stroke-width="1.5" marker-end="url(#dm)"/>
+
+      <!-- EKF feeds HOCBF -->
+      <rect x="2" y="98" width="54" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
+      <text x="29" y="108" text-anchor="middle" font-size="7.5" font-weight="700" fill="#1B5E20">15-State EKF</text>
+      <text x="29" y="116" text-anchor="middle" font-size="7" fill="#555">pz,vz,φ,θ,ω</text>
+      <line x1="56" y1="109" x2="60" y2="109" stroke="#2E7D32" stroke-width="1.2" marker-end="url(#dg)"/>
+
+      <!-- Consensus feeds EKF -->
+      <rect x="194" y="98" width="54" height="22" rx="4" fill="#E0F2F1" stroke="#004D40" stroke-width="1.2"/>
+      <text x="221" y="108" text-anchor="middle" font-size="7.5" font-weight="700" fill="#004D40">BFT Consensus</text>
+      <text x="221" y="116" text-anchor="middle" font-size="7" fill="#555">w=exp(−σ²/2σ²)</text>
+      <line x1="194" y1="109" x2="190" y2="109" stroke="#004D40" stroke-width="1.2" marker-end="url(#dt)"/>
+
+      <!-- Row 4: FSM -->
+      <rect x="80" y="133" width="90" height="22" rx="5" fill="#FCE4EC" stroke="#880E4F" stroke-width="1.5"/>
+      <text x="125" y="143" text-anchor="middle" font-size="8" font-weight="700" fill="#880E4F">DO-178C FSM</text>
+      <text x="125" y="152" text-anchor="middle" font-size="7" fill="#555">P1–P7 · 7 states · 24 transitions</text>
+      <line x1="125" y1="155" x2="125" y2="165" stroke="#888" stroke-width="1.2" marker-end="url(#da)"/>
+
+      <!-- Row 5: Physics Plant -->
+      <rect x="80" y="166" width="90" height="22" rx="5" fill="#FFF8E1" stroke="#F57F17" stroke-width="1.5"/>
+      <text x="125" y="176" text-anchor="middle" font-size="8" font-weight="700" fill="#E65100">SE(3) Physics Plant</text>
+      <text x="125" y="185" text-anchor="middle" font-size="7" fill="#555">RK4 · SO(3) · Isaac Sim 4.5</text>
+
+      <!-- Feedback arrow -->
+      <path d="M 170 177 Q 240 177 240 109 Q 240 68 170 68" fill="none" stroke="#aaa" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#da)"/>
+      <text x="243" y="125" font-size="6.5" fill="#aaa" transform="rotate(90,243,125)">state feedback</text>
+
+      <!-- Battery -->
+      <rect x="2" y="166" width="54" height="22" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.2"/>
+      <text x="29" y="176" text-anchor="middle" font-size="7.5" font-weight="700" fill="#1B5E20">Battery</text>
+      <text x="29" y="184" text-anchor="middle" font-size="7" fill="#555">SOC&lt;15%→RTL</text>
+      <line x1="56" y1="177" x2="80" y2="177" stroke="#2E7D32" stroke-width="1" stroke-dasharray="2,2"/>
+
+      <defs>
+        <marker id="da" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#888"/></marker>
+        <marker id="dm" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#8C1D40"/></marker>
+        <marker id="dg" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#2E7D32"/></marker>
+        <marker id="dt" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#004D40"/></marker>
+      </defs>
+    </svg>
   </div>
 </div>
 

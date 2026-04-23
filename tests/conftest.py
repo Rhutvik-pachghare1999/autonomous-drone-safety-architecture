@@ -1,5 +1,5 @@
 """
-TitanSec AISP — Pytest Configuration.
+ASU Robotics — AISP Pytest Configuration.
 
 Provides fixtures for all test suites.
 """

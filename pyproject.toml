@@ -5,7 +5,7 @@ description = "Neurosymbolic Safety Kernels for VLA-Driven Drone Swarms — ASU 
 authors = ["Rhutvik Prashant Pachghare <rpachgha@asu.edu>"]
 readme = "README.md"
 license = "MIT"
-repository = "https://github.com/titansec/aisp"
+repository = "https://github.com/Rhutvik-pachghare1999/autonomous-drone-safety-architecture"
 keywords = ["robotics", "control-barrier-functions", "reinforcement-learning", "vision-language-action", "formal-verification"]
 
 [tool.poetry.dependencies]

@@ -1,4 +1,4 @@
-name: TitanSec AISP CI
+name: Autonomous Drone Safety Architecture CI
 
 on:
   push:

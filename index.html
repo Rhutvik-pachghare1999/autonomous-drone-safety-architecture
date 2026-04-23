@@ -221,35 +221,21 @@ li{font-size:10px;margin-bottom:2px}
 <div class="card" style="flex:1">
   <div class="ch b">System Concept — Safety-First Autonomy Pipeline</div>
   <div class="cb" style="padding:6px">
-    <table style="width:100%;border-collapse:collapse;font-size:9px">
-      <tr><td style="text-align:center;padding:2px 0">
-        <div style="background:#F3E5F5;border:1.5px solid #6A1B9A;border-radius:5px;padding:4px;margin:0 10%"><strong style="color:#4A148C">VLA Model</strong> · SmolVLM2 · Strategic Planner</div>
-      </td></tr>
-      <tr><td style="text-align:center;color:#888;font-size:10px;padding:1px">↓ vx,vy,vz</td></tr>
-      <tr><td style="text-align:center;padding:2px 0">
-        <div style="background:#E3F2FD;border:1.5px solid #1565C0;border-radius:5px;padding:4px;margin:0 10%"><strong style="color:#0D47A1">PPO RL Policy</strong> · ONNX 22KB · 2M steps</div>
-      </td></tr>
-      <tr><td style="text-align:center;color:#888;font-size:10px;padding:1px">↓ T_nom</td></tr>
-      <tr><td style="padding:2px 0">
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
-          <tr>
-            <td style="background:#E8F5E9;border:1.2px solid #2E7D32;border-radius:4px;padding:3px;text-align:center;width:28%;font-size:8px"><strong style="color:#1B5E20">15-State EKF</strong><br>pz,vz,φ,θ,ω</td>
-            <td style="text-align:center;color:#2E7D32;font-size:10px;width:5%">→</td>
-            <td style="background:#8C1D40;border:2px solid #FFC627;border-radius:5px;padding:5px;text-align:center;width:34%"><strong style="color:#FFC627;font-size:10px">HOCBF</strong><br><span style="color:rgba(255,255,255,.85);font-size:8px">2,725 ns WCET</span></td>
-            <td style="text-align:center;color:#004D40;font-size:10px;width:5%">←</td>
-            <td style="background:#E0F2F1;border:1.2px solid #004D40;border-radius:4px;padding:3px;text-align:center;width:28%;font-size:8px"><strong style="color:#004D40">BFT Consensus</strong><br>w=exp(−σ²)</td>
-          </tr>
-        </table>
-      </td></tr>
-      <tr><td style="text-align:center;color:#888;font-size:10px;padding:1px">↓ T_safe</td></tr>
-      <tr><td style="text-align:center;padding:2px 0">
-        <div style="background:#FCE4EC;border:1.5px solid #880E4F;border-radius:5px;padding:4px;margin:0 10%"><strong style="color:#880E4F">DO-178C FSM</strong> · P1–P7 · 7 states</div>
-      </td></tr>
-      <tr><td style="text-align:center;color:#888;font-size:10px;padding:1px">↓</td></tr>
-      <tr><td style="text-align:center;padding:2px 0">
-        <div style="background:#FFF8E1;border:1.5px solid #F57F17;border-radius:5px;padding:4px;margin:0 10%"><strong style="color:#E65100">SE(3) Physics Plant</strong> · RK4 · SO(3) · Isaac Sim 4.5</div>
-      </td></tr>
-    </table>
+    <div style="font-size:9.5px">
+      <div style="background:#F3E5F5;border:1.5px solid #6A1B9A;border-radius:5px;padding:5px 10px;margin-bottom:3px;text-align:center"><strong style="color:#4A148C">VLA Model</strong> — SmolVLM2 · Strategic Planner</div>
+      <div style="text-align:center;color:#888;margin:1px 0">↓ vx, vy, vz</div>
+      <div style="background:#E3F2FD;border:1.5px solid #1565C0;border-radius:5px;padding:5px 10px;margin-bottom:3px;text-align:center"><strong style="color:#0D47A1">PPO RL Policy</strong> — ONNX 22KB · 2M steps · Actor 13-dim</div>
+      <div style="text-align:center;color:#888;margin:1px 0">↓ T_nom</div>
+      <div style="background:#8C1D40;border:2px solid #FFC627;border-radius:5px;padding:7px 10px;margin-bottom:3px;text-align:center"><strong style="color:#FFC627;font-size:11px">HOCBF Safety Filter</strong> <span style="color:rgba(255,255,255,.8);font-size:9px">— clamp(T_nom, T_lb, T_max) · WCET = 2,725 ns</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:3px">
+        <div style="background:#E8F5E9;border:1.2px solid #2E7D32;border-radius:4px;padding:4px 8px;text-align:center"><strong style="color:#1B5E20">15-State EKF</strong><br><span style="font-size:8.5px;color:#555">pz, vz, φ, θ, ω → feeds HOCBF</span></div>
+        <div style="background:#E0F2F1;border:1.2px solid #004D40;border-radius:4px;padding:4px 8px;text-align:center"><strong style="color:#004D40">BFT Consensus</strong><br><span style="font-size:8.5px;color:#555">w=exp(−σ²/2σ²_warn)</span></div>
+      </div>
+      <div style="text-align:center;color:#888;margin:1px 0">↓ T_safe</div>
+      <div style="background:#FCE4EC;border:1.5px solid #880E4F;border-radius:5px;padding:5px 10px;margin-bottom:3px;text-align:center"><strong style="color:#880E4F">DO-178C FSM</strong> — P1–P7 · 7 states · 24 transitions</div>
+      <div style="text-align:center;color:#888;margin:1px 0">↓</div>
+      <div style="background:#FFF8E1;border:1.5px solid #F57F17;border-radius:5px;padding:5px 10px;text-align:center"><strong style="color:#E65100">SE(3) Physics Plant</strong> — RK4 · SO(3) · Isaac Sim 4.5</div>
+    </div>
   </div>
 </div>
 
@@ -312,15 +298,15 @@ li{font-size:10px;margin-bottom:2px}
   <div class="ch b">EKF Covariance Gating — Property P7</div>
   <div class="cb">
     <!-- Mode ladder diagram -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:5px;table-layout:fixed">
-      <tr>
-        <td style="background:#E8F5E9;border:1.5px solid #2E7D32;border-radius:4px;padding:4px;text-align:center;font-size:9px;width:33%"><strong style="color:#1B5E20">NOMINAL</strong><br><span style="color:#555;font-size:8px">σ² &lt; 5.0 m²</span></td>
-        <td style="text-align:center;font-size:8px;color:#E65100;width:8%">GPS<br>lost<br>→</td>
-        <td style="background:#FFF8E1;border:1.5px solid #F57F17;border-radius:4px;padding:4px;text-align:center;font-size:9px;width:33%"><strong style="color:#E65100">DEGRADED</strong><br><span style="color:#555;font-size:8px">VIO · cy.9</span></td>
-        <td style="text-align:center;font-size:8px;color:#C62828;width:8%">σ²≥25<br>→</td>
-        <td style="background:#FFEBEE;border:1.5px solid #C62828;border-radius:4px;padding:4px;text-align:center;font-size:9px;width:33%"><strong style="color:#C62828">COLLAPSED</strong><br><span style="color:#555;font-size:8px">P7→RTL cy.26</span></td>
-      </tr>
-    </table>
+    <div style="margin-bottom:5px">
+      <div style="display:grid;grid-template-columns:1fr 20px 1fr 20px 1fr;gap:2px;align-items:center">
+        <div style="background:#E8F5E9;border:2px solid #2E7D32;border-radius:5px;padding:6px;text-align:center"><strong style="color:#1B5E20;font-size:10px">NOMINAL</strong><br><span style="font-size:8.5px;color:#555">σ² &lt; 5.0 m²</span></div>
+        <div style="text-align:center;font-size:9px;color:#E65100;line-height:1.2">GPS<br>lost<br>→</div>
+        <div style="background:#FFF8E1;border:2px solid #F57F17;border-radius:5px;padding:6px;text-align:center"><strong style="color:#E65100;font-size:10px">DEGRADED</strong><br><span style="font-size:8.5px;color:#555">VIO · cycle 9</span></div>
+        <div style="text-align:center;font-size:9px;color:#C62828;line-height:1.2">σ²≥<br>25m²<br>→</div>
+        <div style="background:#FFEBEE;border:2px solid #C62828;border-radius:5px;padding:6px;text-align:center"><strong style="color:#C62828;font-size:10px">COLLAPSED</strong><br><span style="font-size:8.5px;color:#555">P7→RTL cy.26</span></div>
+      </div>
+    </div>
     <p style="font-size:8.5px;color:#555;margin-top:3px;">VIO σ_v=0.10 m/s (OpenVINS EuRoC). Air-gap: physics plant writes ground-truth [vx,vy] to <span class="mono">/dev/shm/aisp_gt_state</span> — EKF reads only.</p>
   </div>
 </div>

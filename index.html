@@ -25,7 +25,7 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:11px;li
 
 /* BODY */
 .body{display:grid;grid-template-columns:272px 288px 340px 272px;align-items:stretch}
-.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f8f8f8;min-height:0}
+.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f8f8f8;min-height:820px}
 .col:nth-child(even){background:#f2f2f2}
 .col:last-child{border-right:none}
 
@@ -90,9 +90,9 @@ li{font-size:10px;margin-bottom:2px}
 .pt.b{background:#1565C0}
 
 /* IMAGE CARDS */
-.card.img-card{flex:1 1 0;min-height:0}
+.card.img-card{flex:1 1 0;min-height:200px}
 .img-card .cb{padding:5px;display:flex;flex-direction:column;gap:3px;flex:1;min-height:0}
-.img-card img{width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain;flex:1;min-height:0;height:0}
+.img-card img{width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain;min-height:180px}
 .img-card .cap{font-size:8px;color:#555;text-align:center;font-style:italic;padding:2px 4px;line-height:1.4}
 
 /* HIGHLIGHT */
@@ -309,7 +309,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">1,733ns</div><div class="ml">EVT P=10⁻⁹</div></div>
       <div class="m t"><div class="mv">9.5µs</div><div class="ml">OS Jitter Max</div></div>
     </div>
-    <img src="experiments/results/wcet_panel2.png" alt="WCET EVT" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block">
+    <img src="experiments/results/wcet_panel2.png" alt="WCET EVT" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;min-height:180px;object-fit:contain">
     <div class="cap">CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1.733µs (57× below 100µs deadline)</div>
   </div>
 </div>
@@ -368,7 +368,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">397N</div><div class="ml">Max Correction at vz=−100m/s</div></div>
       <div class="m p"><div class="mv">−380N</div><div class="ml">T_nom at vz=−100m/s</div></div>
     </div>
-    <img src="experiments/results/hallucination_panel1.png" alt="Hallucination" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block">
+    <img src="experiments/results/hallucination_panel1.png" alt="Hallucination" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;min-height:180px;object-fit:contain">
     <div class="cap">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−380N → T_safe=78.5N.</div>
   </div>
 </div>
@@ -387,7 +387,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">0.043ms</div><div class="ml">Mean Commit Latency</div></div>
       <div class="m p"><div class="mv">0.997</div><div class="ml">Mean Quorum Fraction</div></div>
     </div>
-    <img src="experiments/results/consensus_panel3.png" alt="Consensus Trust Weights" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block">
+    <img src="experiments/results/consensus_panel3.png" alt="Consensus Trust Weights" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;min-height:180px;object-fit:contain">
     <div class="cap">Node trust weights from EKF covariance. Byzantine node w=0.008 cannot reach 2/3 quorum threshold.</div>
   </div>
 </div>

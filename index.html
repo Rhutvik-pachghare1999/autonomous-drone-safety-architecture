@@ -20,19 +20,19 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:11px;li
 .hdr-right{text-align:right;font-size:9.5px;color:rgba(255,255,255,.75);line-height:1.7}
 .badge{display:inline-block;background:#FFC627;color:#8C1D40;font-weight:800;font-size:9px;padding:2px 9px;border-radius:3px;margin-bottom:4px}
 .gold-bar{height:3px;background:linear-gradient(90deg,#FFC627,#ffe680,#FFC627)}
-.rq{background:#1a0a10;color:#fff;padding:6px 24px;font-size:10px;font-style:italic;border-bottom:2px solid #FFC627}
+.rq{background:#1a0a10;color:#fff;padding:8px 24px;font-size:10.5px;font-style:italic;border-bottom:3px solid #FFC627}
 .rq span{color:#FFC627;font-weight:700;font-style:normal}
 
 /* BODY */
 .body{display:grid;grid-template-columns:272px 288px 340px 272px;align-items:stretch}
-.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f9f9f9;min-height:0}
-.col:nth-child(even){background:#f4f4f4}
+.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f8f8f8;min-height:0}
+.col:nth-child(even){background:#f2f2f2}
 .col:last-child{border-right:none}
 
 /* CARDS */
-.card{border:1px solid #e0e0e0;border-radius:5px;overflow:hidden;display:flex;flex-direction:column}
+.card{border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 6px rgba(0,0,0,.07)}
 .card.grow{flex:1}
-.ch{padding:5px 9px;font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:#fff;background:#8C1D40;flex-shrink:0}
+.ch{padding:6px 10px;font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#fff;background:#8C1D40;flex-shrink:0}
 .ch.b{background:#1565C0}.ch.g{background:#2E7D32}.ch.o{background:#BF360C}
 .ch.p{background:#4A148C}.ch.t{background:#004D40}.ch.dk{background:#212121}
 .cb{padding:7px 8px;flex:1;min-width:0}
@@ -48,13 +48,13 @@ li{font-size:10px;margin-bottom:2px}
 .mg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:5px}
 .mg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:5px}
 .mg4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:5px}
-.m{background:#fff;border-radius:4px;padding:5px 5px;text-align:center;border-left:3px solid #8C1D40;border:1px solid #e8e8e8;border-left:3px solid #8C1D40}
-.m.b{border-left-color:#1565C0}.m.g{border-left-color:#2E7D32}.m.o{border-left-color:#BF360C}
-.m.p{border-left-color:#4A148C}.m.t{border-left-color:#004D40}
-.mv{font-size:14px;font-weight:900;color:#8C1D40;line-height:1.1}
+.m{background:#fff;border-radius:6px;padding:7px 5px;text-align:center;border:1px solid #e8e8e8;border-top:3px solid #8C1D40;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.m.b{border-top-color:#1565C0}.m.g{border-top-color:#2E7D32}.m.o{border-top-color:#BF360C}
+.m.p{border-top-color:#4A148C}.m.t{border-top-color:#004D40}
+.mv{font-size:17px;font-weight:900;color:#8C1D40;line-height:1.1;letter-spacing:-0.5px}
 .m.b .mv{color:#1565C0}.m.g .mv{color:#2E7D32}.m.o .mv{color:#BF360C}
 .m.p .mv{color:#4A148C}.m.t .mv{color:#004D40}
-.ml{font-size:8px;color:#666;margin-top:1px;font-weight:500}
+.ml{font-size:8px;color:#666;margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
 
 /* BADGES */
 .bpass{display:inline-block;padding:1px 6px;border-radius:8px;font-size:8px;font-weight:700;background:#E8F5E9;color:#1B5E20;border:1px solid #A5D6A7}
@@ -71,7 +71,7 @@ li{font-size:10px;margin-bottom:2px}
 
 /* LAYERS */
 .ls{display:flex;flex-direction:column;gap:3px}
-.lyr{display:flex;align-items:flex-start;gap:6px;padding:4px 7px;border-radius:4px;border-left:4px solid;font-size:9.5px}
+.lyr{display:flex;align-items:flex-start;gap:6px;padding:5px 8px;border-radius:4px;border-left:4px solid;font-size:9.5px}
 .lyr .ln{font-weight:900;font-size:11px;min-width:14px;text-align:center;margin-top:1px}
 .lyr .lnm{font-weight:700;font-size:9px}
 .lyr .ld{font-size:8px;color:#555;margin-top:1px}
@@ -93,18 +93,18 @@ li{font-size:10px;margin-bottom:2px}
 .card.img-card{flex:1 1 0;min-height:0}
 .img-card .cb{padding:5px;display:flex;flex-direction:column;gap:3px;flex:1;min-height:0}
 .img-card img{width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain;flex:1;min-height:0;height:0}
-.img-card .cap{font-size:7.5px;color:#666;text-align:center;font-style:italic}
+.img-card .cap{font-size:8px;color:#555;text-align:center;font-style:italic;padding:2px 4px;line-height:1.4}
 
 /* HIGHLIGHT */
 .hbox{background:linear-gradient(135deg,#8C1D40,#6b1530);color:#fff;padding:7px 9px;border-radius:5px;border-left:4px solid #FFC627;font-size:9.5px;line-height:1.5}
 
 /* CONTRIB */
 .ct{display:flex;gap:6px;margin-bottom:5px;align-items:flex-start}
-.cn{min-width:18px;height:18px;background:#FFC627;color:#8C1D40;font-weight:900;font-size:10px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cn{min-width:20px;height:20px;background:#FFC627;color:#8C1D40;font-weight:900;font-size:11px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.2)}
 .cx{font-size:9.5px}.cx strong{color:#8C1D40}
 
 /* FOOTER */
-.ftr{background:#111;color:rgba(255,255,255,.65);padding:6px 24px;display:flex;justify-content:space-between;align-items:center;font-size:8.5px;border-top:3px solid #FFC627}
+.ftr{background:#111;color:rgba(255,255,255,.65);padding:8px 24px;display:flex;justify-content:space-between;align-items:center;font-size:9px;border-top:4px solid #FFC627}
 .ftr a{color:#FFC627;text-decoration:none}
 
 
@@ -158,7 +158,7 @@ li{font-size:10px;margin-bottom:2px}
       <li><span class="pt">P4</span>Watchdog timeout (5s) → EMERGENCY_LAND</li>
       <li><span class="pt">P5</span>No deadlocks — every state has ≥1 transition</li>
       <li><span class="pt">P6</span>NaN/Inf position inputs always rejected</li>
-      <li><span class="pt b">P7</span><strong>tr(P[px,py,ψ]) ≥ 25m² → RTL ≤100ms</strong> <span class="bnew">NEW</span></li>
+      <li style="background:#f0e8ff;border-radius:3px;padding:3px 4px;margin-top:2px"><span class="pt b">P7</span><strong>tr(P[px,py,ψ]) ≥ 25m² → RTL ≤100ms</strong> <span class="bnew">NEW</span></li>
     </ul>
     <div class="div"></div>
     <div style="font-size:8.5px;font-weight:700;color:#555;text-align:center;margin-bottom:3px">FSM State Diagram</div>

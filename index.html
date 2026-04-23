@@ -10,7 +10,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 @page{size:A0 landscape;margin:0}
 body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:11px;line-height:1.4}
-.poster{width:1188px;background:#fff;margin:0 auto;display:grid;grid-template-rows:auto auto auto auto}
+.poster{width:1600px;background:#fff;margin:0 auto;display:grid;grid-template-rows:auto auto auto auto}
 
 /* HEADER */
 .hdr{background:#8C1D40;color:#fff;padding:14px 24px 10px;border-bottom:5px solid #FFC627;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
@@ -24,7 +24,7 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:11px;li
 .rq span{color:#FFC627;font-weight:700;font-style:normal}
 
 /* BODY */
-.body{display:grid;grid-template-columns:272px 288px 340px 272px;align-items:stretch}
+.body{display:grid;grid-template-columns:372px 388px 452px 372px;align-items:stretch}
 .col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f8f8f8;min-height:820px}
 .col:nth-child(even){background:#f2f2f2}
 .col:last-child{border-right:none}
@@ -441,18 +441,9 @@ li{font-size:10px;margin-bottom:2px}
 </div><!-- /poster -->
 
 <style>
-html,body{margin:0;padding:8px;background:#444;display:flex;justify-content:center;align-items:flex-start;min-height:100vh}
-.poster{width:1188px;transform-origin:top center;flex-shrink:0}
+html,body{margin:0;padding:0;background:#444;overflow-x:auto;overflow-y:auto}
+body{display:flex;justify-content:flex-start;align-items:flex-start;min-height:100vh;padding:12px}
+.poster{width:1600px;flex-shrink:0}
 </style>
-<script>
-function fitPoster(){
-  var p=document.querySelector('.poster');
-  var s=Math.min(1,(window.innerWidth-16)/1188);
-  p.style.transform='scale('+s+')';
-  p.style.marginBottom=((p.offsetHeight*s)-p.offsetHeight)+'px';
-}
-window.addEventListener('load',fitPoster);
-window.addEventListener('resize',fitPoster);
-</script>
 </body>
 </html>

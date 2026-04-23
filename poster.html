@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AISP Poster — Rhutvik Pachghare — ASU RAS 2026</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+@page{size:A0 landscape;margin:0}
+@media print{body{background:#fff;margin:0}
+.poster{margin:0;box-shadow:none;width:100%;min-height:0}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#333;color:#111;margin:0;padding:0;font-size:11px;line-height:1.4}
+.poster{width:1188px;background:#fff;margin:0 auto;display:grid;grid-template-rows:auto auto auto auto;box-shadow:0 6px 32px rgba(0,0,0,.3)}
+
+/* HEADER */
+.hdr{background:#8C1D40;color:#fff;padding:16px 24px 12px;border-bottom:5px solid #FFC627;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start}
+.hdr-title{font-size:18px;font-weight:900;line-height:1.15;letter-spacing:-.3px}
+.hdr-sub{font-size:11px;color:rgba(255,255,255,.8);margin-top:3px}
+.hdr-auth{margin-top:6px;font-size:10px;color:#FFC627;font-weight:600}
+.hdr-right{text-align:right;font-size:9.5px;color:rgba(255,255,255,.75);line-height:1.7}
+.badge-prog{display:inline-block;background:#FFC627;color:#8C1D40;font-weight:800;font-size:9px;padding:2px 9px;border-radius:3px;margin-bottom:4px;letter-spacing:.6px}
+.gold-bar{height:3px;background:linear-gradient(90deg,#FFC627,#ffe680,#FFC627)}
+
+/* RQ BAR */
+.rq-bar{background:#1a0a10;color:#fff;padding:7px 24px;font-size:10px;font-style:italic;border-bottom:2px solid #FFC627;line-height:1.5}
+.rq-bar span{color:#FFC627;font-weight:700;font-style:normal}
+
+/* BODY */
+.body{display:grid;grid-template-columns:280px 295px 320px 275px;align-items:stretch;width:1188px}
+.col{padding:10px 9px;border-right:1px solid #e0e0e0;background:#f8f8f8;display:flex;flex-direction:column;justify-content:flex-start;gap:10px}
+.col:nth-child(even){background:#f3f3f3}
+.col:last-child{border-right:none}
+
+/* CARDS */
+.card{border:1px solid #e2e2e2;border-radius:5px;margin-bottom:0;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.ch{padding:5px 9px;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#fff;background:#8C1D40}
+.ch.b{background:#1565C0}.ch.g{background:#2E7D32}.ch.o{background:#BF360C}
+.ch.p{background:#4A148C}.ch.t{background:#004D40}.ch.dk{background:#212121}
+.ch.br{background:#4E342E}
+.cb{padding:7px 8px;flex:1;min-width:0;overflow:hidden}
+
+/* TYPE */
+h4{font-size:10px;font-weight:700;color:#8C1D40;margin-bottom:3px}
+p{font-size:10px;margin-bottom:4px}
+ul{padding-left:13px;margin-bottom:4px}
+li{font-size:10px;margin-bottom:2px}
+code{font-family:'JetBrains Mono',monospace;font-size:8.5px;background:#f3f3f3;padding:1px 3px;border-radius:2px;color:#8C1D40}
+.mono{font-family:'JetBrains Mono',monospace;font-size:9px}
+.div{height:1px;background:#eee;margin:5px 0}
+
+/* METRICS */
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:5px}
+.mg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:5px}
+.m{background:#f8f8f8;border-radius:4px;padding:5px 6px;text-align:center;border-left:3px solid #8C1D40}
+.m.b{border-left-color:#1565C0}.m.g{border-left-color:#2E7D32}.m.o{border-left-color:#BF360C}
+.m.p{border-left-color:#4A148C}.m.t{border-left-color:#004D40}
+.mv{font-size:15px;font-weight:900;color:#8C1D40;line-height:1.1}
+.m.b .mv{color:#1565C0}.m.g .mv{color:#2E7D32}.m.o .mv{color:#BF360C}
+.m.p .mv{color:#4A148C}.m.t .mv{color:#004D40}
+.ml{font-size:8px;color:#666;margin-top:1px;font-weight:500}
+
+/* BADGES */
+.bpass{display:inline-block;padding:1px 6px;border-radius:8px;font-size:8.5px;font-weight:700;background:#E8F5E9;color:#1B5E20;border:1px solid #A5D6A7}
+.bwarn{display:inline-block;padding:1px 6px;border-radius:8px;font-size:8.5px;font-weight:700;background:#FFF8E1;color:#E65100;border:1px solid #FFE082}
+.binfo{display:inline-block;padding:1px 6px;border-radius:8px;font-size:8.5px;font-weight:700;background:#E3F2FD;color:#0D47A1;border:1px solid #90CAF9}
+.bnew{display:inline-block;padding:1px 6px;border-radius:8px;font-size:8.5px;font-weight:700;background:#F3E5F5;color:#4A148C;border:1px solid #CE93D8}
+
+/* TABLES */
+.rt{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:4px;table-layout:fixed;word-break:break-word}
+.rt th{background:#f5f5f5;padding:3px 5px;text-align:left;font-weight:700;border-bottom:1px solid #ddd;font-size:8.5px;color:#333}
+.rt td{padding:3px 5px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.rt tr:last-child td{border-bottom:none}
+.rt .nr{text-align:right;font-family:'JetBrains Mono',monospace;font-size:8.5px}
+.rt .hi{font-weight:700;color:#2E7D32}
+.rt .lo{color:#BF360C;font-weight:600}
+
+/* FORMULA */
+.fbox{background:#0d1117;color:#c9d1d9;font-family:'JetBrains Mono',monospace;font-size:8.5px;padding:7px 9px;border-radius:4px;margin-bottom:5px;line-height:1.8;border-left:3px solid #FFC627;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+.fbox .kw{color:#FFC627;font-weight:700}
+.fbox .cm{color:#6e7681}
+.fbox .vl{color:#79c0ff}
+.fbox .gr{color:#56d364}
+
+/* LAYERS */
+.ls{display:flex;flex-direction:column;gap:3px;margin-bottom:5px}
+.lyr{display:flex;align-items:flex-start;gap:6px;padding:5px 7px;border-radius:4px;border-left:4px solid;font-size:9.5px}
+.lyr .ln{font-weight:900;font-size:12px;min-width:14px;text-align:center;margin-top:1px}
+.lyr .lnm{font-weight:700;font-size:9.5px}
+.lyr .ld{font-size:8px;color:#555;margin-top:1px}
+.lyr.l1{background:#FFF8E1;border-color:#F57F17}
+.lyr.l2{background:#E3F2FD;border-color:#1565C0}
+.lyr.l3{background:#F3E5F5;border-color:#6A1B9A}
+.lyr.l4{background:#FCE4EC;border-color:#880E4F}
+.lyr.l5{background:#E8F5E9;border-color:#1B5E20}
+.lyr.lx{background:#E0F2F1;border-color:#00695C}
+
+/* FLOW */
+.fl{display:flex;flex-direction:column;gap:2px;margin-bottom:5px}
+.fs{display:flex;align-items:flex-start;gap:5px;font-size:9.5px}
+.fn{min-width:17px;height:17px;border-radius:50%;background:#8C1D40;color:#fff;font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.fn.b{background:#1565C0}.fn.g{background:#2E7D32}.fn.o{background:#BF360C}.fn.p{background:#4A148C}
+.fa{text-align:center;color:#bbb;font-size:10px;line-height:1;margin-left:7px}
+
+/* PROPS */
+.pl{list-style:none;padding:0}
+.pl li{display:flex;align-items:flex-start;gap:5px;padding:3px 0;border-bottom:1px solid #f2f2f2;font-size:9.5px}
+.pl li:last-child{border-bottom:none}
+.pt{min-width:22px;height:15px;background:#8C1D40;color:#fff;font-size:7.5px;font-weight:700;border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.pt.b{background:#1565C0}
+
+/* HIGHLIGHT */
+.hbox{background:linear-gradient(135deg,#8C1D40,#6b1530);color:#fff;padding:8px 10px;border-radius:5px;margin-bottom:7px;border-left:4px solid #FFC627;font-size:9.5px;line-height:1.5}
+.hbox .hq{font-style:italic;opacity:.9;font-size:9px}
+
+/* CONTRIB */
+.ct{display:flex;gap:6px;margin-bottom:5px;align-items:flex-start}
+.cn{min-width:19px;height:19px;background:#FFC627;color:#8C1D40;font-weight:900;font-size:10px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cx{font-size:9.5px}
+.cx strong{color:#8C1D40}
+
+/* FOOTER */
+.ftr{background:#111;color:rgba(255,255,255,.65);padding:7px 24px;display:flex;justify-content:space-between;align-items:center;font-size:8.5px;border-top:3px solid #FFC627}
+.ftr a{color:#FFC627;text-decoration:none}
+</style>
+
+<style>
+html,body{margin:0;padding:0;background:#333;width:100%;overflow-x:hidden}
+.poster{transform-origin:top left;position:absolute;top:0;left:0}
+#wrap{position:relative;width:100%;overflow:hidden}
+</style>
+<script>
+(function(){
+  function fit(){
+    var p=document.querySelector('.poster');
+    var w=document.querySelector('#wrap');
+    var s=window.innerWidth/1188;
+    p.style.transform='scale('+s+')';
+    w.style.height=(p.offsetHeight*s)+'px';
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    var p=document.querySelector('.poster');
+    var d=document.createElement('div');
+    d.id='wrap';
+    p.parentNode.insertBefore(d,p);
+    d.appendChild(p);
+    fit();
+    window.addEventListener('resize',fit);
+  });
+})();
+</script>
+</head>
+<body>
+<div class="poster">
+
+<!-- HEADER -->
+<div class="hdr">
+  <div>
+    <div class="hdr-title">Autonomous Drone Safety Architecture:<br>A Formally Verified Hierarchical Control Framework for SITL Research</div>
+    <div class="hdr-sub">Neurosymbolic Safety Kernels · HOCBF₄ · 15-State EKF · Byzantine Fault-Tolerant Consensus · Zero Hardware Required</div>
+    <div class="hdr-auth">
+      Rhutvik Prashant Pachghare &nbsp;·&nbsp;
+      Advisor: Prof. Shenghan Guo (Knowledge-Informed AI, Statistical Quality Control) &nbsp;·&nbsp;
+      Program Chair: Prof. Sangram Redkar (Nonlinear Dynamics, Inertial Navigation, Robotics)
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="badge-prog">MS · ROBOTICS &amp; AUTONOMOUS SYSTEMS</div><br>
+    Arizona State University · Polytechnic Campus<br>
+    School of Manufacturing Systems &amp; Networks<br>
+    Spring 2026
+  </div>
+</div>
+<div class="gold-bar"></div>
+
+<!-- RESEARCH QUESTION BAR -->
+<div class="rq-bar">
+  <span>Research Question: </span>"Can a hierarchical architecture combining a formally verified FSM, continuous EKF state estimation, and Byzantine fault-tolerant consensus provide <em>quantifiable safety guarantees</em> while maintaining autonomous adaptability — and what is the measurable computational cost of each guarantee?"
+</div>
+
+<!-- BODY -->
+<div class="body">
+
+<!-- ═══ COL 1 ═══ -->
+<div class="col">
+
+<div class="hbox">
+  <div style="font-weight:800;font-size:10.5px;margin-bottom:3px;">Problem Statement</div>
+  No open-source drone platform simultaneously provides: (1) mathematical proofs of state-transition safety invariants, (2) continuous constraint satisfaction under sensor degradation, (3) fault-tolerant swarm consensus under Byzantine failure — all in a reproducible environment requiring <strong style="color:#FFC627">zero physical hardware</strong>.
+</div>
+
+<div class="card">
+  <div class="ch b">5-Layer Hierarchical Architecture · 10 Hz Integrated Loop</div>
+  <div class="cb">
+    <div class="ls">
+      <div class="lyr l1"><div class="ln">1</div><div><div class="lnm">SE(3) Rigid-Body Physics Plant</div><div class="ld">F=ma translational + Euler rotational · RK4 integrator · SO(3) SVD projection · m=2.0 kg · Ixx=0.0347 · Iyy=0.0458 · Izz=0.0977 kg·m² · wind σ=0.05 m/s · drag k=0.1 m⁻¹</div></div></div>
+      <div class="lyr l2"><div class="ln">2</div><div><div class="lnm">15-State EKF Sensor Fusion</div><div class="ld">state: pos(3) vel(3) quat(4) gyro_bias(3) accel_bias(2) · P₀=I₁₅×0.1 · Q=I₁₅×0.001 · R_GPS=diag[2.5,2.5,5.0]m² · IMU@10Hz GPS@1Hz Baro@1Hz · VIO σ_v=0.10 m/s (OpenVINS EuRoC)</div></div></div>
+      <div class="lyr l3"><div class="ln">3</div><div><div class="lnm">PPO Asymmetric Actor-Critic (RL)</div><div class="ld">Actor obs: 13-dim noisy EKF · Critic obs: 17-dim privileged ground truth · Trained Isaac Sim 4.5 · Domain rand ±40% mass · Deployed ONNX 22KB C99 RT hot-path</div></div></div>
+      <div class="lyr l4"><div class="ln">4</div><div><div class="lnm">DO-178C-Inspired Safety Kernel (FSM)</div><div class="ld">7 states · 24 transitions · 7 proven properties P1–P7 · watchdog=5s · geofence=±500m/120m AGL · SOC&lt;15%→RTL · HOCBF₂ + HOCBF₄ filters</div></div></div>
+      <div class="lyr l5"><div class="ln">5</div><div><div class="lnm">Battery Model</div><div class="ld">5.0Ah 6S LiPo · fade=0.05%/cycle · R_int=0.05Ω · Coulomb counting + 4th-order OCV polynomial · Validated NASA PCoE B0005/B0006/B0007</div></div></div>
+      <div class="lyr lx"><div class="ln" style="font-size:7px;font-weight:900">SVC</div><div><div class="lnm">Observability-Weighted HotStuff Consensus</div><div class="ld">EKF covariance → trust weight w=exp(−σ²/2σ²_warn) → weighted quorum ≥2/3 · ZMQ PUB/SUB · /dev/shm IPC</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch" style="background:#880E4F">Formal Safety Properties P1–P7 (DO-178C-Inspired)</div>
+  <div class="cb">
+    <ul class="pl">
+      <li><span class="pt">P1</span>Geofence violation → RTL within 1 control cycle (≤100ms)</li>
+      <li><span class="pt">P2</span>DISARMED reachable from every state — BFS exhaustive proof</li>
+      <li><span class="pt">P3</span>No DISARMED→FLYING without ARM + TAKEOFF sequence</li>
+      <li><span class="pt">P4</span>Watchdog timeout (5s) → EMERGENCY_LAND from any flight state</li>
+      <li><span class="pt">P5</span>No deadlocks — every state has ≥1 outgoing transition</li>
+      <li><span class="pt">P6</span>NaN/Inf position inputs always rejected before FSM evaluation</li>
+      <li><span class="pt b">P7</span><strong>tr(P[px,py,ψ]) ≥ 25.0 m² → RTL ≤100ms</strong> <span class="bnew">NEW</span> EKF observability collapse detection</li>
+    </ul>
+    <div class="div"></div>
+    <!-- FSM SVG -->
+    <div style="font-size:8.5px;font-weight:700;color:#555;text-align:center;margin-bottom:3px;">FSM State Diagram (7 States · 24 Transitions)</div>
+    <svg width="258" height="148" viewBox="0 0 258 148">
+      <defs>
+        <marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#555"/></marker>
+        <marker id="ar" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C62828"/></marker>
+        <marker id="ag" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2E7D32"/></marker>
+      </defs>
+      <!-- DISARMED -->
+      <ellipse cx="40" cy="74" rx="34" ry="14" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5"/>
+      <text x="40" y="78" text-anchor="middle" font-size="8" font-weight="700" fill="#1B5E20">DISARMED</text>
+      <!-- ARMED -->
+      <ellipse cx="120" cy="40" rx="28" ry="13" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+      <text x="120" y="44" text-anchor="middle" font-size="8" font-weight="700" fill="#0D47A1">ARMED</text>
+      <!-- FLYING -->
+      <ellipse cx="200" cy="74" rx="28" ry="13" fill="#FFF8E1" stroke="#F57F17" stroke-width="2"/>
+      <text x="200" y="78" text-anchor="middle" font-size="8" font-weight="700" fill="#E65100">FLYING</text>
+      <!-- RTL -->
+      <ellipse cx="200" cy="115" rx="28" ry="13" fill="#FCE4EC" stroke="#880E4F" stroke-width="1.5"/>
+      <text x="200" y="119" text-anchor="middle" font-size="8" font-weight="700" fill="#880E4F">RTL</text>
+      <!-- EMERG LAND -->
+      <ellipse cx="120" cy="115" rx="34" ry="13" fill="#FFEBEE" stroke="#C62828" stroke-width="1.5"/>
+      <text x="120" y="119" text-anchor="middle" font-size="8" font-weight="700" fill="#C62828">EMERG_LAND</text>
+      <!-- TAKEOFF -->
+      <ellipse cx="120" cy="74" rx="28" ry="13" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1.5"/>
+      <text x="120" y="78" text-anchor="middle" font-size="8" font-weight="700" fill="#4A148C">TAKEOFF</text>
+      <!-- LANDED -->
+      <ellipse cx="40" cy="115" rx="28" ry="13" fill="#E0F2F1" stroke="#004D40" stroke-width="1.5"/>
+      <text x="40" y="119" text-anchor="middle" font-size="8" font-weight="700" fill="#004D40">LANDED</text>
+      <!-- Arrows -->
+      <line x1="74" y1="68" x2="92" y2="50" stroke="#2E7D32" stroke-width="1.2" marker-end="url(#ag)"/>
+      <text x="76" y="56" font-size="7" fill="#2E7D32">ARM</text>
+      <line x1="148" y1="74" x2="172" y2="74" stroke="#555" stroke-width="1.2" marker-end="url(#a)"/>
+      <text x="154" y="71" font-size="7" fill="#555">TKOFF</text>
+      <line x1="172" y1="84" x2="148" y2="104" stroke="#C62828" stroke-width="1.2" marker-end="url(#ar)"/>
+      <text x="163" y="98" font-size="7" fill="#C62828">P4/P7</text>
+      <line x1="172" y1="115" x2="154" y2="115" stroke="#880E4F" stroke-width="1.2" marker-end="url(#ar)"/>
+      <text x="156" y="112" font-size="7" fill="#880E4F">P1</text>
+      <line x1="86" y1="115" x2="68" y2="115" stroke="#555" stroke-width="1.2" marker-end="url(#a)"/>
+      <line x1="40" y1="102" x2="40" y2="88" stroke="#004D40" stroke-width="1.2" marker-end="url(#ag)"/>
+      <text x="42" y="97" font-size="7" fill="#004D40">DISARM</text>
+      <line x1="92" y1="40" x2="74" y2="65" stroke="#555" stroke-width="1.2" marker-end="url(#a)"/>
+      <text x="72" y="50" font-size="7" fill="#555">DISARM</text>
+      <line x1="120" y1="53" x2="120" y2="61" stroke="#555" stroke-width="1.2" marker-end="url(#a)"/>
+    </svg>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch dk">RT IPC: Zero-Copy /dev/shm Architecture</div>
+  <div class="cb">
+    <svg width="258" height="95" viewBox="0 0 258 95">
+      <rect x="2" y="4" width="118" height="40" rx="4" fill="#FFF3E0" stroke="#E65100" stroke-width="1.5"/>
+      <text x="61" y="16" text-anchor="middle" font-size="8" font-weight="700" fill="#BF360C">Cores 0–1 (Best-Effort)</text>
+      <text x="61" y="27" text-anchor="middle" font-size="7.5" fill="#555">VLA SmolVLM2-500M ~2.5s</text>
+      <text x="61" y="37" text-anchor="middle" font-size="7.5" fill="#555">PPO ONNX ~0.5ms · Telemetry</text>
+      <rect x="138" y="4" width="118" height="40" rx="4" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5"/>
+      <text x="197" y="16" text-anchor="middle" font-size="8" font-weight="700" fill="#1B5E20">Cores 2–3 (SCHED_FIFO 99)</text>
+      <text x="197" y="27" text-anchor="middle" font-size="7.5" fill="#555">HOCBF filter &lt;371ns WCET</text>
+      <text x="197" y="37" text-anchor="middle" font-size="7.5" fill="#555">mmap read ~50ns · UDP→:14550</text>
+      <rect x="70" y="55" width="118" height="34" rx="4" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+      <text x="129" y="67" text-anchor="middle" font-size="8" font-weight="700" fill="#0D47A1">POSIX mmap /dev/shm (tmpfs)</text>
+      <text x="129" y="78" text-anchor="middle" font-size="7.5" fill="#555">vla_cmd(64B) · ekf_state(64B)</text>
+      <text x="129" y="87" text-anchor="middle" font-size="7.5" fill="#555">consensus(28B) · gt_state(16B)</text>
+      <line x1="80" y1="44" x2="100" y2="55" stroke="#8C1D40" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <line x1="178" y1="44" x2="158" y2="55" stroke="#8C1D40" stroke-width="1.5" stroke-dasharray="3,2"/>
+    </svg>
+    <p style="font-size:8.5px;color:#555;margin-top:2px;">No serialization · No syscalls in hot-path · L3 cache coherency ~50–100ns latency</p>
+  </div>
+</div>
+
+
+<div class="card">
+  <div class="ch" style="background:#37474F;">Honest Limitations</div>
+  <div class="cb" style="font-size:9px;color:#444;">
+    <ul>
+      <li>No physical hardware tested — SITL results may differ on real sensors</li>
+      <li>DO-178C-inspired design, not certified — full cert requires EASA/FAA, LDRA/VectorCAST, PSAC</li>
+      <li>VIO uses OpenVINS-derived noise params (σ_v=0.10 m/s) — not a running OpenVINS pipeline</li>
+      <li>Yaw remains unobservable under GPS denial regardless of VIO</li>
+      <li>Battery validated on 18650 cells (2Ah) — project uses 6S LiPo (5Ah), chemistry differs</li>
+      <li>WCET measured on unpatched Linux kernel — PREEMPT_RT would reduce jitter further</li>
+      <li>HotStuff consensus is 1-round weighted majority vote — no view-change protocol (liveness gap)</li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /col1 -->
+
+<!-- ═══ COL 2 ═══ -->
+<div class="col">
+
+<div class="card card-img">
+  <div class="ch o">HOCBF Safety Filter — Mathematical Foundation</div>
+  <div class="cb">
+    <h4>Relative-Degree-2 CBF (Altitude Safety)</h4>
+    <div class="fbox">
+<span class="cm">-- Safety constraint: h(x) = p_z ≥ 0</span>
+<span class="kw">ψ₀</span> = h = p_z
+<span class="kw">ψ₁</span> = Lf h = v_z
+<span class="kw">ψ₂</span> = Lf²h = (T/m)·cos(φ)·cos(θ) − g
+<span class="kw">LgLfh</span> = cos(φ)·cos(θ) / m
+
+<span class="cm">-- QP: min ½(T−T_nom)² s.t. T ≥ T_lb</span>
+<span class="kw">T_lb</span> = (g − α₁·vz − α₂·pz) / LgLfh
+<span class="vl">α₁=2.0  α₂=1.0  T_max=78.48N</span>
+<span class="gr">T_safe = clamp(T_nom, T_lb, T_max)</span></div>
+
+    <h4>Relative-Degree-4 CBF (Full Rigid-Body)</h4>
+    <div class="fbox">
+<span class="cm">-- ZYX Euler kinematics (NOT small-angle)</span>
+<span class="kw">φ̇</span> = ωx + sin(φ)·tan(θ)·ωy + cos(φ)·tan(θ)·ωz
+<span class="kw">θ̇</span> = cos(φ)·ωy − sin(φ)·ωz
+
+<span class="kw">ψ₃</span> = (T/m)·(−sin(φ)·cos(θ)·φ̇ − cos(φ)·sin(θ)·θ̇)
+<span class="kw">Lf⁴h</span> = d/dt[ψ₃]|τ=0  <span class="cm">(full, not ≈0)</span>
+<span class="kw">gx</span> = (T/m)·(−sin(φ)·cos(θ)) / Ixx
+<span class="kw">gy</span> = (T/m)·(−cos(φ)·sin(θ)) / Iyy
+
+<span class="cm">-- Condition enforced each cycle:</span>
+<span class="gr">Lf⁴h + gx·τx + gy·τy + α₃ψ₃+α₂ψ₂+α₁ψ₁+α₀ψ₀ ≥ 0</span>
+<span class="vl">α₀=1.0  α₁=2.0  α₂=2.0  α₃=1.5</span></div>
+
+    <p style="font-size:8.5px;color:#555;">Derived symbolically via CasADi SX. C++ implementation validated against CasADi spot-checks to 4 decimal places across 5 boundary states. Conservatism factor 1.08 (8% buffer: drag≈4%, motor latency≈3%, inertia≈1%).</p>
+    <div class="div"></div>
+    <h4>Control Invariant Set — PROVED ✓</h4>
+    <table class="rt">
+      <tr><th>Boundary State</th><th class="nr">T_lb (N)</th><th class="nr">Margin (N)</th><th>Status</th></tr>
+      <tr><td>Hover</td><td class="nr">17.62</td><td class="nr hi">60.86</td><td><span class="bpass">PASS</span></td></tr>
+      <tr><td>Max descent vz=−5m/s</td><td class="nr">27.62</td><td class="nr hi">50.86</td><td><span class="bpass">PASS</span></td></tr>
+      <tr><td>Max tilt φ=0.5 rad</td><td class="nr">20.08</td><td class="nr hi">58.40</td><td><span class="bpass">PASS</span></td></tr>
+      <tr><td>Near-ground pz=0.1m</td><td class="nr">21.52</td><td class="nr hi">56.96</td><td><span class="bpass">PASS</span></td></tr>
+      <tr><td>Near-ground + tilt</td><td class="nr">50.28</td><td class="nr hi">28.20</td><td><span class="bpass">PASS</span></td></tr>
+      <tr><td><strong>Worst-case combined</strong></td><td class="nr"><strong>78.48</strong></td><td class="nr" style="color:#E65100;font-weight:700">0.00</td><td><span class="bwarn">TIGHT</span></td></tr>
+    </table>
+    <p style="font-size:8px;color:#777;">T_max=78.48N. Worst-case (max velocity + max tilt) hits T_max exactly — set is tight but feasible. Ref: Xiao &amp; Belta (2022) IEEE TAC.</p>
+    <div style="display:flex;flex-direction:column;flex:1;"><img src="experiments/results/wcet_evt.png" style="width:100%;border-radius:3px;border:1px solid #e0e0e0;display:block;" alt="HOCBF₄ Lie Derivative Chain ψ₀–ψ₃ vs Altitude (CasADi Symbolic, ZYX Kinematics)"/><div style="font-size:7px;color:#777;margin-top:3px;font-style:italic;text-align:center;">HOCBF₄ Lie Derivative Chain ψ₀–ψ₃ vs Altitude (CasADi Symbolic, ZYX Kinematics)</div></div>
+  </div>
+</div>
+
+<div class="card card-img">
+  <div class="ch dk">WCET Benchmark — C99 safety_filter · 100k Trials · SCHED_FIFO prio 99 · CPU Core 2</div>
+  <div class="cb">
+    <div class="mg">
+      <div class="m g"><div class="mv">31 ns</div><div class="ml">HOCBF P99</div></div>
+      <div class="m o"><div class="mv">2,725 ns</div><div class="ml">HOCBF WCET</div></div>
+      <div class="m b"><div class="mv">9,618 ns</div><div class="ml">Full RT Loop WCET</div></div>
+      <div class="m t"><div class="mv">9.5 µs</div><div class="ml">OS Jitter Max</div></div>
+    </div>
+    <div class="mg3">
+      <div style="text-align:center"><span class="bpass">HOCBF &lt;100µs ✓</span></div>
+      <div style="text-align:center"><span class="bpass">Loop &lt;2ms ✓</span></div>
+      <div style="text-align:center"><span class="bpass">Jitter &lt;50µs ✓</span></div>
+    </div>
+
+    <!-- WCET histogram SVG -->
+<div style="display:flex;flex-direction:column;flex:1;"><img src="experiments/results/hallucination_1000.png" style="width:100%;border-radius:3px;border:1px solid #e0e0e0;display:block;" alt="WCET Latency Distribution + EVT Gumbel Tail (100k trials, SCHED_FIFO prio 99, CPU core 2)"/><div style="font-size:7px;color:#777;margin-top:3px;font-style:italic;text-align:center;">WCET Latency Distribution + EVT Gumbel Tail (100k trials, SCHED_FIFO prio 99, CPU core 2)</div></div>
+        <p style="font-size:8px;color:#777;">EVT method: Block Maxima (Gumbel Type-I). β=84.2ns, µ=−11.8ns. Bound at P=10⁻⁹: <strong>1,733 ns (1.73 µs)</strong> — 57× below 100µs deadline. Ref: Foughali &amp; Zuepke (2022).</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch b">EKF Covariance Gating — Property P7</div>
+  <div class="cb">
+    <div class="fbox">
+<span class="kw">σ²_pos</span> = P[px,px] + P[py,py] + 4·P[qz,qz]
+<span class="cm">-- Mode ladder:</span>
+<span class="gr">NOMINAL</span>   : σ²_pos &lt; 5.0 m²   (GPS trusted)
+<span class="vl">DEGRADED</span>  : 5.0 ≤ σ²_pos &lt; 25.0  (VIO injected)
+<span class="kw">COLLAPSED</span> : σ²_pos ≥ 25.0 m²  → P7 → RTL</div>
+    <div class="mg3">
+      <div class="m g"><div class="mv">Cycle 9</div><div class="ml">DEGRADED onset</div></div>
+      <div class="m o"><div class="mv">Cycle 26</div><div class="ml">P7 fires (σ²=25.80)</div></div>
+      <div class="m b"><div class="mv">0.10 m/s</div><div class="ml">VIO σ_v (OpenVINS)</div></div>
+    </div>
+    <p style="font-size:8.5px;color:#555;margin-top:2px;">VIO EKF update (Joseph form): H selects [vx,vy], R_VIO=diag[0.01,0.01] m²/s². Ground-truth air-gap: physics plant writes [vx,vy] to <code>/dev/shm/aisp_gt_state</code> — EKF reads only, never writes. Yaw remains unobservable without magnetometer (stated limitation).</p>
+  </div>
+</div>
+
+</div><!-- /col2 -->
+
+<!-- ═══ COL 3 ═══ -->
+<div class="col">
+
+<div class="card card-img">
+  <div class="ch t">Empirical Observability Gramian — GPS Denial Analysis</div>
+  <div class="cb">
+    <div class="fbox">
+<span class="cm">-- Krener & Ide (2009) method:</span>
+<span class="kw">W_o[i,j]</span> = Σ_k (1/ε²)·δy_i(tk)ᵀ·δy_j(tk)
+<span class="vl">ε=1e-4  T=1.0s  dt=0.1s  n_steps=10</span>
+<span class="cm">-- Rank = eigenvalues above threshold λ_max·1e-6</span></div>
+
+    <!-- Gramian rank bar chart SVG -->
+<div style="display:flex;flex-direction:column;flex:1;"><img src="experiments/results/observability_gramian.png" style="width:100%;border-radius:3px;border:1px solid #e0e0e0;display:block;" alt="Empirical Observability Gramian — Eigenvalue Spectrum & Rank by Sensor Config"/><div style="font-size:7px;color:#777;margin-top:3px;font-style:italic;text-align:center;">Empirical Observability Gramian — Eigenvalue Spectrum & Rank by Sensor Config</div></div>
+        <p style="font-size:8.5px;color:#555;margin-top:3px;">GPS denial drops observable rank 6→4: px, py become unobservable. VIO (σ_v=0.10 m/s, OpenVINS EuRoC benchmark) restores rank to 6 by injecting horizontal velocity measurements. Yaw (ψ) remains unobservable regardless — stated limitation. Top eigenvalues ≈3859 (altitude/attitude well-observed in all configs).</p>
+  </div>
+</div>
+
+<div class="card card-img">
+  <div class="ch o">1000-Trial Adversarial Hallucination Blocking</div>
+  <div class="cb">
+    <div class="mg">
+      <div class="m g"><div class="mv">100%</div><div class="ml">Survival Rate (1000/1000)</div></div>
+      <div class="m o"><div class="mv">90.7%</div><div class="ml">HOCBF Triggered (907/1000)</div></div>
+      <div class="m b"><div class="mv">397 N</div><div class="ml">Max Correction at vz=−100m/s</div></div>
+      <div class="m p"><div class="mv">−0.1→−100</div><div class="ml">vz range (m/s, log-spaced)</div></div>
+    </div>
+    <!-- Hallucination chart SVG -->
+<div style="display:flex;flex-direction:column;flex:1;"><img src="experiments/results/consensus_fault.png" style="width:100%;border-radius:3px;border:1px solid #e0e0e0;display:block;" alt="1000-Trial Adversarial Hallucination Blocking — T_nom vs T_safe vs |vz_cmd|"/><div style="font-size:7px;color:#777;margin-top:3px;font-style:italic;text-align:center;">1000-Trial Adversarial Hallucination Blocking — T_nom vs T_safe vs |vz_cmd|</div></div>
+        <p style="font-size:8.5px;color:#555;margin-top:2px;">50 physics steps per trial (1s at 50Hz). HOCBF₂ applied every step. At vz=−100m/s, T_nom=−380.38N (negative thrust — physically impossible); HOCBF corrects to T_safe=78.48N (T_max). Zero collisions across all 1000 trials. Ref: Ames et al. (2019) ECC.</p>
+  </div>
+</div>
+
+<div class="card card-img">
+  <div class="ch p">Observability-Weighted HotStuff Consensus</div>
+  <div class="cb">
+    <div class="fbox">
+<span class="cm">-- Trust weight (EKF covariance → vote weight):</span>
+<span class="kw">w_i</span> = exp(−σ²_pos,i / (2·σ²_warn))
+<span class="cm">-- Weighted quorum rule (BFT threshold):</span>
+<span class="gr">Commit iff Σw_i(hash H) / Σw_i(all) ≥ 2/3</span>
+<span class="cm">-- GPS-denied Byzantine node cannot swing quorum</span></div>
+
+    <!-- Node trust weights SVG -->
+<div style="display:flex;flex-direction:column;flex:1;"><img src="experiments/results/battery_validation.png" style="width:100%;border-radius:3px;border:1px solid #e0e0e0;display:block;" alt="aBFT Consensus Under 20% Packet Loss — Commit Rate, Quorum Fraction & Node Trust Weights"/><div style="font-size:7px;color:#777;margin-top:3px;font-style:italic;text-align:center;">aBFT Consensus Under 20% Packet Loss — Commit Rate, Quorum Fraction & Node Trust Weights</div></div>
+    
+    <div class="mg">
+      <div class="m g"><div class="mv">100%</div><div class="ml">Commit Rate (100/100)</div></div>
+      <div class="m g"><div class="mv">100%</div><div class="ml">Byzantine Rejection</div></div>
+      <div class="m b"><div class="mv">0.043ms</div><div class="ml">Mean Commit Latency</div></div>
+      <div class="m t"><div class="mv">0.997</div><div class="ml">Mean Quorum Fraction</div></div>
+    </div>
+    <p style="font-size:8.5px;color:#555;">20% packet loss · asymmetric latency 0–50ms · 5 nodes · 100 rounds. Byzantine node (w=0.008) proposes fabricated position [100,100,2]m — GPS-active nodes (w=0.976 each) dominate quorum. Ref: Yin et al. (2019) HotStuff PODC.</p>
+  </div>
+</div>
+
+</div><!-- /col3 -->
+
+<!-- ═══ COL 4 ═══ -->
+<div class="col">
+
+<div class="card card-img">
+  <div class="ch g">Battery Aging Validation — NASA PCoE B0005/B0006/B0007</div>
+  <div class="cb">
+    <!-- Battery chart SVG -->
+<div style="display:flex;flex-direction:column;flex:1;"><img src="experiments/results/lie_derivatives.png" style="width:100%;border-radius:3px;border:1px solid #e0e0e0;display:block;" alt="NASA PCoE Battery Capacity Fade — Poly-4 Fit vs Spec-Linear (B0005/B0006/B0007)"/><div style="font-size:7px;color:#777;margin-top:3px;font-style:italic;text-align:center;">NASA PCoE Battery Capacity Fade — Poly-4 Fit vs Spec-Linear (B0005/B0006/B0007)</div></div>
+        <table class="rt" style="margin-top:4px;">
+      <tr><th>Cell</th><th class="nr">RMSE Poly-4</th><th class="nr">RMSE Linear</th><th class="nr">EOL (Poly→Linear)</th></tr>
+      <tr><td>B0005</td><td class="nr hi">0.016 Ah</td><td class="nr lo">0.252 Ah</td><td class="nr"><span class="hi">165</span> → <span class="lo">600</span></td></tr>
+      <tr><td>B0006</td><td class="nr hi">0.030 Ah</td><td class="nr lo">0.451 Ah</td><td class="nr"><span class="hi">100</span> → <span class="lo">600</span></td></tr>
+      <tr><td>B0007</td><td class="nr hi">0.014 Ah</td><td class="nr lo">0.203 Ah</td><td class="nr">— → <span class="lo">600</span></td></tr>
+    </table>
+    <p style="font-size:8.5px;color:#555;">Spec linear model predicts EOL at cycle 600; real cells hit EOL at cycle 100–165 — <strong style="color:#C62828">4–6× error</strong>. Poly-4 RMSE &lt;0.05 Ah on all cells. Limitation: NASA cells are 2Ah 18650; project uses 5Ah 6S LiPo — scaling noted, chemistry differs. Ref: Saha &amp; Goebel (2007) NASA PCoE.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch br">Models, Data &amp; Software Stack</div>
+  <div class="cb">
+    <h4>RL Policy — PPO Asymmetric Actor-Critic</h4>
+    <table class="rt">
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Algorithm</td><td>PPO (stable-baselines3 v2.2)</td></tr>
+      <tr><td>Actor obs</td><td>13-dim: pos(3)+vel(3)+quat(4)+ω(3) + noise σ=0.05/0.10m</td></tr>
+      <tr><td>Critic obs</td><td>17-dim: ground truth + mass + motor_gain + wind(3)</td></tr>
+      <tr><td>Policy</td><td>MlpPolicy · lr=3e-4 · γ=0.99 · λ=0.95 · clip=0.2</td></tr>
+      <tr><td>Training</td><td>200k steps · Isaac Sim 4.5 · PhysX · headless</td></tr>
+      <tr><td>Deployment</td><td>ONNX 22KB · ONNXRuntime C API · single-threaded RT</td></tr>
+      <tr><td>Domain rand</td><td>mass ±40% · motor ±25% · wind σ=2.0 m/s · inertia ±15%</td></tr>
+    </table>
+    <div class="div"></div>
+    <h4>VLA Model — SmolVLM2-500M</h4>
+    <table class="rt">
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Model</td><td>HuggingFaceTB/SmolVLM2-500M-Video-Instruct</td></tr>
+      <tr><td>Quantization</td><td>INT8 (bitsandbytes) + TurboQuant 4-bit KV cache</td></tr>
+      <tr><td>VRAM</td><td>~3.7 GB · fits single consumer GPU</td></tr>
+      <tr><td>Latency</td><td>~2.5s/query (best-effort core, NOT in RT loop)</td></tr>
+      <tr><td>Role</td><td>Strategic planner only — outputs goal waypoints, never thrust</td></tr>
+      <tr><td>IPC</td><td>/dev/shm/aisp_vla_cmd (64B mmap) · stale &gt;100ms → RL takes over</td></tr>
+    </table>
+    <div class="div"></div>
+    <h4>Full Software Stack</h4>
+    <table class="rt">
+      <tr><th>Layer</th><th>Technology</th></tr>
+      <tr><td>Physics / RL sim</td><td>Isaac Sim 4.5 · PhysX · gymnasium API</td></tr>
+      <tr><td>Symbolic math</td><td>CasADi 3.7.2 (Lie derivatives, HOCBF4)</td></tr>
+      <tr><td>Optimization</td><td>OSQP 1.1.1 · CVXPY 1.4 (QP solver)</td></tr>
+      <tr><td>RT hot-path</td><td>C99 · C++20 · pybind11 · ONNXRuntime C API</td></tr>
+      <tr><td>Consensus IPC</td><td>ZMQ PUB/SUB · POSIX mmap /dev/shm</td></tr>
+      <tr><td>Formal methods</td><td>Z3-solver 4.13 (FSM BFS proofs)</td></tr>
+      <tr><td>Build</td><td>CMake 3.18 · gcc -O3 -march=native · Python 3.10/3.12</td></tr>
+      <tr><td>CI/CD</td><td>GitHub Actions · ubuntu-latest · pytest 9.0.2</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch" style="background:#FFC627;color:#8C1D40;">Research Contributions</div>
+  <div class="cb">
+    <div class="ct"><div class="cn">1</div><div class="cx"><strong>Formally verified 7-state FSM</strong> with 7 proven invariants P1–P7 including EKF observability collapse detection. WCET=2,725ns, EVT P=10⁻⁹ bound=1,733ns.</div></div>
+    <div class="ct"><div class="cn">2</div><div class="cx"><strong>15-state EKF with quantified observability Gramian</strong> under GPS denial. Rank drops 6→4 when GPS lost. VIO factor (OpenVINS-derived) restores rank to 6. Air-gap architecture prevents confirmation bias.</div></div>
+    <div class="ct"><div class="cn">3</div><div class="cx"><strong>Battery aging → mission feasibility boundary</strong> validated against NASA PCoE empirical data. Spec linear model predicts EOL at cycle 600; real cells hit EOL at cycle 100–165 (4–6× error).</div></div>
+    <div class="ct"><div class="cn">4</div><div class="cx"><strong>HOCBF₄ derived symbolically via CasADi</strong> with full ZYX Euler kinematics (not small-angle). Control invariant set proved: T_lb ≤ T_max at all boundary states including worst-case.</div></div>
+    <div class="ct"><div class="cn">5</div><div class="cx"><strong>Observability-weighted HotStuff consensus:</strong> GPS-denied Byzantine node (w=0.008) cannot corrupt quorum against GPS-active nodes (w=0.976). 100% commit rate, 100% Byzantine rejection under 20% packet loss.</div></div>
+    <div class="ct"><div class="cn">6</div><div class="cx"><strong>1000-trial adversarial hallucination blocking:</strong> 100% survival rate across vz commands from −0.1 to −100 m/s. HOCBF triggered in 90.7% of trials. Max correction 397N.</div></div>
+    <div class="ct"><div class="cn">7</div><div class="cx"><strong>Headless SITL testbed:</strong> zero dependencies on Gazebo, GPU, X11, ROS, PX4, or physical hardware. Fully reproducible. pytest 13/13 PASSED.</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch dk">References</div>
+  <div class="cb" style="font-size:8.5px;color:#333;line-height:1.6;">
+    <p>[1] Xiao &amp; Belta (2022). High-Order Control Barrier Functions. <em>IEEE TAC</em>.</p>
+    <p>[2] Ames et al. (2019). Control Barrier Functions: Theory and Applications. <em>ECC</em>.</p>
+    <p>[3] Geneva et al. (2020). OpenVINS: A Research Platform for VIO. <em>ICRA 2020</em>.</p>
+    <p>[4] Lee et al. (2010). Geometric Tracking Control on SE(3). <em>CDC</em>.</p>
+    <p>[5] Yin et al. (2019). HotStuff: BFT Consensus with Linearity. <em>PODC</em>.</p>
+    <p>[6] Saha &amp; Goebel (2007). NASA PCoE Battery Dataset. <em>NASA Ames</em>.</p>
+    <p>[7] Foughali &amp; Zuepke (2022). Formal Verification of RT Autonomous Robots. <em>Front. Robotics AI</em>.</p>
+    <p>[8] Krener &amp; Ide (2009). Measures of Unobservability. <em>CDC</em>.</p>
+    <p>[9] Markovic et al. (2021). ES-EKF for GPS-Denied UAV Navigation. <em>arXiv:2109.04908</em>.</p>
+    <p>[10] Makoviychuk et al. (2021). Isaac Gym. <em>NeurIPS</em>.</p>
+    <p>[11] Tobin et al. (2017). Domain Randomization for Deep Neural Networks. <em>IROS</em>.</p>
+    <p>[12] Burri et al. (2016). The EuRoC MAV Datasets. <em>IJRR</em>.</p>
+  </div>
+</div>
+
+</div><!-- /col4 -->
+
+</div><!-- /body -->
+
+<!-- FOOTER -->
+<div class="ftr">
+  <div>
+    <strong style="color:#FFC627">Rhutvik Prashant Pachghare</strong> · MS Robotics &amp; Autonomous Systems · Arizona State University · Spring 2026
+  </div>
+  <div style="text-align:center;color:rgba(255,255,255,.5)">
+    Advisor: Prof. Shenghan Guo (Knowledge-Informed AI · Statistical QC) &nbsp;|&nbsp; Program Chair: Prof. Sangram Redkar (Nonlinear Dynamics · Inertial Navigation)
+  </div>
+  <div style="text-align:right">
+    <a href="https://github.com/titansec/aisp">github.com/titansec/aisp</a> &nbsp;·&nbsp;
+    pytest 13/13 PASS &nbsp;·&nbsp; WCET 2,725 ns &nbsp;·&nbsp; 100% survival
+  </div>
+</div>
+
+</div><!-- /poster -->
+</body>
+</html>

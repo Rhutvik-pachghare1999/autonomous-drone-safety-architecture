@@ -106,6 +106,12 @@ li{font-size:10px;margin-bottom:2px}
 /* FOOTER */
 .ftr{background:#111;color:rgba(255,255,255,.65);padding:6px 24px;display:flex;justify-content:space-between;align-items:center;font-size:8.5px;border-top:3px solid #FFC627}
 .ftr a{color:#FFC627;text-decoration:none}
+
+/* Cropped panel: show only 1/3 of a 3-panel image */
+.panel-crop{width:100%;overflow:hidden;border-radius:3px;border:1px solid #ddd;flex:1;min-height:0;position:relative}
+.panel-crop img{width:300%;max-width:none;display:block;object-fit:cover;margin-left:0}
+.panel-crop.p2 img{margin-left:-100%}
+.panel-crop.p3 img{margin-left:-200%}
 </style>
 </head>
 <body>
@@ -268,8 +274,8 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">1,733ns</div><div class="ml">EVT P=10⁻⁹</div></div>
       <div class="m t"><div class="mv">9.5µs</div><div class="ml">OS Jitter Max</div></div>
     </div>
-    <img src="experiments/results/wcet_evt.png" alt="WCET EVT Analysis">
-    <div class="cap">Latency distribution + Gumbel EVT tail — all bounds well under 100µs deadline</div>
+    <div class="panel-crop p2"><img src="experiments/results/wcet_evt.png" alt="WCET EVT"></div>
+    <div class="cap">CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1.733µs (57× below 100µs deadline)</div>
   </div>
 </div>
 
@@ -327,8 +333,8 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">397N</div><div class="ml">Max Correction at vz=−100m/s</div></div>
       <div class="m p"><div class="mv">−380N</div><div class="ml">T_nom at vz=−100m/s</div></div>
     </div>
-    <img src="experiments/results/hallucination_1000.png" alt="Hallucination Blocking">
-    <div class="cap">vz swept −0.1 to −100 m/s (log-spaced). HOCBF clamps T_nom→T_safe at every step. Zero collisions.</div>
+    <div class="panel-crop"><img src="experiments/results/hallucination_1000.png" alt="Hallucination"></div>
+    <div class="cap">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−380N → T_safe=78.5N.</div>
   </div>
 </div>
 
@@ -346,8 +352,8 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">0.043ms</div><div class="ml">Mean Commit Latency</div></div>
       <div class="m p"><div class="mv">0.997</div><div class="ml">Mean Quorum Fraction</div></div>
     </div>
-    <img src="experiments/results/consensus_fault.png" alt="Consensus Fault Tolerance">
-    <div class="cap">5 nodes · 20% packet loss · Byzantine node w=0.008 vs GPS-active w=0.976. Ref: Yin et al. (2019) PODC.</div>
+    <div class="panel-crop p3"><img src="experiments/results/consensus_fault.png" alt="Consensus Trust Weights"></div>
+    <div class="cap">Node trust weights from EKF covariance. Byzantine node w=0.008 cannot reach 2/3 quorum threshold.</div>
   </div>
 </div>
 
@@ -419,6 +425,12 @@ li{font-size:10px;margin-bottom:2px}
 html,body{margin:0;padding:0;width:100%;overflow-x:hidden}
 #wrap{position:relative;width:100%;overflow:hidden}
 .poster{transform-origin:top left;position:absolute;top:0;left:0}
+
+/* Cropped panel: show only 1/3 of a 3-panel image */
+.panel-crop{width:100%;overflow:hidden;border-radius:3px;border:1px solid #ddd;flex:1;min-height:0;position:relative}
+.panel-crop img{width:300%;max-width:none;display:block;object-fit:cover;margin-left:0}
+.panel-crop.p2 img{margin-left:-100%}
+.panel-crop.p3 img{margin-left:-200%}
 </style>
 <script>
 (function(){

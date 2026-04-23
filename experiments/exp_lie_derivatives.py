@@ -34,7 +34,6 @@ Control Invariant Set Proof:
 
 References:
     Xiao & Belta (2022). High-Order Control Barrier Functions. IEEE TAC.
-    arxiv:2510.05456 — SdHOCBF for quadrotor (2025).
     Lee et al. (2010). Geometric Tracking Control on SE(3). CDC.
 
 Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems

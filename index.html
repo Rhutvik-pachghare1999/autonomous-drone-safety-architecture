@@ -24,7 +24,7 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:11px;li
 .rq span{color:#FFC627;font-weight:700;font-style:normal}
 
 /* BODY */
-.body{display:grid;grid-template-columns:23fr 24fr 28fr 23fr;align-items:start;width:1600px}
+.body{display:grid;grid-template-columns:23fr 24fr 28fr 23fr;align-items:stretch;width:1600px}
 .col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f8f8f8;min-width:0}
 .col:nth-child(even){background:#f2f2f2}
 .col:last-child{border-right:none}
@@ -280,7 +280,7 @@ li{font-size:10px;margin-bottom:2px}
   </div>
 </div>
 
-<div class="card">
+<div class="card" style="flex:1">
   <div class="ch b">EKF Covariance Gating — Property P7</div>
   <div class="cb">
     <!-- Mode ladder diagram -->
@@ -380,7 +380,7 @@ li{font-size:10px;margin-bottom:2px}
   </div>
 </div>
 
-<div class="card">
+<div class="card" style="flex:1">
   <div class="ch dk">References</div>
   <div class="cb" style="font-size:8.5px;color:#333;line-height:1.6;">
     <p>[1] Xiao &amp; Belta (2022). High-Order CBFs. <em>IEEE TAC</em>.</p>

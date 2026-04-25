@@ -25,7 +25,7 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:11px;li
 
 /* BODY */
 .body{display:grid;grid-template-columns:23fr 24fr 28fr 23fr;align-items:stretch;width:1600px}
-.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f8f8f8;min-width:0}
+.col{padding:10px 9px;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:8px;background:#f8f8f8;min-width:0;height:100%}
 .col:nth-child(even){background:#f2f2f2}
 .col:last-child{border-right:none}
 
@@ -228,9 +228,9 @@ li{font-size:10px;margin-bottom:2px}
 
 <div class="card img-card grow">
   <div class="ch o">HOCBF₄ Lie Derivative Chain — CasADi Symbolic</div>
-  <div class="cb">
-    <img src="experiments/results/lie_derivatives.png" alt="Lie Derivatives">
-    <div class="cap">ψ₀–ψ₃ vs altitude. Full ZYX Euler kinematics — not small-angle. Lf⁴h nonzero at tilt states.</div>
+  <div class="cb" style="display:flex;flex-direction:column;padding:5px;gap:4px">
+    <img src="experiments/results/lie_derivatives.png" alt="Lie Derivatives" style="width:100%;flex:1;min-height:0;max-height:none;border:1px solid #ddd;display:block;object-fit:contain">
+    <div class="cap" style="flex-shrink:0">ψ₀–ψ₃ vs altitude. Full ZYX Euler kinematics — not small-angle. Lf⁴h nonzero at tilt states.</div>
   </div>
 </div>
 </div><!-- /col1 -->
@@ -333,7 +333,7 @@ li{font-size:10px;margin-bottom:2px}
   </div>
 </div>
 
-<div class="card img-card">
+<div class="card img-card" style="flex:1">
   <div class="ch p">Observability-Weighted HotStuff Consensus</div>
   <div class="cb" style="display:flex;flex-direction:column;padding:5px;gap:4px">
     <!-- Trust weight formula as simple visual -->

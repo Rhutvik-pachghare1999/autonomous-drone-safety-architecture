@@ -268,32 +268,36 @@ li{font-size:10px;margin-bottom:2px}
 
 <div class="card img-card grow">
   <div class="ch dk">WCET + EVT · 100k Trials · SCHED_FIFO · Core 2</div>
-  <div class="cb">
-    <div class="mg4" style="margin-bottom:5px">
+  <div class="cb" style="display:flex;flex-direction:column;padding:5px;gap:4px">
+    <div class="mg4" style="margin-bottom:5px;flex-shrink:0">
       <div class="m g"><div class="mv">31ns</div><div class="ml">P99</div></div>
       <div class="m o"><div class="mv">2,725ns</div><div class="ml">WCET</div></div>
       <div class="m b"><div class="mv">1,733ns</div><div class="ml">EVT P=10⁻⁹</div></div>
       <div class="m t"><div class="mv">9.5µs</div><div class="ml">OS Jitter Max</div></div>
     </div>
-    <img src="experiments/results/wcet_panel2.png" alt="WCET EVT" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
-    <div class="cap">CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1.733µs (57× below 100µs deadline)</div>
+    <img src="experiments/results/wcet_panel2.png" alt="WCET EVT" style="width:100%;flex:1;min-height:0;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
+    <div class="cap" style="flex-shrink:0">CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1.733µs (57× below 100µs deadline)</div>
   </div>
 </div>
 
 <div class="card" style="flex:1">
   <div class="ch b">EKF Covariance Gating — Property P7</div>
-  <div class="cb">
-    <!-- Mode ladder diagram -->
-    <div style="margin-bottom:5px">
-      <div style="display:grid;grid-template-columns:1fr 20px 1fr 20px 1fr;gap:2px;align-items:center">
-        <div style="background:#E8F5E9;border:2px solid #2E7D32;border-radius:5px;padding:6px;text-align:center"><strong style="color:#1B5E20;font-size:10px">NOMINAL</strong><br><span style="font-size:8.5px;color:#555">σ² &lt; 5.0 m²</span></div>
-        <div style="text-align:center;font-size:9px;color:#E65100;line-height:1.2">GPS<br>lost<br>→</div>
-        <div style="background:#FFF8E1;border:2px solid #F57F17;border-radius:5px;padding:6px;text-align:center"><strong style="color:#E65100;font-size:10px">DEGRADED</strong><br><span style="font-size:8.5px;color:#555">VIO · cycle 9</span></div>
-        <div style="text-align:center;font-size:9px;color:#C62828;line-height:1.2">σ²≥<br>25m²<br>→</div>
-        <div style="background:#FFEBEE;border:2px solid #C62828;border-radius:5px;padding:6px;text-align:center"><strong style="color:#C62828;font-size:10px">COLLAPSED</strong><br><span style="font-size:8.5px;color:#555">P7→RTL cy.26</span></div>
-      </div>
+  <div class="cb" style="display:flex;flex-direction:column;gap:6px">
+    <div style="background:#E8F5E9;border:2px solid #2E7D32;border-radius:5px;padding:10px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center">
+      <strong style="color:#1B5E20;font-size:11px">NOMINAL</strong><br>
+      <span style="font-size:9px;color:#555">σ² &lt; 5.0 m²</span>
     </div>
-    <p style="font-size:8.5px;color:#555;margin-top:3px;">VIO σ_v=0.10 m/s (OpenVINS EuRoC). Air-gap: physics plant writes ground-truth [vx,vy] to <span class="mono">/dev/shm/aisp_gt_state</span> — EKF reads only.</p>
+    <div style="text-align:center;font-size:10px;color:#E65100;font-weight:700">GPS lost ↓</div>
+    <div style="background:#FFF8E1;border:2px solid #F57F17;border-radius:5px;padding:10px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center">
+      <strong style="color:#E65100;font-size:11px">DEGRADED</strong><br>
+      <span style="font-size:9px;color:#555">VIO · cycle 9</span>
+    </div>
+    <div style="text-align:center;font-size:10px;color:#C62828;font-weight:700">σ² ≥ 25m² ↓</div>
+    <div style="background:#FFEBEE;border:2px solid #C62828;border-radius:5px;padding:10px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center">
+      <strong style="color:#C62828;font-size:11px">COLLAPSED</strong><br>
+      <span style="font-size:9px;color:#555">P7 → RTL · cycle 26</span>
+    </div>
+    <p style="font-size:8.5px;color:#555;flex-shrink:0">VIO σ_v=0.10 m/s (OpenVINS EuRoC). Air-gap: physics plant writes ground-truth [vx,vy] to <span class="mono">/dev/shm/aisp_gt_state</span> — EKF reads only.</p>
   </div>
 </div>
 
@@ -382,7 +386,7 @@ li{font-size:10px;margin-bottom:2px}
 
 <div class="card" style="flex:1">
   <div class="ch dk">References</div>
-  <div class="cb" style="font-size:8.5px;color:#333;line-height:1.6;">
+  <div class="cb" style="display:flex;flex-direction:column;justify-content:space-between;font-size:8.5px;color:#333;line-height:1.4">
     <p>[1] Xiao &amp; Belta (2022). High-Order CBFs. <em>IEEE TAC</em>.</p>
     <p>[2] Ames et al. (2019). Control Barrier Functions. <em>ECC</em>.</p>
     <p>[3] Geneva et al. (2020). OpenVINS. <em>ICRA</em>.</p>

@@ -275,7 +275,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">1,733ns</div><div class="ml">EVT P=10⁻⁹</div></div>
       <div class="m t"><div class="mv">9.5µs</div><div class="ml">OS Jitter Max</div></div>
     </div>
-    <img src="experiments/results/wcet_panel2.png" alt="WCET EVT" style="width:100%;flex:1;min-height:0;max-height:none;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
+    <img src="experiments/results/wcet_panel2.png" alt="WCET EVT" style="width:100%;flex:1;min-height:0;max-height:none;border:1px solid #ddd;display:block;object-fit:contain">
     <div class="cap" style="flex-shrink:0">CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1.733µs (57× below 100µs deadline)</div>
   </div>
 </div>
@@ -321,34 +321,34 @@ li{font-size:10px;margin-bottom:2px}
 
 <div class="card img-card grow">
   <div class="ch o">1000-Trial Adversarial Hallucination Blocking</div>
-  <div class="cb">
-    <div class="mg" style="margin-bottom:5px">
+  <div class="cb" style="display:flex;flex-direction:column;padding:5px;gap:4px">
+    <div class="mg" style="margin-bottom:5px;flex-shrink:0">
       <div class="m g"><div class="mv">100%</div><div class="ml">Survival (1000/1000)</div></div>
       <div class="m o"><div class="mv">90.7%</div><div class="ml">HOCBF Triggered</div></div>
       <div class="m b"><div class="mv">397N</div><div class="ml">Max Correction at vz=−100m/s</div></div>
       <div class="m p"><div class="mv">−380N</div><div class="ml">T_nom at vz=−100m/s</div></div>
     </div>
-    <img src="experiments/results/hallucination_panel1.png" alt="Hallucination" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
-    <div class="cap">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−380N → T_safe=78.5N.</div>
+    <img src="experiments/results/hallucination_panel1.png" alt="Hallucination" style="width:100%;flex:1;min-height:0;max-height:none;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
+    <div class="cap" style="flex-shrink:0">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−380N → T_safe=78.5N.</div>
   </div>
 </div>
 
 <div class="card img-card">
   <div class="ch p">Observability-Weighted HotStuff Consensus</div>
-  <div class="cb">
+  <div class="cb" style="display:flex;flex-direction:column;padding:5px;gap:4px">
     <!-- Trust weight formula as simple visual -->
-    <svg width="318" height="30" viewBox="0 0 318 30">
+    <svg width="100%" height="30" viewBox="0 0 318 30" style="flex-shrink:0">
       <rect x="2" y="5" width="314" height="22" rx="4" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1"/>
       <text x="159" y="20" text-anchor="middle" font-size="9" font-weight="600" fill="#4A148C">w_i = exp(−σ²_pos / 2σ²_warn) &nbsp;|&nbsp; Commit if Σw_i(H) / Σw_i(all) ≥ 2/3</text>
     </svg>
-    <div class="mg" style="margin:4px 0">
+    <div class="mg" style="margin:4px 0;flex-shrink:0">
       <div class="m g"><div class="mv">100%</div><div class="ml">Commit Rate (100/100)</div></div>
       <div class="m g"><div class="mv">100%</div><div class="ml">Byzantine Rejection</div></div>
       <div class="m b"><div class="mv">0.043ms</div><div class="ml">Mean Commit Latency</div></div>
       <div class="m p"><div class="mv">0.997</div><div class="ml">Mean Quorum Fraction</div></div>
     </div>
-    <img src="experiments/results/consensus_panel3.png" alt="Consensus Trust Weights" style="width:100%;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
-    <div class="cap">Node trust weights from EKF covariance. Byzantine node w=0.008 cannot reach 2/3 quorum threshold.</div>
+    <img src="experiments/results/consensus_panel3.png" alt="Consensus Trust Weights" style="width:100%;flex:1;min-height:0;max-height:none;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
+    <div class="cap" style="flex-shrink:0">Node trust weights from EKF covariance. Byzantine node w=0.008 cannot reach 2/3 quorum threshold.</div>
   </div>
 </div>
 

@@ -228,14 +228,14 @@ li{font-size:10px;margin-bottom:2px}
 
 <div class="card grow">
   <div class="ch o">HOCBF₄ Lie Derivative Chain — CasADi Symbolic</div>
-  <div class="cb" style="padding:6px">
+  <div class="cb" style="padding:6px;display:flex;flex-direction:column;flex:1">
     <!-- 2x2 grid of mini SVG plots, real data -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;flex:1">
+    <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;flex:1">
 
       <!-- ψ₀ = p_z: linear 0.05→5 -->
-      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff">
+      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff;display:flex;flex-direction:column">
         <div style="font-size:8px;font-weight:700;color:#1565C0;text-align:center;margin-bottom:2px">ψ₀ = h = p_z (m)</div>
-        <svg viewBox="0 0 120 80" width="100%" style="display:block">
+        <svg viewBox="0 0 120 80" width="100%" height="100%" style="display:block;flex:1">
           <rect x="28" y="4" width="88" height="60" fill="#f9f9f9" stroke="#ccc" stroke-width="0.5"/>
           <!-- y-axis labels -->
           <text x="26" y="8" text-anchor="end" font-size="6" fill="#666">5</text>
@@ -254,9 +254,9 @@ li{font-size:10px;margin-bottom:2px}
       </div>
 
       <!-- ψ₁ = v_z: constant -2.0 -->
-      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff">
+      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff;display:flex;flex-direction:column">
         <div style="font-size:8px;font-weight:700;color:#BF360C;text-align:center;margin-bottom:2px">ψ₁ = Lf h = v_z (m/s)</div>
-        <svg viewBox="0 0 120 80" width="100%" style="display:block">
+        <svg viewBox="0 0 120 80" width="100%" height="100%" style="display:block;flex:1">
           <rect x="28" y="4" width="88" height="60" fill="#f9f9f9" stroke="#ccc" stroke-width="0.5"/>
           <text x="26" y="8" text-anchor="end" font-size="6" fill="#666">0</text>
           <text x="26" y="34" text-anchor="end" font-size="6" fill="#666">−1</text>
@@ -273,9 +273,9 @@ li{font-size:10px;margin-bottom:2px}
       </div>
 
       <!-- ψ₂ = Lf²h ≈ 0 at hover -->
-      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff">
+      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff;display:flex;flex-direction:column">
         <div style="font-size:8px;font-weight:700;color:#2E7D32;text-align:center;margin-bottom:2px">ψ₂ = Lf²h (m/s²)</div>
-        <svg viewBox="0 0 120 80" width="100%" style="display:block">
+        <svg viewBox="0 0 120 80" width="100%" height="100%" style="display:block;flex:1">
           <rect x="28" y="4" width="88" height="60" fill="#f9f9f9" stroke="#ccc" stroke-width="0.5"/>
           <text x="26" y="8" text-anchor="end" font-size="6" fill="#666">0.04</text>
           <text x="26" y="34" text-anchor="end" font-size="6" fill="#666">0</text>
@@ -290,9 +290,9 @@ li{font-size:10px;margin-bottom:2px}
       </div>
 
       <!-- ψ₃ = Lf³h ≈ 0 at hover -->
-      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff">
+      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff;display:flex;flex-direction:column">
         <div style="font-size:8px;font-weight:700;color:#4A148C;text-align:center;margin-bottom:2px">ψ₃ = Lf³h (m/s³)</div>
-        <svg viewBox="0 0 120 80" width="100%" style="display:block">
+        <svg viewBox="0 0 120 80" width="100%" height="100%" style="display:block;flex:1">
           <rect x="28" y="4" width="88" height="60" fill="#f9f9f9" stroke="#ccc" stroke-width="0.5"/>
           <text x="26" y="8" text-anchor="end" font-size="6" fill="#666">0.04</text>
           <text x="26" y="34" text-anchor="end" font-size="6" fill="#666">0</text>
@@ -353,7 +353,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m t"><div class="mv">9.5µs</div><div class="ml">OS Jitter Max</div></div>
     </div>
     <!-- CCDF + EVT inline SVG — real data: 100k trials, mu=-11.8ns, beta=84.2ns -->
-    <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;border:1px solid #ddd;border-radius:3px;background:#fff">
+    <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;width:100%;height:100%;border:1px solid #ddd;border-radius:3px;background:#fff">
       <line x1="40" y1="10" x2="40" y2="170" stroke="#999" stroke-width="0.8"/>
       <line x1="40" y1="170" x2="270" y2="170" stroke="#999" stroke-width="0.8"/>
       <text x="38" y="13" text-anchor="end" font-size="7" fill="#555">10⁻¹</text>
@@ -442,7 +442,7 @@ li{font-size:10px;margin-bottom:2px}
     <!-- y: thrust -400→100N mapped to SVG 10→170 (range=500N, scale=160/500=0.32px/N) -->
     <!-- T_nom = M*G + M*vz*2 = 19.62 + 4*vz_cmd. At vz=-0.1: 19.22N. At vz=-100: -380.38N -->
     <!-- T_safe = clamp(T_nom, T_lb, T_max). T_lb≈19.62 at hover. So T_safe≈T_max=78.48 when T_nom>78.48, T_nom when 19.62<T_nom<78.48, T_lb when T_nom<T_lb -->
-    <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;border:1px solid #ddd;border-radius:3px;background:#fff">
+    <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;width:100%;height:100%;border:1px solid #ddd;border-radius:3px;background:#fff">
       <line x1="40" y1="10" x2="40" y2="170" stroke="#999" stroke-width="0.8"/>
       <line x1="40" y1="170" x2="270" y2="170" stroke="#999" stroke-width="0.8"/>
       <!-- y labels: 100N→y=10+(-100-100)*(-0.32)=10+64=74? Let me use: y=90-(N*0.32) where 0N→y=90 -->
@@ -504,7 +504,7 @@ li{font-size:10px;margin-bottom:2px}
     </div>
     <!-- Node trust weights bar chart — real data: w=exp(-σ²/2σ²_warn), σ²_warn=5.0 -->
     <!-- Nodes: GPS active (σ²=0.25)→w=0.976, GPS degraded (σ²=8.0)→w=0.147, Byzantine (σ²=125)→w=0.008 -->
-    <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;border:1px solid #ddd;border-radius:3px;background:#fff">
+    <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;width:100%;height:100%;border:1px solid #ddd;border-radius:3px;background:#fff">
       <line x1="35" y1="10" x2="35" y2="155" stroke="#999" stroke-width="0.8"/>
       <line x1="35" y1="155" x2="270" y2="155" stroke="#999" stroke-width="0.8"/>
       <!-- y labels: 1.0→y=10, 0.75→y=47, 0.5→y=83, 0.25→y=119, 0→y=155 -->

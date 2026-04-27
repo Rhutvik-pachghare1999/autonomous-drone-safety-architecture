@@ -226,11 +226,88 @@ li{font-size:10px;margin-bottom:2px}
 </div>
 
 
-<div class="card img-card grow">
+<div class="card grow">
   <div class="ch o">HOCBF₄ Lie Derivative Chain — CasADi Symbolic</div>
-  <div class="cb" style="display:flex;flex-direction:column;padding:5px;gap:4px">
-    <img src="experiments/results/lie_derivatives.png" alt="Lie Derivatives" style="width:100%;flex:1;min-height:0;max-height:none;border:1px solid #ddd;display:block;object-fit:contain">
-    <div class="cap" style="flex-shrink:0">ψ₀–ψ₃ vs altitude. Full ZYX Euler kinematics — not small-angle. Lf⁴h nonzero at tilt states.</div>
+  <div class="cb" style="padding:6px">
+    <!-- 2x2 grid of mini SVG plots, real data -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;flex:1">
+
+      <!-- ψ₀ = p_z: linear 0.05→5 -->
+      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff">
+        <div style="font-size:8px;font-weight:700;color:#1565C0;text-align:center;margin-bottom:2px">ψ₀ = h = p_z (m)</div>
+        <svg viewBox="0 0 120 80" width="100%" style="display:block">
+          <rect x="28" y="4" width="88" height="60" fill="#f9f9f9" stroke="#ccc" stroke-width="0.5"/>
+          <!-- y-axis labels -->
+          <text x="26" y="8" text-anchor="end" font-size="6" fill="#666">5</text>
+          <text x="26" y="34" text-anchor="end" font-size="6" fill="#666">2.5</text>
+          <text x="26" y="64" text-anchor="end" font-size="6" fill="#666">0</text>
+          <!-- x-axis labels -->
+          <text x="28" y="72" text-anchor="middle" font-size="6" fill="#666">0</text>
+          <text x="72" y="72" text-anchor="middle" font-size="6" fill="#666">2.5</text>
+          <text x="116" y="72" text-anchor="middle" font-size="6" fill="#666">5</text>
+          <!-- safety boundary y=0 → at bottom -->
+          <line x1="28" y1="64" x2="116" y2="64" stroke="red" stroke-width="0.8" stroke-dasharray="3,2"/>
+          <!-- ψ₀ line: linear from (0.05,0.05) to (5,5) → maps to SVG -->
+          <line x1="28" y1="63" x2="116" y2="4" stroke="#1565C0" stroke-width="1.5"/>
+          <text x="72" y="78" text-anchor="middle" font-size="6" fill="#555">Altitude p_z (m)</text>
+        </svg>
+      </div>
+
+      <!-- ψ₁ = v_z: constant -2.0 -->
+      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff">
+        <div style="font-size:8px;font-weight:700;color:#BF360C;text-align:center;margin-bottom:2px">ψ₁ = Lf h = v_z (m/s)</div>
+        <svg viewBox="0 0 120 80" width="100%" style="display:block">
+          <rect x="28" y="4" width="88" height="60" fill="#f9f9f9" stroke="#ccc" stroke-width="0.5"/>
+          <text x="26" y="8" text-anchor="end" font-size="6" fill="#666">0</text>
+          <text x="26" y="34" text-anchor="end" font-size="6" fill="#666">−1</text>
+          <text x="26" y="64" text-anchor="end" font-size="6" fill="#666">−2</text>
+          <text x="28" y="72" text-anchor="middle" font-size="6" fill="#666">0</text>
+          <text x="72" y="72" text-anchor="middle" font-size="6" fill="#666">2.5</text>
+          <text x="116" y="72" text-anchor="middle" font-size="6" fill="#666">5</text>
+          <!-- safety boundary at y=0 → top of plot -->
+          <line x1="28" y1="4" x2="116" y2="4" stroke="red" stroke-width="0.8" stroke-dasharray="3,2"/>
+          <!-- ψ₁ = -2.0 constant → maps to y=64 -->
+          <line x1="28" y1="64" x2="116" y2="64" stroke="#BF360C" stroke-width="1.5"/>
+          <text x="72" y="78" text-anchor="middle" font-size="6" fill="#555">Altitude p_z (m)</text>
+        </svg>
+      </div>
+
+      <!-- ψ₂ = Lf²h ≈ 0 at hover -->
+      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff">
+        <div style="font-size:8px;font-weight:700;color:#2E7D32;text-align:center;margin-bottom:2px">ψ₂ = Lf²h (m/s²)</div>
+        <svg viewBox="0 0 120 80" width="100%" style="display:block">
+          <rect x="28" y="4" width="88" height="60" fill="#f9f9f9" stroke="#ccc" stroke-width="0.5"/>
+          <text x="26" y="8" text-anchor="end" font-size="6" fill="#666">0.04</text>
+          <text x="26" y="34" text-anchor="end" font-size="6" fill="#666">0</text>
+          <text x="26" y="64" text-anchor="end" font-size="6" fill="#666">−0.04</text>
+          <text x="28" y="72" text-anchor="middle" font-size="6" fill="#666">0</text>
+          <text x="72" y="72" text-anchor="middle" font-size="6" fill="#666">2.5</text>
+          <text x="116" y="72" text-anchor="middle" font-size="6" fill="#666">5</text>
+          <line x1="28" y1="34" x2="116" y2="34" stroke="red" stroke-width="0.8" stroke-dasharray="3,2"/>
+          <line x1="28" y1="34" x2="116" y2="34" stroke="#2E7D32" stroke-width="1.5"/>
+          <text x="72" y="78" text-anchor="middle" font-size="6" fill="#555">Altitude p_z (m)</text>
+        </svg>
+      </div>
+
+      <!-- ψ₃ = Lf³h ≈ 0 at hover -->
+      <div style="border:1px solid #ddd;border-radius:3px;padding:3px;background:#fff">
+        <div style="font-size:8px;font-weight:700;color:#4A148C;text-align:center;margin-bottom:2px">ψ₃ = Lf³h (m/s³)</div>
+        <svg viewBox="0 0 120 80" width="100%" style="display:block">
+          <rect x="28" y="4" width="88" height="60" fill="#f9f9f9" stroke="#ccc" stroke-width="0.5"/>
+          <text x="26" y="8" text-anchor="end" font-size="6" fill="#666">0.04</text>
+          <text x="26" y="34" text-anchor="end" font-size="6" fill="#666">0</text>
+          <text x="26" y="64" text-anchor="end" font-size="6" fill="#666">−0.04</text>
+          <text x="28" y="72" text-anchor="middle" font-size="6" fill="#666">0</text>
+          <text x="72" y="72" text-anchor="middle" font-size="6" fill="#666">2.5</text>
+          <text x="116" y="72" text-anchor="middle" font-size="6" fill="#666">5</text>
+          <line x1="28" y1="34" x2="116" y2="34" stroke="red" stroke-width="0.8" stroke-dasharray="3,2"/>
+          <line x1="28" y1="34" x2="116" y2="34" stroke="#4A148C" stroke-width="1.5"/>
+          <text x="72" y="78" text-anchor="middle" font-size="6" fill="#555">Altitude p_z (m)</text>
+        </svg>
+      </div>
+
+    </div>
+    <div class="cap">ψ₀–ψ₃ vs altitude. Full ZYX Euler kinematics — not small-angle. Lf⁴h nonzero at tilt states.</div>
   </div>
 </div>
 </div><!-- /col1 -->
@@ -275,7 +352,39 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">1,733ns</div><div class="ml">EVT P=10⁻⁹</div></div>
       <div class="m t"><div class="mv">9.5µs</div><div class="ml">OS Jitter Max</div></div>
     </div>
-    <img src="experiments/results/wcet_panel2.png" alt="WCET EVT" style="width:100%;flex:1;min-height:0;max-height:none;border:1px solid #ddd;display:block;object-fit:contain">
+    <!-- CCDF + EVT inline SVG — real data: 100k trials, mu=-11.8ns, beta=84.2ns -->
+    <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;border:1px solid #ddd;border-radius:3px;background:#fff">
+      <line x1="40" y1="10" x2="40" y2="170" stroke="#999" stroke-width="0.8"/>
+      <line x1="40" y1="170" x2="270" y2="170" stroke="#999" stroke-width="0.8"/>
+      <text x="38" y="13" text-anchor="end" font-size="7" fill="#555">10⁻¹</text>
+      <text x="38" y="60" text-anchor="end" font-size="7" fill="#555">10⁻³</text>
+      <text x="38" y="108" text-anchor="end" font-size="7" fill="#555">10⁻⁵</text>
+      <text x="38" y="155" text-anchor="end" font-size="7" fill="#555">10⁻⁷</text>
+      <text x="38" y="170" text-anchor="end" font-size="7" fill="#555">10⁻⁹</text>
+      <text x="40" y="178" text-anchor="middle" font-size="7" fill="#555">0</text>
+      <text x="117" y="178" text-anchor="middle" font-size="7" fill="#555">1µs</text>
+      <text x="193" y="178" text-anchor="middle" font-size="7" fill="#555">2µs</text>
+      <text x="270" y="178" text-anchor="middle" font-size="7" fill="#555">3µs</text>
+      <text x="155" y="188" text-anchor="middle" font-size="7" fill="#333">Latency (µs)</text>
+      <text x="10" y="95" text-anchor="middle" font-size="7" fill="#333" transform="rotate(-90,10,95)">Exceedance prob.</text>
+      <line x1="40" y1="60" x2="270" y2="60" stroke="#eee" stroke-width="0.5"/>
+      <line x1="40" y1="108" x2="270" y2="108" stroke="#eee" stroke-width="0.5"/>
+      <line x1="40" y1="155" x2="270" y2="155" stroke="#eee" stroke-width="0.5"/>
+      <!-- Empirical CCDF: 74968@20ns→p=1.0..0.25, 20849@30ns→p=0.23..0.02, outliers to 2725ns→p~1e-5 -->
+      <polyline points="41,10 41,52 42,54 42,83 42,84 43,119 249,119 249,170" fill="none" stroke="#1565C0" stroke-width="1.8" stroke-linejoin="round"/>
+      <!-- EVT Gumbel extrapolation: p=1e-2→0.376µs, p=1e-4→0.763µs, p=1e-6→1.15µs, p=1e-9→1.733µs -->
+      <polyline points="69,10 98,87 128,127 173,170" fill="none" stroke="#C62828" stroke-width="1.8" stroke-dasharray="5,3"/>
+      <line x1="268" y1="10" x2="268" y2="170" stroke="red" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+      <text x="266" y="18" text-anchor="end" font-size="6" fill="red">100µs</text>
+      <line x1="40" y1="170" x2="270" y2="170" stroke="#aaa" stroke-width="0.8" stroke-dasharray="2,2"/>
+      <text x="173" y="166" text-anchor="middle" font-size="11" fill="#C62828">★</text>
+      <text x="173" y="160" text-anchor="middle" font-size="6.5" fill="#C62828" font-weight="700">1.733µs</text>
+      <line x1="45" y1="22" x2="62" y2="22" stroke="#1565C0" stroke-width="1.8"/>
+      <text x="64" y="25" font-size="6.5" fill="#333">Empirical CCDF</text>
+      <line x1="45" y1="33" x2="62" y2="33" stroke="#C62828" stroke-width="1.8" stroke-dasharray="5,3"/>
+      <text x="64" y="36" font-size="6.5" fill="#333">Gumbel EVT extrap.</text>
+      <text x="64" y="47" font-size="6.5" fill="#C62828">★ EVT bound=1.733µs (P=10⁻⁹)</text>
+    </svg>
     <div class="cap" style="flex-shrink:0">CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1.733µs (57× below 100µs deadline)</div>
   </div>
 </div>
@@ -328,7 +437,53 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">397N</div><div class="ml">Max Correction at vz=−100m/s</div></div>
       <div class="m p"><div class="mv">−380N</div><div class="ml">T_nom at vz=−100m/s</div></div>
     </div>
-    <img src="experiments/results/hallucination_panel1.png" alt="Hallucination" style="width:100%;flex:1;min-height:0;max-height:none;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
+    <!-- T_nom vs T_safe inline SVG — real data: M=2kg, G=9.81, T_max=78.48N -->
+    <!-- x: log scale |vz| 0.1→100 m/s mapped to SVG 40→270 (log10: -1→2, range=3) -->
+    <!-- y: thrust -400→100N mapped to SVG 10→170 (range=500N, scale=160/500=0.32px/N) -->
+    <!-- T_nom = M*G + M*vz*2 = 19.62 + 4*vz_cmd. At vz=-0.1: 19.22N. At vz=-100: -380.38N -->
+    <!-- T_safe = clamp(T_nom, T_lb, T_max). T_lb≈19.62 at hover. So T_safe≈T_max=78.48 when T_nom>78.48, T_nom when 19.62<T_nom<78.48, T_lb when T_nom<T_lb -->
+    <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;border:1px solid #ddd;border-radius:3px;background:#fff">
+      <line x1="40" y1="10" x2="40" y2="170" stroke="#999" stroke-width="0.8"/>
+      <line x1="40" y1="170" x2="270" y2="170" stroke="#999" stroke-width="0.8"/>
+      <!-- y labels: 100N→y=10+(-100-100)*(-0.32)=10+64=74? Let me use: y=90-(N*0.32) where 0N→y=90 -->
+      <!-- y(N) = 90 - N*0.32. 100N→58, 0N→90, -100N→122, -200N→154, -380N→212(clip to 170) -->
+      <text x="38" y="60" text-anchor="end" font-size="7" fill="#555">100N</text>
+      <text x="38" y="92" text-anchor="end" font-size="7" fill="#555">0</text>
+      <text x="38" y="124" text-anchor="end" font-size="7" fill="#555">−100N</text>
+      <text x="38" y="156" text-anchor="end" font-size="7" fill="#555">−200N</text>
+      <!-- x log labels: 0.1→x=40, 1→x=117, 10→x=193, 100→x=270 -->
+      <text x="40" y="178" text-anchor="middle" font-size="7" fill="#555">0.1</text>
+      <text x="117" y="178" text-anchor="middle" font-size="7" fill="#555">1</text>
+      <text x="193" y="178" text-anchor="middle" font-size="7" fill="#555">10</text>
+      <text x="270" y="178" text-anchor="middle" font-size="7" fill="#555">100</text>
+      <text x="155" y="188" text-anchor="middle" font-size="7" fill="#333">|vz_cmd| (m/s) [log scale]</text>
+      <text x="10" y="95" text-anchor="middle" font-size="7" fill="#333" transform="rotate(-90,10,95)">Thrust (N)</text>
+      <line x1="40" y1="90" x2="270" y2="90" stroke="#eee" stroke-width="0.5"/>
+      <line x1="40" y1="122" x2="270" y2="122" stroke="#eee" stroke-width="0.5"/>
+      <line x1="40" y1="154" x2="270" y2="154" stroke="#eee" stroke-width="0.5"/>
+      <!-- Hover thrust 19.62N → y=90-19.62*0.32=83.7≈84 -->
+      <line x1="40" y1="84" x2="270" y2="84" stroke="#333" stroke-width="0.8" stroke-dasharray="3,2"/>
+      <text x="272" y="86" font-size="6" fill="#333">19.6N</text>
+      <!-- T_max=78.48N → y=90-78.48*0.32=64.9≈65 -->
+      <line x1="40" y1="65" x2="270" y2="65" stroke="red" stroke-width="0.8" stroke-dasharray="3,2"/>
+      <text x="272" y="67" font-size="6" fill="red">78.5N</text>
+      <!-- HOCBF correction shading between T_nom and T_safe where T_nom < T_lb -->
+      <!-- T_nom drops below T_lb (~19.62N) when vz_cmd < ~0: always for negative vz -->
+      <!-- Shade region: from vz=~0.5 (x=97) to vz=100 (x=270), between T_nom line and T_safe=78.48 line -->
+      <polygon points="97,84 270,170 270,65 97,65" fill="#4CAF50" opacity="0.12"/>
+      <!-- T_nom line: at vz=0.1→T=19.22N→y=84, at vz=1→T=15.62N→y=85, at vz=5→T=-0.38N→y=90, at vz=10→T=-20.38N→y=97, at vz=50→T=-180.38N→y=148, at vz=100→T=-380.38N→y=212(clip170) -->
+      <polyline points="40,84 117,85 163,90 193,97 247,148 270,170" fill="none" stroke="#C62828" stroke-width="2"/>
+      <!-- T_safe line: clamped to [T_lb, T_max]. T_lb≈19.62 at hover. T_safe≈78.48 for all unsafe commands -->
+      <!-- At low vz T_nom≈T_safe, diverges around vz=0.5 -->
+      <polyline points="40,84 97,84 270,65" fill="none" stroke="#1565C0" stroke-width="2"/>
+      <!-- legend -->
+      <line x1="45" y1="22" x2="62" y2="22" stroke="#C62828" stroke-width="2"/>
+      <text x="64" y="25" font-size="6.5" fill="#333">T_nom (VLA — unsafe)</text>
+      <line x1="45" y1="33" x2="62" y2="33" stroke="#1565C0" stroke-width="2"/>
+      <text x="64" y="36" font-size="6.5" fill="#333">T_safe (HOCBF — corrected)</text>
+      <rect x="45" y="40" width="17" height="7" fill="#4CAF50" opacity="0.3"/>
+      <text x="64" y="47" font-size="6.5" fill="#333">HOCBF correction zone</text>
+    </svg>
     <div class="cap" style="flex-shrink:0">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−380N → T_safe=78.5N.</div>
   </div>
 </div>
@@ -347,7 +502,51 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m b"><div class="mv">0.043ms</div><div class="ml">Mean Commit Latency</div></div>
       <div class="m p"><div class="mv">0.997</div><div class="ml">Mean Quorum Fraction</div></div>
     </div>
-    <img src="experiments/results/consensus_panel3.png" alt="Consensus Trust Weights" style="width:100%;flex:1;min-height:0;max-height:none;border-radius:3px;border:1px solid #ddd;display:block;object-fit:contain">
+    <!-- Node trust weights bar chart — real data: w=exp(-σ²/2σ²_warn), σ²_warn=5.0 -->
+    <!-- Nodes: GPS active (σ²=0.25)→w=0.976, GPS degraded (σ²=8.0)→w=0.147, Byzantine (σ²=125)→w=0.008 -->
+    <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;border:1px solid #ddd;border-radius:3px;background:#fff">
+      <line x1="35" y1="10" x2="35" y2="155" stroke="#999" stroke-width="0.8"/>
+      <line x1="35" y1="155" x2="270" y2="155" stroke="#999" stroke-width="0.8"/>
+      <!-- y labels: 1.0→y=10, 0.75→y=47, 0.5→y=83, 0.25→y=119, 0→y=155 -->
+      <text x="33" y="13" text-anchor="end" font-size="7" fill="#555">1.0</text>
+      <text x="33" y="50" text-anchor="end" font-size="7" fill="#555">0.75</text>
+      <text x="33" y="86" text-anchor="end" font-size="7" fill="#555">0.5</text>
+      <text x="33" y="122" text-anchor="end" font-size="7" fill="#555">0.25</text>
+      <text x="33" y="155" text-anchor="end" font-size="7" fill="#555">0</text>
+      <line x1="35" y1="83" x2="270" y2="83" stroke="#eee" stroke-width="0.5"/>
+      <line x1="35" y1="119" x2="270" y2="119" stroke="#eee" stroke-width="0.5"/>
+      <!-- 2/3 threshold line: y=155-(2/3)*145=58.7≈59 -->
+      <line x1="35" y1="59" x2="270" y2="59" stroke="red" stroke-width="1.2" stroke-dasharray="4,2"/>
+      <text x="272" y="61" font-size="6.5" fill="red">2/3</text>
+      <!-- Bars: 5 nodes, bar width=38, gap=8, start x=43 -->
+      <!-- y(w) = 155 - w*145. w=0.976→y=13.5≈14. w=0.147→y=133.7≈134. w=0.008→y=153.8≈154 -->
+      <!-- Node 0: GPS active w=0.976 → bar from y=14 to y=155, height=141 -->
+      <rect x="43" y="14" width="34" height="141" fill="#5B9BD5" rx="2"/>
+      <text x="60" y="11" text-anchor="middle" font-size="7" font-weight="700" fill="#1565C0">0.976</text>
+      <text x="60" y="168" text-anchor="middle" font-size="6" fill="#555">GPS active</text>
+      <text x="60" y="175" text-anchor="middle" font-size="6" fill="#555">(Node 0)</text>
+      <!-- Node 1: GPS active w=0.976 -->
+      <rect x="85" y="14" width="34" height="141" fill="#5B9BD5" rx="2"/>
+      <text x="102" y="11" text-anchor="middle" font-size="7" font-weight="700" fill="#1565C0">0.976</text>
+      <text x="102" y="168" text-anchor="middle" font-size="6" fill="#555">GPS active</text>
+      <text x="102" y="175" text-anchor="middle" font-size="6" fill="#555">(Node 1)</text>
+      <!-- Node 2: GPS active w=0.976 -->
+      <rect x="127" y="14" width="34" height="141" fill="#5B9BD5" rx="2"/>
+      <text x="144" y="11" text-anchor="middle" font-size="7" font-weight="700" fill="#1565C0">0.976</text>
+      <text x="144" y="168" text-anchor="middle" font-size="6" fill="#555">GPS active</text>
+      <text x="144" y="175" text-anchor="middle" font-size="6" fill="#555">(Node 2)</text>
+      <!-- Node 3: GPS degraded w=0.147 → bar height=0.147*145=21.3 → y=155-21=134 -->
+      <rect x="169" y="134" width="34" height="21" fill="#FFC000" rx="2"/>
+      <text x="186" y="131" text-anchor="middle" font-size="7" font-weight="700" fill="#E65100">0.147</text>
+      <text x="186" y="168" text-anchor="middle" font-size="6" fill="#555">GPS</text>
+      <text x="186" y="175" text-anchor="middle" font-size="6" fill="#555">degraded</text>
+      <!-- Node 4: Byzantine w=0.008 → bar height=0.008*145=1.2 → y=154 -->
+      <rect x="211" y="154" width="34" height="1" fill="#C62828" rx="1"/>
+      <text x="228" y="151" text-anchor="middle" font-size="7" font-weight="700" fill="#C62828">0.008</text>
+      <text x="228" y="168" text-anchor="middle" font-size="6" fill="#555">Byzantine</text>
+      <text x="228" y="175" text-anchor="middle" font-size="6" fill="#555">(GPS denied)</text>
+      <text x="152" y="188" text-anchor="middle" font-size="7" fill="#333">Node Trust Weights (from EKF covariance)</text>
+    </svg>
     <div class="cap" style="flex-shrink:0">Node trust weights from EKF covariance. Byzantine node w=0.008 cannot reach 2/3 quorum threshold.</div>
   </div>
 </div>

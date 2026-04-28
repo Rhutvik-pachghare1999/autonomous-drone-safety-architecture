@@ -11,7 +11,7 @@ CPU Cores 0-1  (Best-Effort, SCHED_OTHER)
 CPU Cores 2-3  (Hard-RT, SCHED_FIFO prio 99, isolated)
   └── safety_filter.c   HOCBF hot-path
         ├── mmap read    /dev/shm/aisp_vla_cmd  (zero-copy, ~50-100ns)
-        ├── HOCBF filter O(1) arithmetic         (<371ns WCET measured)
+        ├── HOCBF filter O(1) arithmetic         (<2725ns WCET (100k trials))
         └── mmap write   safe thrust command     (zero-copy)
 
 IPC: POSIX mmap /dev/shm (tmpfs RAM)
@@ -20,7 +20,7 @@ IPC: POSIX mmap /dev/shm (tmpfs RAM)
   - Replaces: ZeroMQ, ROS2 DDS, WebSocket, MAVLink
 ```
 
-## Measured WCET — safety_filter.c (10,000 trials, SCHED_FIFO prio 99, CPU core 2)
+## Measured WCET — safety_filter.c (100,000 trials, SCHED_FIFO prio 99, CPU core 2)
 
 | Metric  | Measured  | Budget   | Margin  |
 |---------|-----------|----------|---------|
@@ -29,7 +29,7 @@ IPC: POSIX mmap /dev/shm (tmpfs RAM)
 | P50     | 30 ns     | —        | —       |
 | P99     | 31 ns     | 10 μs    | 323×    |
 | P99.9   | 31 ns     | 10 μs    | 323×    |
-| **WCET**| **371 ns**| **100 μs** | **270×** |
+| **WCET**| **2,725 ns**| **100 μs** | **36×** |
 
 WCET proven via `clock_gettime(CLOCK_MONOTONIC_RAW)` hardware counter.
 Raw data: `experiments/results/latency_raw.csv`
@@ -57,7 +57,7 @@ Best-Effort cores (0-1):
 Hard-RT cores (2-3):
   1. Read VLA command from /dev/shm (zero-copy, ~50ns)
   2. RL policy forward pass (ONNX, ~0.5ms) → nominal thrust T_nom
-  3. HOCBF filter: T_safe = clamp(T_nom, T_lb, T_max)  (<371ns)
+  3. HOCBF filter: T_safe = clamp(T_nom, T_lb, T_max)  (<2725ns)
   4. Write T_safe to actuator interface
 ```
 
@@ -68,7 +68,7 @@ autonomously using the last known state — the RT loop never blocks on AI.
 
 | Subsystem                  | Budget    | Measured  | Method              |
 |----------------------------|-----------|-----------|---------------------|
-| HOCBF filter (C99)         | **<10 μs**| **371 ns**| CLOCK_MONOTONIC_RAW |
+| HOCBF filter (C99)         | **<10 μs**| **2,725 ns**| CLOCK_MONOTONIC_RAW |
 | mmap IPC read              | <1 μs     | ~50-100ns | L3 cache coherency  |
 | RL policy ONNX forward     | <1 ms     | ~0.5ms    | ONNXRuntime C API   |
 | VLA inference (SmolVLM2)   | <5 s      | ~2.5s     | Best-effort core    |

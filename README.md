@@ -13,7 +13,7 @@
 
 ## The Objective
 
-Foundation models are notoriously unreliable in safety-critical loops. A single hallucinated motor command — "descend at 100 m/s" — is a total loss. I built a sub-microsecond safety kernel that intercepts every AI command, checks it against hard physics constraints, and clamps it before it reaches the motors. The AI can output whatever it wants. The drone doesn't care.
+Foundation models are powerful but non-deterministic. In a flight stack, a single hallucinated motor command is a total loss. I built a sub-microsecond safety kernel that intercepts every AI command, checks it against hard physics constraints, and clamps it before it reaches the motors. The AI can output whatever it wants. The drone doesn't care.
 
 1,000 adversarial trials. 100% survival rate.
 

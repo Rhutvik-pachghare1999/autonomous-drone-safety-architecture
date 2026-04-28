@@ -13,9 +13,7 @@
 
 ## The Objective
 
-Foundation models hallucinate. That's fine for a chatbot. It's not fine when a drone's AI outputs "descend at 100 m/s."
-
-I built a 5-layer safety kernel that sits between the AI and the motors. Every command gets intercepted, checked against hard physics constraints, and either passed through or clamped — in **under 400 nanoseconds**. The AI can hallucinate whatever it wants. The drone doesn't care.
+Foundation models are notoriously unreliable in safety-critical loops. A single hallucinated motor command — "descend at 100 m/s" — is a total loss. I built a sub-microsecond safety kernel that intercepts every AI command, checks it against hard physics constraints, and clamps it before it reaches the motors. The AI can output whatever it wants. The drone doesn't care.
 
 1,000 adversarial trials. 100% survival rate.
 
@@ -62,27 +60,13 @@ I built a 5-layer safety kernel that sits between the AI and the motors. Every c
 
 ## What It Does
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    SAFETY PIPELINE                          │
-│                                                             │
-│  VLA Model (SmolVLM2)   →  "descend to waypoint"           │
-│         ↓ vz_cmd                                            │
-│  PPO RL Policy (22KB)   →  T_nom = -380N  ← UNSAFE         │
-│         ↓                                                   │
-│  ┌─────────────────────────────────┐                        │
-│  │   HOCBF Safety Filter (C99)    │  ← intercepts here     │
-│  │   clamp(T_nom, T_lb, T_max)    │                        │
-│  │   WCET = 2,725 ns              │                        │
-│  └─────────────────────────────────┘                        │
-│         ↓ T_safe = 78.5N  ← SAFE                           │
-│  DO-178C FSM (7 states)  →  P1–P7 verified                 │
-│         ↓                                                   │
-│  SE(3) Physics Plant     →  drone stays alive              │
-└─────────────────────────────────────────────────────────────┘
+![Hallucination blocking — T_nom vs T_safe across 1,000 adversarial trials](experiments/results/hallucination_1000.png)
 
-Cross-cutting: 15-state EKF feeds covariance into HOCBF + consensus weights
-```
+*T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−380N → T_safe=78.5N. Zero collisions across all 1,000 trials.*
+
+![WCET EVT analysis — CCDF tail + Gumbel extrapolation](experiments/results/wcet_evt.png)
+
+*CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1,733ns (57× below 100µs deadline)*
 
 ---
 
@@ -159,21 +143,9 @@ Note: yaw (ψ) stays unobservable without magnetometer
 
 ## Battery Aging Reality Check
 
-```
-Capacity (Ah)
-2.0 ┤████████████████████████████████████████  ← Spec linear model
-    │                                           (predicts EOL @ cycle 600)
-1.8 ┤         ████████████
-    │                     ██████
-1.6 ┤                           ████
-    │                               ██          ← Real cells (NASA PCoE)
-1.4 ┤                                 ██        (EOL @ cycle 100–165)
-    │
-    └──────────────────────────────────────────
-    0        100       200       300    cycles
+![Battery capacity fade — poly-4 fit vs spec linear model](experiments/results/battery_validation.png)
 
-Poly-4 fit RMSE: 0.016 Ah (B0005), 0.030 Ah (B0006), 0.014 Ah (B0007)
-```
+*Spec linear model predicts EOL at cycle 600. Real NASA PCoE cells died at cycle 100–165 — 4–6× error. Poly-4 fit RMSE: 0.016 Ah (B0005), 0.030 Ah (B0006), 0.014 Ah (B0007).*
 
 ---
 

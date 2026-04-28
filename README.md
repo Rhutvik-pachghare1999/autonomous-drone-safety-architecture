@@ -11,40 +11,52 @@
 
 ---
 
-## The Problem & My Solution
+## The Objective
 
-Foundation models hallucinate. That's fine when a chatbot gives you a wrong recipe. It's not fine when a drone's AI outputs "descend at 100 m/s" and there's no safety layer to catch it.
+Foundation models hallucinate. That's fine for a chatbot. It's not fine when a drone's AI outputs "descend at 100 m/s."
 
-I built a 5-layer safety kernel that intercepts unsafe AI commands before they reach the motors. Even if the model hallucinates negative thrust (physically impossible), the HOCBF filter clamps it to a safe value in **under 400 nanoseconds**. Tested across 1,000 adversarial trials. 100% survival rate.
+I built a 5-layer safety kernel that sits between the AI and the motors. Every command gets intercepted, checked against hard physics constraints, and either passed through or clamped — in **under 400 nanoseconds**. The AI can hallucinate whatever it wants. The drone doesn't care.
+
+1,000 adversarial trials. 100% survival rate.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Why |
-|---|---|---|
-| Safety filter hot-path | C99, POSIX mmap, SCHED_FIFO | zero-copy IPC, no syscalls in RT loop |
-| RL policy | PPO + ONNX 22KB, ONNXRuntime C API | deterministic inference in <0.5ms |
-| Formal verification | Z3 solver, BFS over FSM | exhaustive proof of 7 safety invariants |
-| State estimation | 15-state EKF, GPS/IMU/Baro/VIO | covariance-gated sensor fusion |
-| Simulation | Isaac Sim 4.5, PhysX | domain randomization, zero hardware needed |
-| Symbolic math | CasADi 3.7 | Lie derivative chain for HOCBF₄ |
-| Consensus | ZMQ PUB/SUB, HotStuff BFT | Byzantine-fault-tolerant swarm voting |
+| Domain | Technology |
+|---|---|
+| Real-Time | C99, POSIX Threads, `mmap`, `SCHED_FIFO`, `mlockall` |
+| Control | HOCBF (Relative Degree 4), CasADi symbolic math, OSQP |
+| AI / RL | PPO Asymmetric Actor-Critic, ONNX Runtime C API |
+| Simulation | NVIDIA Isaac Sim 4.5, PhysX 5.4 |
+| Formal Methods | Z3 solver, BFS over FSM, 7 proven invariants |
+| State Estimation | 15-state EKF, GPS/IMU/Baro/VIO fusion |
+| Consensus | HotStuff BFT, ZMQ PUB/SUB, observability-weighted voting |
 
 ---
 
-## Latency Budget (Measured)
+## Under the Hood — The Details That Matter
+
+**`mlockall(MCL_CURRENT | MCL_FUTURE)`** — called at startup in `safety_filter.c`. Pins every memory page so the kernel can't page-fault during the RT loop. One missed page fault at the wrong moment blows your deadline. This is standard hard-RT practice; most student projects skip it.
+
+**Zero-copy IPC via `/dev/shm`** — the VLA model (Python, best-effort core) writes commands to a POSIX shared memory region. The safety filter (C99, SCHED_FIFO prio 99, isolated core) reads it with a single `mmap` pointer dereference. No serialization. No syscalls. ~50–100ns latency. This replaces ZeroMQ, ROS2 DDS, and MAVLink entirely in the hot-path.
+
+**Property P7** — fires RTL when `tr(P[px,py,ψ]) ≥ 25 m²`. That's 1-σ horizontal uncertainty exceeding 5m. The drone stops trusting its own position estimate *before* it acts on it. Deterministic fallback, not a heuristic. Most systems detect bad estimates after the fact — this one stops the drone from using them in the first place.
+
+---
+
+## Latency Budget (Measured — 100k trials, SCHED_FIFO prio 99, CPU core 2)
 
 | Subsystem | Budget | Measured | Margin |
 |---|---|---|---|
-| HOCBF filter (C99) | < 10 µs | **371 ns** (P99: 31ns) | **270×** |
+| **HOCBF filter only** (C99 clamp) | < 10 µs | **P99: 31 ns, WCET: 2,725 ns** | **36×** |
 | mmap IPC read | < 1 µs | ~50–100 ns | — |
 | RL policy ONNX forward | < 1 ms | ~0.5 ms | 2× |
 | OS scheduler jitter | < 50 µs | 5.0 µs P99 | 10× |
 | End-to-end RT loop | < 2 ms | < 1 ms | 2× |
 | VLA inference (SmolVLM2) | < 5 s | ~2.5 s | best-effort core |
 
-WCET measured via `clock_gettime(CLOCK_MONOTONIC_RAW)` on SCHED_FIFO prio 99, CPU core 2, 100k trials. Raw data in `experiments/results/latency_raw.csv`.
+> WCET = 2,725 ns is the single worst-case sample across 100k trials (`clock_gettime(CLOCK_MONOTONIC_RAW)`). P99 is 31 ns — the spike is a rare OS interrupt. EVT Gumbel tail bound at P=10⁻⁹: **1,733 ns** — 57× below the 100µs hard deadline. Raw data: `experiments/results/latency_raw.csv`.
 
 ---
 
@@ -91,15 +103,15 @@ Cross-cutting: 15-state EKF feeds covariance into HOCBF + consensus weights
 
 ## What I Built
 
-1. **C99 HOCBF safety filter** — closed-form clamp, no QP solver, WCET 2,725ns. pybind11 wrapper for Python testing. EVT Gumbel tail bound at P=10⁻⁹ is 1,733ns — 57× below the 100µs hard deadline.
+1. **C99 HOCBF safety filter** — closed-form clamp, no QP solver needed for the altitude constraint. WCET 2,725ns on unpatched Linux. pybind11 wrapper keeps it testable from Python without a separate build step.
 
-2. **15-state EKF with observability Gramian** — rank drops 6→4 under GPS denial. VIO (OpenVINS-derived noise) restores rank to 6. Air-gap architecture prevents the filter from confirming its own estimates.
+2. **15-state EKF with observability Gramian** — rank drops 6→4 under GPS denial. VIO (OpenVINS-derived noise) restores rank to 6. Air-gap architecture: the physics plant writes ground-truth to `/dev/shm/aisp_gt_state`, the EKF reads it as a VIO measurement but never writes back. Prevents the filter from confirming its own estimates.
 
-3. **DO-178C-inspired FSM with Z3 proofs** — 7 states, 24 transitions, 7 invariants (P1–P7). P7 is new: fires RTL when EKF covariance collapses before the drone acts on bad state estimates.
+3. **DO-178C-inspired FSM with Z3 proofs** — 7 states, 24 transitions, 7 invariants (P1–P7). BFS exhaustive proof over all reachable states. P7 is the new one: fires RTL when EKF covariance collapses, before the drone acts on bad estimates.
 
-4. **Observability-weighted HotStuff consensus** — the consensus node uses EKF covariance to weight votes. A GPS-denied Byzantine node gets w=0.008 vs w=0.976 for GPS-active nodes. It can't reach 2/3 quorum regardless of what it votes. No separate fault detection layer needed.
+4. **Observability-weighted HotStuff consensus** — I didn't want a separate fault-detection layer. Instead I tied BFT voting power directly to EKF covariance. A GPS-denied node gets w=0.008; GPS-active nodes get w=0.976. The Byzantine node silences itself — it can't reach 2/3 quorum no matter what it votes.
 
-5. **Battery aging model** — validated against NASA PCoE cells (B0005/B0006/B0007). Spec linear model predicts EOL at cycle 600. Real cells died at cycle 100–165. 4th-order polynomial fit gets RMSE < 0.03 Ah.
+5. **Battery aging model** — validated against NASA PCoE cells (B0005/B0006/B0007). Spec linear model predicts EOL at cycle 600. Real cells died at cycle 100–165. 4th-order polynomial fit, RMSE < 0.03 Ah.
 
 6. **Headless SITL testbed** — zero dependencies on Gazebo, ROS, PX4, or hardware. Fully reproducible from a fresh clone.
 
@@ -189,17 +201,7 @@ python experiments/exp_consensus_fault.py
 
 ---
 
-## Under the Hood (High-Signal Details)
-
-**`mlockall(MCL_CURRENT | MCL_FUTURE)`** — called at startup in `safety_filter.c` to pin all memory pages and prevent page faults from blowing the RT deadline. Standard practice for hard-RT systems, rarely seen in student projects.
-
-**Zero-copy IPC via `/dev/shm`** — the VLA (Python, best-effort core) writes commands to a POSIX shared memory region. The safety filter (C99, SCHED_FIFO prio 99, isolated core) reads it with a single `mmap` pointer dereference — no serialization, no syscalls, ~50–100ns latency. Replaces ZeroMQ, ROS2 DDS, and MAVLink entirely in the hot-path.
-
-**Property P7** — fires RTL when `tr(P[px,py,ψ]) ≥ 25 m²`, meaning 1-σ horizontal uncertainty has exceeded 5m. The drone stops trusting its own position estimate before it acts on it. This is a deterministic fallback, not a heuristic.
-
----
-
-
+## Engineering Trade-offs & Future Work
 
 - Simulation-first workflow to maximize iteration speed. Next step is porting to a Jetson Orin for hardware-in-the-loop (HIL) validation.
 - DO-178C-inspired, not certified. Full cert needs EASA/FAA, LDRA/VectorCAST, PSAC.
@@ -210,11 +212,16 @@ python experiments/exp_consensus_fault.py
 
 ---
 
-## Project Status
+## 🎯 Career Status — May 2026
 
-Master's thesis — ASU School of Manufacturing Systems & Networks, Spring 2026.
-Advisor: Prof. Shenghan Guo.
+I'm a Graduate Researcher at ASU finishing my Master's in Robotics & Autonomous Systems (Spring 2026). My focus is hard real-time safety kernels, formal verification, and robot learning.
 
-I'm looking for full-time roles in **safety-critical autonomy, real-time systems, and robot learning** in the U.S. starting **May 2026**. If you're working on hard RT safety kernels, formal verification, or autonomous vehicle software — let's talk.
+Looking for full-time roles in the U.S. starting **May 2026** — specifically safety-critical autonomy, real-time embedded systems, and autonomous vehicle software.
+
+**Specialties:** Hard RT Safety Kernels · Formal Verification (Z3) · Robot Learning (PPO) · High-Performance Middleware (POSIX, C99)
 
 → [LinkedIn](https://linkedin.com/in/rhutvik-pachghare) · rhutvik.pachghare@asu.edu
+
+---
+
+*Master's thesis — ASU School of Manufacturing Systems & Networks, Spring 2026. Advisor: Prof. Shenghan Guo.*

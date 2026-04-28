@@ -189,13 +189,23 @@ python experiments/exp_consensus_fault.py
 
 ---
 
-## Honest Limitations
+## Under the Hood (High-Signal Details)
 
-- No real hardware. SITL only.
+**`mlockall(MCL_CURRENT | MCL_FUTURE)`** — called at startup in `safety_filter.c` to pin all memory pages and prevent page faults from blowing the RT deadline. Standard practice for hard-RT systems, rarely seen in student projects.
+
+**Zero-copy IPC via `/dev/shm`** — the VLA (Python, best-effort core) writes commands to a POSIX shared memory region. The safety filter (C99, SCHED_FIFO prio 99, isolated core) reads it with a single `mmap` pointer dereference — no serialization, no syscalls, ~50–100ns latency. Replaces ZeroMQ, ROS2 DDS, and MAVLink entirely in the hot-path.
+
+**Property P7** — fires RTL when `tr(P[px,py,ψ]) ≥ 25 m²`, meaning 1-σ horizontal uncertainty has exceeded 5m. The drone stops trusting its own position estimate before it acts on it. This is a deterministic fallback, not a heuristic.
+
+---
+
+
+
+- Simulation-first workflow to maximize iteration speed. Next step is porting to a Jetson Orin for hardware-in-the-loop (HIL) validation.
 - DO-178C-inspired, not certified. Full cert needs EASA/FAA, LDRA/VectorCAST, PSAC.
 - VIO uses OpenVINS-derived noise params on synthetic data — not a live pipeline.
-- Yaw unobservable under GPS denial. No magnetometer model.
-- Battery model trained on 18650 cells (2Ah). Project uses 6S LiPo (5Ah). Chemistry differs.
+- Yaw unobservable under GPS denial. Magnetometer model is the fix.
+- Battery model validated on 18650 cells (2Ah). Project uses 6S LiPo (5Ah). Chemistry differs; recalibration needed for real hardware.
 - WCET on stock Linux. PREEMPT_RT would tighten jitter further.
 
 ---

@@ -133,7 +133,7 @@ li{font-size:10px;margin-bottom:2px}
   </div>
 </div>
 <div class="gold-bar"></div>
-<div class="rq"><span>Research Question: </span>"Can a hierarchical architecture combining a formally verified FSM, continuous EKF state estimation, and Byzantine fault-tolerant consensus provide <em>quantifiable safety guarantees</em> while maintaining autonomous adaptability — and what is the measurable computational cost of each guarantee?"</div>
+<div class="rq"><span>Research Question: </span>"Can a hierarchical architecture combining a deterministic safety filter, continuous EKF state estimation, and Byzantine fault-tolerant consensus enforce <em>quantifiable safety constraints</em> while maintaining autonomous adaptability — and what is the measurable computational cost of each constraint?"</div>
 
 <div class="body">
 
@@ -147,7 +147,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="lyr l1"><div class="ln">1</div><div><div class="lnm">SE(3) Rigid-Body Physics Plant</div><div class="ld">RK4 · SO(3) projection · m=2kg · wind σ=0.05m/s</div></div></div>
       <div class="lyr l2"><div class="ln">2</div><div><div class="lnm">15-State EKF Sensor Fusion</div><div class="ld">pos(3) vel(3) quat(4) bias(5) · GPS/IMU/Baro/VIO</div></div></div>
       <div class="lyr l3"><div class="ln">3</div><div><div class="lnm">PPO Asymmetric Actor-Critic</div><div class="ld">Actor 13-dim noisy · Critic 17-dim privileged · ONNX 22KB</div></div></div>
-      <div class="lyr l4"><div class="ln">4</div><div><div class="lnm">DO-178C Safety Kernel (FSM)</div><div class="ld">7 states · 24 transitions · P1–P7 · HOCBF₂ + HOCBF₄</div></div></div>
+      <div class="lyr l4"><div class="ln">4</div><div><div class="lnm">Safety Kernel (FSM — planned)</div><div class="ld">7 states · 24 transitions · P1–P7 specified · HOCBF₂ + HOCBF₄</div></div></div>
       <div class="lyr l5"><div class="ln">5</div><div><div class="lnm">Battery Model</div><div class="ld">5Ah 6S LiPo · Coulomb counting · 4th-order OCV · NASA validated</div></div></div>
       <div class="lyr lx"><div class="ln" style="font-size:7px;font-weight:900">SVC</div><div><div class="lnm">Observability-Weighted HotStuff Consensus</div><div class="ld">EKF covariance → vote weight → /dev/shm IPC</div></div></div>
     </div>
@@ -155,11 +155,11 @@ li{font-size:10px;margin-bottom:2px}
 </div>
 
 <div class="card">
-  <div class="ch" style="background:#880E4F">Formal Safety Properties P1–P7</div>
+  <div class="ch" style="background:#880E4F">Safety Properties P1–P7 (specified)</div>
   <div class="cb">
     <ul class="pl">
       <li><span class="pt">P1</span>Geofence violation → RTL ≤100ms</li>
-      <li><span class="pt">P2</span>DISARMED reachable from every state (BFS)</li>
+      <li><span class="pt">P2</span>DISARMED reachable from every state (planned BFS)</li>
       <li><span class="pt">P3</span>No DISARMED→FLYING without ARM+TAKEOFF</li>
       <li><span class="pt">P4</span>Watchdog timeout (5s) → EMERGENCY_LAND</li>
       <li><span class="pt">P5</span>No deadlocks — every state has ≥1 transition</li>
@@ -218,7 +218,7 @@ li{font-size:10px;margin-bottom:2px}
         <div style="background:#E0F2F1;border:1.2px solid #004D40;border-radius:4px;padding:4px 8px;text-align:center"><strong style="color:#004D40">BFT Consensus</strong><br><span style="font-size:8.5px;color:#555">w=exp(−σ²/2σ²_warn)</span></div>
       </div>
       <div style="text-align:center;color:#888;margin:1px 0">↓ T_safe</div>
-      <div style="background:#FCE4EC;border:1.5px solid #880E4F;border-radius:5px;padding:5px 10px;margin-bottom:3px;text-align:center"><strong style="color:#880E4F">DO-178C FSM</strong> — P1–P7 · 7 states · 24 transitions</div>
+      <div style="background:#FCE4EC;border:1.5px solid #880E4F;border-radius:5px;padding:5px 10px;margin-bottom:3px;text-align:center"><strong style="color:#880E4F">Safety Kernel (DO-178C-inspired)</strong> — P1–P7 specified · 7 states · 24 transitions · FSM planned</div>
       <div style="text-align:center;color:#888;margin:1px 0">↓</div>
       <div style="background:#FFF8E1;border:1.5px solid #F57F17;border-radius:5px;padding:5px 10px;text-align:center"><strong style="color:#E65100">SE(3) Physics Plant</strong> — RK4 · SO(3) · Isaac Sim 4.5</div>
     </div>
@@ -339,7 +339,7 @@ li{font-size:10px;margin-bottom:2px}
       <tr><td>Near-ground + tilt</td><td class="nr">50.28</td><td class="nr hi">28.20N</td><td><span class="bpass">PASS</span></td></tr>
       <tr><td><strong>Worst-case combined</strong></td><td class="nr"><strong>78.48</strong></td><td class="nr" style="color:#E65100;font-weight:700">0.00N</td><td><span class="bwarn">TIGHT</span></td></tr>
     </table>
-    <p style="font-size:8px;color:#777;">T_max=78.48N. Control invariant set <strong>PROVED</strong> — feasible at all boundary states. Ref: Xiao &amp; Belta (2022) IEEE TAC.</p>
+    <p style="font-size:8px;color:#777;">T_max=78.48N. Control invariant set <strong>specified</strong> — feasibility analysis planned. Ref: Xiao &amp; Belta (2022) IEEE TAC.</p>
   </div>
 </div>
 
@@ -573,13 +573,13 @@ li{font-size:10px;margin-bottom:2px}
 <div class="card">
   <div class="ch" style="background:#FFC627;color:#8C1D40;">Research Contributions</div>
   <div class="cb">
-    <div class="ct"><div class="cn">1</div><div class="cx"><strong>Formally verified FSM</strong> — 7 states, P1–P7, WCET=2,725ns, EVT P=10⁻⁹ bound=1,733ns</div></div>
+    <div class="ct"><div class="cn">1</div><div class="cx"><strong>Hard-RT safety filter</strong> — HOCBF clamp, WCET=2,725ns (p99=31ns), EVT P=10⁻⁹ bound=1,733ns; FSM P1–P7 specified, verification planned</div></div>
     <div class="ct"><div class="cn">2</div><div class="cx"><strong>EKF observability Gramian</strong> — rank 6→4 under GPS denial, VIO restores rank, air-gap prevents confirmation bias</div></div>
     <div class="ct"><div class="cn">3</div><div class="cx"><strong>Battery EOL validation</strong> — spec model 4–6× wrong; poly-4 fit RMSE &lt;0.03Ah on NASA PCoE cells</div></div>
-    <div class="ct"><div class="cn">4</div><div class="cx"><strong>HOCBF₄ symbolic derivation</strong> — full ZYX Euler kinematics via CasADi, control invariant set proved</div></div>
+    <div class="ct"><div class="cn">4</div><div class="cx"><strong>HOCBF₄ symbolic derivation</strong> — full ZYX Euler kinematics via CasADi, control invariant set derived (formal proof planned)</div></div>
     <div class="ct"><div class="cn">5</div><div class="cx"><strong>Observability-weighted BFT consensus</strong> — 100% commit, 100% Byzantine rejection under 20% packet loss</div></div>
     <div class="ct"><div class="cn">6</div><div class="cx"><strong>1000-trial hallucination blocking</strong> — 100% survival, vz from −0.1 to −100 m/s, max correction 397N</div></div>
-    <div class="ct"><div class="cn">7</div><div class="cx"><strong>Headless SITL testbed</strong> — zero Gazebo/ROS/PX4/hardware dependencies, pytest 13/13 PASSED</div></div>
+    <div class="ct"><div class="cn">7</div><div class="cx"><strong>Headless SITL testbed</strong> — zero Gazebo/ROS/PX4/hardware dependencies, pytest 30/30 PASSED</div></div>
   </div>
 </div>
 

@@ -1,206 +1,289 @@
 # Autonomous Drone Safety Architecture
-### Hard Real-Time Safety for AI-Driven Drones
 
 [![Build Status](https://github.com/Rhutvik-pachghare1999/autonomous-drone-safety-architecture/actions/workflows/ci.yml/badge.svg)](https://github.com/Rhutvik-pachghare1999/autonomous-drone-safety-architecture/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 
-**[🔗 View Live Research Poster ↗](https://rhutvik-pachghare1999.github.io/autonomous-drone-safety-architecture/)**
+Research prototype: a hard real-time safety kernel that wraps an AI-driven
+quadrotor flight stack. The goal is to intercept every high-level command,
+project it through a physical safety filter, and clamp the actuator command
+before it reaches the motors.
+
+This is **not a certified flight controller**. It is a simulation-first
+research codebase used to study how deterministic safety filters can bound
+foundation-model/RL hallucinations in real time.
 
 ---
 
-## The Objective
+## What is implemented
 
-Foundation models are powerful but non-deterministic. In a flight stack, a single hallucinated motor command is a total loss. I built a sub-microsecond safety kernel that intercepts every AI command, checks it against hard physics constraints, and clamps it before it reaches the motors. The AI can output whatever it wants. The drone doesn't care.
-
-1,000 adversarial trials. 100% survival rate.
+| Component | Status | Evidence |
+|---|---|---|
+| C99 + pybind11 HOCBF altitude safety filter | implemented, tested | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_hocbf.py`, `tests/test_input_validation.py` |
+| NaN/Inf input validation / fail-safe | implemented, tested | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_input_validation.py` |
+| POSIX `/dev/shm` zero-copy command IPC | implemented | `src/utils/shm_bridge.py`, `src/rt/safety_filter.c` |
+| EKF covariance gating / mode ladder (P7) | partially implemented | `src/estimation/ekf_gating.py` computes threshold; RTL FSM action is planned |
+| Observability-weighted HotStuff consensus | implemented, tested | `services/consensus_node.py`, `experiments/exp_consensus_fault.py` |
+| VLA bridge (SmolVLM2) | implemented, not validated here | `src/perception/vla_bridge.py` — requires GPU + HF model download |
+| PPO policy + ONNXRuntime C hot-path | implemented, not validated here | `experiments/results/ppo_policy.onnx`, `src/rt/safety_filter.c` — requires ONNX build |
+| Formal FSM / Z3 invariants (P1–P7) | planned, not implemented | `ROADMAP.md` § "Formal verification roadmap" |
+| Isaac Sim / SITL closed-loop flight | planned / dev-tool only | No simulator launch scripts are committed; see `docs/DEMO_RUNBOOK.md` |
 
 ---
 
-## Tech Stack
+## System overview
 
-| Domain | Technology |
+```
+Best-effort cores (SCHED_OTHER)
+  ├── VLA bridge ..................... parses image+text → [vx, vy, vz]
+  │                                    (best-effort, ~2.5 s latency)
+  └── RL policy ...................... PPO actor-critic → nominal thrust
+                                       (optional ONNXRuntime path)
+                │
+                ▼ /dev/shm/aisp_vla_cmd
+Hard-RT core (SCHED_FIFO prio 99, isolated)
+  └── safety_filter.c ................ mmap read → HOCBF clamp → actuator
+       ├── HOCBF filter .............. O(1) arithmetic, WCET 2,725 ns
+       ├── jitter watchdog ........... per-cycle deviation from expected
+       └── stale-VLA fallback ........ RL hover if VLA silent > 100 ms
+
+State estimation:
+  └── ekf_gating.py .................. 15-state EKF mode ladder (NOMINAL / DEGRADED / COLLAPSED)
+       └── P7 threshold: tr(P[px,py,ψ]) ≥ 25 m² → set p7_triggered
+
+Swarm consensus:
+  └── consensus_node.py .............. observability-weighted HotStuff quorum
+       └── writes /dev/shm/aisp_consensus for EKF gating
+```
+
+Implemented and tested paths are shown in **bold**. Dashed lines are planned
+or require external runtime dependencies (Isaac Sim, ONNX runtime library,
+GPU, downloaded VLA weights).
+
+---
+
+## Repository layout
+
+| Path | What it contains |
 |---|---|
-| Real-Time | C99, POSIX Threads, `mmap`, `SCHED_FIFO`, `mlockall` |
-| Control | HOCBF (Relative Degree 4), CasADi symbolic math, OSQP |
-| AI / RL | PPO Asymmetric Actor-Critic, ONNX Runtime C API |
-| Simulation | NVIDIA Isaac Sim 4.5, PhysX 5.4 |
-| Formal Methods | FSM/Z3 safety specification planned — not implemented in this repo |
-| State Estimation | 15-state EKF, GPS/IMU/Baro/VIO fusion |
-| Consensus | HotStuff BFT, ZMQ PUB/SUB, observability-weighted voting |
+| `src/control/hocbf.cpp` | C++ HOCBF filter with pybind11 Python wrapper |
+| `src/rt/safety_filter.c` | Standalone C99 real-time filter + ONNX path + benchmark harness |
+| `src/estimation/ekf_gating.py` | EKF covariance gating, P7 threshold, VIO injection, consensus read |
+| `src/perception/vla_bridge.py` | SmolVLM2 VLA bridge (requires GPU + transformers) |
+| `src/utils/shm_bridge.py`, `shm_bridge.h` | `/dev/shm` layout definitions |
+| `services/consensus_node.py` | Observability-weighted HotStuff node |
+| `experiments/*.py` | Reproducible experiments; see "Quick start" for which ones run here |
+| `experiments/results/*.json`, `*.csv`, `*.png` | Committed measurement artifacts |
+| `docs/WCET_BENCHMARK.md` | How the 2,725 ns WCET was produced and reproduced |
+| `docs/LATENCY_BUDGET.md` | Subsystem latency budget and SLA definitions |
+| `docs/CLAIM_EVIDENCE_AUDIT.md` | Claim-by-claim evidence map |
+| `docs/ARCHITECTURE.md` | Code-verified data/control flow |
+| `docs/DEMO_RUNBOOK.md` | Procedures for paths that cannot run in this environment |
+| `ROADMAP.md` | Development roadmap including formal verification P1–P7 |
+| `tests/` | `test_hocbf.py` (13 tests) + `test_input_validation.py` (17 tests) |
 
 ---
 
-## Under the Hood — The Details That Matter
+## Requirements
 
-**`mlockall(MCL_CURRENT | MCL_FUTURE)`** — called at startup in `safety_filter.c`. Pins every memory page so the kernel can't page-fault during the RT loop. One missed page fault at the wrong moment blows your deadline. This is standard hard-RT practice; most student projects skip it.
+**For the verified, CI-friendly subset:**
 
-**Zero-copy IPC via `/dev/shm`** — the VLA model (Python, best-effort core) writes commands to a POSIX shared memory region. The safety filter (C99, SCHED_FIFO prio 99, isolated core) reads it with a single `mmap` pointer dereference. No serialization. No syscalls. ~50–100ns latency. This replaces ZeroMQ, ROS2 DDS, and MAVLink entirely in the hot-path.
+- Python 3.12
+- `numpy`, `scipy`, `pyzmq`, `pytest`, `pybind11`
+- GCC or Clang for the C99 benchmark harness
+- CMake 3.20+ (for the C++/pybind11 build)
 
-**Property P7 (specified, not formally proven)** — the EKF gating module is designed to command return-to-launch when `tr(P[px,py,ψ]) ≥ 25 m²`. The implementation (`src/estimation/ekf_gating.py`) evaluates this threshold and sets `p7_triggered`, but the FSM that converts that signal into a guaranteed RTL within one 100 ms cycle is specified, not yet implemented or model-checked. See `ROADMAP.md` § "Formal verification roadmap (P1–P7)".
+**For optional paths (not validated here):**
 
----
+- `casadi` → `experiments/exp_lie_derivatives.py`
+- `transformers`, `torch`, `pillow`, `bitsandbytes`, GPU → `src/perception/vla_bridge.py`
+- ONNX Runtime C library → ONNX-linked `safety_filter.c` build
+- NVIDIA Isaac Sim → closed-loop SITL
 
-## Latency Budget (Measured — 100k trials, SCHED_FIFO prio 99, CPU core 2)
-
-| Subsystem | Budget | Measured | Margin |
-|---|---|---|---|
-| **HOCBF filter only** (C99 clamp) | < 10 µs | **P99: 31 ns, WCET: 2,725 ns** | **36×** |
-| mmap IPC read | < 1 µs | ~50–100 ns | — |
-| RL policy ONNX forward | < 1 ms | ~0.5 ms | 2× |
-| OS scheduler jitter | < 50 µs | 5.0 µs P99 | 10× |
-| End-to-end RT loop | < 2 ms | < 1 ms | 2× |
-| VLA inference (SmolVLM2) | < 5 s | ~2.5 s | best-effort core |
-
-> WCET = 2,725 ns is the single worst-case sample across 100k trials (`clock_gettime(CLOCK_MONOTONIC_RAW)`). P99 is 31 ns — the spike is a rare OS interrupt. EVT Gumbel tail bound at P=10⁻⁹: **1,733 ns** — 57× below the 100µs hard deadline. Raw data: `experiments/results/latency_raw.csv`.
-
----
-
-## What It Does
-
-![Hallucination blocking — T_nom vs T_safe across 1,000 adversarial trials](experiments/results/hallucination_1000.png)
-
-*T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−380N → T_safe=78.5N. Zero collisions across all 1,000 trials.*
-
-![WCET EVT analysis — CCDF tail + Gumbel extrapolation](experiments/results/wcet_evt.png)
-
-*CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1,733ns (57× below 100µs deadline)*
-
----
-
-## Key Results
-
-| Metric | Result |
-|---|---|
-| HOCBF filter WCET | 2,725 ns |
-| EVT tail bound (P=10⁻⁹) | 1,733 ns — 57× below 100µs deadline |
-| Survival across 1,000 adversarial trials | 100% |
-| Worst command corrected | −380N → 78.5N |
-| Byzantine rejection (20% packet loss) | 100% |
-| EKF rank under GPS denial | 6 → 4, VIO restores to 6 |
-| Battery EOL: spec vs reality | cycle 600 vs cycle 100 (4–6× error) |
-| pytest | 13/13 PASSED |
-
----
-
-## What I Built
-
-1. **C99 HOCBF safety filter** — closed-form clamp, no QP solver needed for the altitude constraint. WCET 2,725ns on unpatched Linux. pybind11 wrapper keeps it testable from Python without a separate build step.
-
-2. **15-state EKF with observability Gramian** — rank drops 6→4 under GPS denial. VIO (OpenVINS-derived noise) restores rank to 6. Air-gap architecture: the physics plant writes ground-truth to `/dev/shm/aisp_gt_state`, the EKF reads it as a VIO measurement but never writes back. Prevents the filter from confirming its own estimates.
-
-3. **DO-178C-inspired mode ladder (FSM specified, not formally verified)** — P1–P7 are written down as the intended safety properties, and the EKF gating module implements the P7 threshold check. The actual FSM with Z3/FSM model checking is not implemented in this repo; it lives in `ROADMAP.md` as planned verification work.
-
-4. **Observability-weighted HotStuff consensus** — I didn't want a separate fault-detection layer. Instead I tied BFT voting power directly to EKF covariance. A GPS-denied node gets w=0.008; GPS-active nodes get w=0.976. The Byzantine node silences itself — it can't reach 2/3 quorum no matter what it votes.
-
-5. **Battery aging model** — validated against NASA PCoE cells (B0005/B0006/B0007). Spec linear model predicts EOL at cycle 600. Real cells died at cycle 100–165. 4th-order polynomial fit, RMSE < 0.03 Ah.
-
-6. **Headless SITL testbed** — zero dependencies on Gazebo, ROS, PX4, or hardware. Fully reproducible from a fresh clone.
-
----
-
-## What Actually Broke
-
-**Python HOCBF was too slow.** First implementation used OSQP in Python. Jitter was 50–200µs — unusable in a 10Hz loop. Rewrote in C99 with a closed-form clamp. WCET dropped to 2,725ns. The pybind11 wrapper keeps it testable from Python.
-
-**The EKF was confirming its own estimates.** Early versions let the EKF read from the same shared memory the physics plant wrote to. Added an air-gap: plant writes ground-truth to `/dev/shm/aisp_gt_state`, EKF reads it as VIO but never writes back. Rank went from artificially inflated to the correct 4 under GPS denial.
-
-**Battery spec was off by 4–6×.** Datasheet says EOL at cycle 600. NASA PCoE cells actually died at cycle 100–165. A linear model would have you planning missions on a dead battery.
-
-**Byzantine detection came for free.** Expected to need a separate fault detection layer. Didn't. The EKF covariance weighting handles it automatically.
-
----
-
-## Formal Safety Properties (Specified, Not Proven)
-
-The properties below are the *design targets* for a future FSM/Z3 verification layer. They are **not** proven invariants in the current codebase. What is implemented is noted for each property.
-
-```
-P1 — Geofence breach        → RTL in ≤ 1 cycle (100ms)                [planned]
-P2 — DISARMED always reachable (BFS proof over all states)            [planned]
-P3 — Can't go DISARMED → FLYING without ARM + TAKEOFF                 [planned]
-P4 — 5s watchdog timeout    → EMERGENCY_LAND                          [planned]
-P5 — No deadlocks (every state has ≥1 exit)                           [planned]
-P6 — NaN/Inf inputs rejected before FSM sees them                     [implemented]
-       ↳ src/control/hocbf.cpp filter_thrust() fails safe on non-finite inputs
-       ↳ src/rt/safety_filter.c hocbf_filter() fails safe on non-finite state
-       ↳ tests/test_input_validation.py: 17 pytest cases
-P7 — EKF covariance collapse → RTL before bad estimates cause damage  [partial]
-       ↳ src/estimation/ekf_gating.py computes sigma_sq and sets p7_triggered
-       ↳ FSM RTL action is planned, not implemented
-```
-
-For the full roadmap see `ROADMAP.md` § "Formal verification roadmap (P1–P7)".
-
----
-
-## EKF Observability Under GPS Denial
-
-```
-Sensor config          Observable states    Rank
-─────────────────────────────────────────────────
-GPS + IMU + Baro       px, py, pz, vx, vy   6/15
-IMU + Baro only        pz, vz, φ, θ         4/15  ← px, py lost
-+ VIO (σ=0.10 m/s)    px, py restored       6/15
-
-Note: yaw (ψ) stays unobservable without magnetometer
-```
-
----
-
-## Battery Aging Reality Check
-
-![Battery capacity fade — poly-4 fit vs spec linear model](experiments/results/battery_validation.png)
-
-*Spec linear model predicts EOL at cycle 600. Real NASA PCoE cells died at cycle 100–165 — 4–6× error. Poly-4 fit RMSE: 0.016 Ah (B0005), 0.030 Ah (B0006), 0.014 Ah (B0007).*
-
----
-
-## Running It
+Install the core set:
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install numpy scipy casadi pyzmq osqp pytest pybind11
-
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc) && make install
-cd ..
-
-PYTHONPATH=. pytest tests/test_hocbf.py -v
-
-python experiments/exp_hallucination_1000.py
-python experiments/exp_wcet_evt.py
-python experiments/exp_lie_derivatives.py
-python experiments/exp_observability_gramian.py
-python experiments/exp_battery_validation.py
-python experiments/exp_consensus_fault.py
-
-./build/safety_filter 100000 2
 ```
 
 ---
 
-## Engineering Trade-offs & Future Work
+## Quick start
 
-- Simulation-first workflow to maximize iteration speed. Next step is porting to a Jetson Orin for hardware-in-the-loop (HIL) validation.
-- DO-178C-inspired, not certified and not formally verified. Full cert needs requirements-based testing, traceability, and tools such as LDRA/VectorCAST; the Z3/FSM proof is planned, not implemented.
-- VIO uses OpenVINS-derived noise params on synthetic data — not a live pipeline.
-- Yaw unobservable under GPS denial. Magnetometer model is the fix.
-- Battery model validated on 18650 cells (2Ah). Project uses 6S LiPo (5Ah). Chemistry differs; recalibration needed for real hardware.
-- WCET on stock Linux. PREEMPT_RT would tighten jitter further.
+Only the commands below were run in this environment.
+
+### 1. Build
+
+```bash
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release && make -j2 && make install
+cd ..
+```
+
+This compiles the pybind11 `hocbf` module and installs `hocbf.so` into
+`src/control/`.
+
+### 2. Run tests
+
+```bash
+python3 -m pytest tests/ -q
+```
+
+Expected result: **30 passed** (13 from `test_hocbf.py`, 17 from
+`test_input_validation.py`).
+
+### 3. Run the C99 filter benchmark
+
+```bash
+gcc -O3 -DNO_ONNX -o /tmp/sf src/rt/safety_filter.c -lm -lrt
+/tmp/sf 1000 0
+```
+
+This is the no-root, no-SCHED_FIFO run. It measures the arithmetic cost of
+the filter without OS scheduler isolation. On the author's machine it reports
+WCET ≈ 31 ns for 1,000 trials. The committed 2,725 ns WCET was captured under
+`SCHED_FIFO` + isolated core; see `docs/WCET_BENCHMARK.md`.
+
+### 4. Run experiments that execute here
+
+```bash
+python3 experiments/exp_hallucination_1000.py
+python3 experiments/exp_wcet_evt.py
+python3 experiments/exp_observability_gramian.py
+python3 experiments/exp_consensus_fault.py
+python3 experiments/exp_battery_validation.py   # requires experiments/results/nasa_pcoe_discharge.csv
+python3 services/consensus_node.py --test
+```
+
+`experiments/exp_lie_derivatives.py` needs `casadi`, which is not installed in
+this environment. ONNX-linked and Isaac-Sim paths are documented in
+`docs/DEMO_RUNBOOK.md`.
 
 ---
 
-## 🎯 Career Status — May 2026
+## Tests & validation
 
-I'm a Graduate Researcher at ASU finishing my Master's in Robotics & Autonomous Systems (Spring 2026). My focus is hard real-time safety kernels, formal verification, and robot learning.
+| Test / check | Command | Result | Evidence |
+|---|---|---|---|
+| HOCBF unit tests | `pytest tests/test_hocbf.py -q` | 13 passed | `tests/test_hocbf.py` |
+| NaN/Inf fail-safe | `pytest tests/test_input_validation.py -q` | 17 passed | `tests/test_input_validation.py` |
+| C filter no-ONNX run | `gcc -O3 -DNO_ONNX -o /tmp/sf src/rt/safety_filter.c -lm -lrt && /tmp/sf 1000 0` | builds and runs | terminal output |
+| Consensus quorum | `python3 services/consensus_node.py --test` | PASS | terminal output |
 
-Looking for full-time roles in the U.S. starting **May 2026** — specifically safety-critical autonomy, real-time embedded systems, and autonomous vehicle software.
-
-**Specialties:** Hard RT Safety Kernels · Safety-Critical Autonomy · Robot Learning (PPO) · High-Performance Middleware (POSIX, C99)
-
-→ [LinkedIn](https://linkedin.com/in/rhutvik-pachghare) · rhutvik.pachghare@asu.edu
+All 30 pytest cases pass with Python 3.12 in a clean checkout after the
+`conftest.py` fix.
 
 ---
 
-*Master's thesis — ASU School of Manufacturing Systems & Networks, Spring 2026. Advisor: Prof. Shenghan Guo.*
+## Results
+
+| Claim | Value | Committed artifact | Notes |
+|---|---|---|---|
+| HOCBF filter WCET | 2,725 ns | `experiments/results/latency_raw.csv` (100,000 rows), `experiments/results/wcet_evt.json` | Captured under `SCHED_FIFO` prio 99, core 2, isolated core. Fresh-clone no-root run ≈ 31 ns. |
+| EVT tail bound (P=10⁻⁹) | 1,733 ns | `experiments/results/wcet_evt.json` | Gumbel block-maxima fit from committed CSV. |
+| Filter latency p99 | 31 ns | `experiments/results/wcet_evt.json` | Empirical p99 from committed CSV. |
+| Filter latency mean / p50 | 22.31 ns / 20 ns | `experiments/results/wcet_evt.json` | From committed CSV. |
+| Adversarial survival | 100% (1,000 / 1,000) | `experiments/results/hallucination_1000.json`, `hallucination_1000.png` | vz swept −0.1 to −100 m/s. |
+| Worst corrected command | T_nom = −380.4 N → T_safe = 16.9 N, correction = 397.25 N | `experiments/results/hallucination_1000.json` | **Previous README value "78.5 N" was the actuator ceiling (T_max), not the HOCBF-corrected thrust.** The filter returns the safe lower bound 16.9 N. |
+| EKF rank GPS denied | 6 → 4 | `experiments/results/observability_gramian.json` | IMU+Baro only loses horizontal position. |
+| VIO restores rank | 4 → 6 | `experiments/results/observability_gramian.json` | With OpenVINS-derived noise model. |
+| Consensus commit rate | 100% (100 / 100 rounds) | `experiments/results/consensus_fault.json` | 20% packet loss + 50 ms max latency. |
+| Byzantine rejection | 100% (100 / 100) | `experiments/results/consensus_fault.json` | Byzantine GPS-denied node cannot reach 2/3 weighted quorum. |
+| Battery poly-4 RMSE | 0.016 Ah (B0005), 0.030 Ah (B0006), 0.014 Ah (B0007) | `experiments/results/battery_validation.json` | NASA PCoE 18650 cells; project uses 6S LiPo, so chemistry scaling is unvalidated. |
+| Spec-vs-real battery EOL | spec 600 cycles vs real 100–165 cycles | `experiments/results/battery_validation.json` | Linear spec model overestimates usable life by ~4–6×. |
+
+---
+
+## Engineering decisions
+
+1. **Closed-form HOCBF instead of OSQP in the hot path.** The altitude-only
+   safety constraint reduces to a 1-D clamp, so the C99 hot path avoids any
+   QP solver or heap allocation. This keeps the deterministic latency in the
+   tens of nanoseconds instead of the tens of microseconds seen in the early
+   Python/OSQP prototype.
+
+2. **Fail-safe on non-finite inputs.** Upstream models can emit NaN/Inf.
+   Both `hocbf.cpp` and `safety_filter.c` detect non-finite state or nominal
+   commands and fall back to hover thrust or the computed safe lower bound.
+   This is tested by 17 dedicated pytest cases.
+
+3. **Ground-truth air-gap for VIO.** The physics plant writes true velocity
+   to `/dev/shm/aisp_gt_state`; the EKF reads it as a VIO measurement but
+   never writes back. This prevents the filter from confirming its own drift
+   under GPS denial.
+
+4. **Observability-weighted consensus.** Vote weight is tied to EKF covariance
+   rather than adding a separate fault detector. GPS-denied nodes naturally
+   receive near-zero weight, so a Byzantine node in that state cannot sway
+   the 2/3 quorum.
+
+5. **Separate best-effort and hard-RT paths.** VLA inference (~seconds) and
+   RL policy inference (~milliseconds) run on best-effort cores; only the
+   O(1) HOCBF clamp runs under `SCHED_FIFO` priority 99 with memory locked.
+
+---
+
+## Limitations & known gaps
+
+- **Not certified.** The codebase is DO-178C-inspired in structure only. There
+  is no requirements traceability, MC/DC evidence, or certification authority
+  involvement.
+
+- **Formal verification is planned, not done.** Properties P1–P5 are
+  specified but unproven. P6 is implemented and tested. P7 computes the
+  covariance threshold but the RTL FSM action is not implemented. See
+  `ROADMAP.md`.
+
+- **Simulation-only.** No hardware-in-the-loop, flight logs, or real-vehicle
+   validation. The zero-copy IPC path has not been exercised against a live
+   flight controller.
+
+- **Yaw unobservable without magnetometer.** Under GPS denial the EKF cannot
+  observe yaw; the current model does not include a magnetometer.
+
+- **Battery model chemistry gap.** Validation used NASA PCoE 18650 cells
+  (~2 Ah). The project assumes a 6S LiPo (~5 Ah); direct chemistry and
+  capacity scaling is unvalidated.
+
+- **VLA bridge unvalidated here.** `src/perception/vla_bridge.py` depends on
+  Hugging Face `transformers`, `bitsandbytes`, a CUDA GPU, and a ~500M
+  download. It has not been run in this environment.
+
+- **ONNX hot-path unvalidated here.** The ONNXRuntime C API path in
+  `safety_filter.c` is compiled out by default (`-DNO_ONNX`) because the
+  ONNX Runtime shared library is not present in this checkout.
+
+- **Cyclictest OS jitter images not committed.** The 2.0–28.0 µs scheduler
+  jitter numbers in `docs/LATENCY_BUDGET.md` were measured locally but the
+  raw data and CDF plots were not committed; treat them as indicative.
+
+- **Static README badges removed.** The old "13/13 tests" and "WCET 2725 ns"
+  shields were hardcoded and are now removed. Only the live GitHub Actions
+  badge remains.
+
+---
+
+## Safety & scope
+
+This repository is a **research prototype**. It demonstrates a real-time
+safety-filter architecture in simulation and provides reproducible evidence
+for the latency and adversarial-blocking claims above. It is **not intended
+for deployment** on real aircraft without substantial additional work:
+requirements engineering, independent verification, hardware testing,
+fail-operational analysis, and regulatory review.
+
+If you use ideas from this codebase in a safety-critical system, assume every
+claim is unproven until you reproduce and validate it in your own environment.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
+*Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems.*
+*Advisor: Prof. Shenghan Guo.*

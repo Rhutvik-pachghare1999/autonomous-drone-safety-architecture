@@ -142,16 +142,25 @@ def plot_histogram(latencies_ns: list[int], python_stats: dict):
 # ── Formal properties P1–P7 ───────────────────────────────────────────────────
 # Documented here alongside the latency benchmark so the WCET evidence is
 # co-located with the safety properties it supports.
+#
+# STATUS: these are the *specified* safety properties, not proven invariants.
+# There is no finite-state machine or Z3/BFS proof harness in this repository
+# (see ROADMAP.md "Formal verification roadmap"). Of the set below, only the
+# P6 behaviour (reject non-finite inputs) is implemented and tested today, via
+# tests/test_input_validation.py; P7's covariance threshold is computed in
+# src/estimation/ekf_gating.py but its RTL action is not wired. P1-P5 are
+# design intent only.
 FORMAL_PROPERTIES = {
-    "P1": "Geofence violation → RTL within 1 control cycle (≤100ms)",
-    "P2": "DISARMED reachable from every state (BFS proof)",
-    "P3": "No DISARMED→FLYING without ARM + TAKEOFF sequence",
-    "P4": "Watchdog timeout → EMERGENCY_LAND from any flight state",
-    "P5": "No deadlocks — every state has ≥1 outgoing transition",
-    "P6": "NaN/Inf position inputs always rejected",
+    "P1": "[planned] Geofence violation -> RTL within 1 control cycle (<=100ms)",
+    "P2": "[planned] DISARMED reachable from every state (to be shown by BFS over the FSM)",
+    "P3": "[planned] No DISARMED->FLYING without ARM + TAKEOFF sequence",
+    "P4": "[planned] Watchdog timeout -> EMERGENCY_LAND from any flight state",
+    "P5": "[planned] No deadlocks - every state has >=1 outgoing transition",
+    "P6": "[implemented+tested] NaN/Inf inputs rejected (fail-safe in the filter)",
     "P7": (
-        "tr(P[p_x, p_y, psi]) >= SIGMA_CRITICAL_SQ "
-        "=> RTL within 1 control cycle (<= 100 ms)"
+        "[partial] tr(P[p_x, p_y, psi]) >= SIGMA_CRITICAL_SQ "
+        "=> RTL within 1 control cycle (<= 100 ms); threshold computed, "
+        "RTL action not implemented"
     ),
 }
 

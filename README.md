@@ -56,9 +56,11 @@ Swarm consensus:
        └── writes /dev/shm/aisp_consensus for EKF gating
 ```
 
-Implemented and tested paths are shown in **bold**. Dashed lines are planned
-or require external runtime dependencies (Isaac Sim, ONNX runtime library,
-GPU, downloaded VLA weights).
+Only the HOCBF clamp and jitter watchdog run in the hard-RT path and are
+covered by tests. The VLA bridge, RL/ONNX policy, EKF gating FSM action, and
+Isaac Sim / SITL loop either require external runtime dependencies (Isaac Sim,
+ONNX runtime library, GPU, downloaded VLA weights) or are planned; see the
+status column in "What is implemented" and `docs/ARCHITECTURE.md`.
 
 ---
 
@@ -232,9 +234,11 @@ All 30 pytest cases pass with Python 3.12 in a clean checkout after the
   involvement.
 
 - **Formal verification is planned, not done.** Properties P1–P5 are
-  specified but unproven. P6 is implemented and tested. P7 computes the
-  covariance threshold but the RTL FSM action is not implemented. See
-  `ROADMAP.md`.
+  specified but unproven — there is no finite-state machine or Z3 harness in
+  the repo. The NaN/Inf-rejection behaviour described by P6 is implemented and
+  tested (`tests/test_input_validation.py`), but not as part of a formal
+  proof. P7 computes the covariance threshold but the RTL FSM action is not
+  implemented. See `ROADMAP.md`.
 
 - **Simulation-only.** No hardware-in-the-loop, flight logs, or real-vehicle
    validation. The zero-copy IPC path has not been exercised against a live

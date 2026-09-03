@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 
+**[View Research Poster](https://rhutvik-pachghare1999.github.io/autonomous-drone-safety-architecture/)**
+
 Research prototype: a hard real-time safety kernel that wraps an AI-driven
 quadrotor flight stack. The goal is to intercept every high-level command,
 project it through a physical safety filter, and clamp the actuator command

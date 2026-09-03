@@ -4,8 +4,6 @@
 [![Build Status](https://github.com/Rhutvik-pachghare1999/autonomous-drone-safety-architecture/actions/workflows/ci.yml/badge.svg)](https://github.com/Rhutvik-pachghare1999/autonomous-drone-safety-architecture/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
-[![pytest](https://img.shields.io/badge/tests-13%2F13%20PASSED-brightgreen.svg)]()
-[![WCET](https://img.shields.io/badge/WCET-2%2C725ns-orange.svg)]()
 
 **[🔗 View Live Research Poster ↗](https://rhutvik-pachghare1999.github.io/autonomous-drone-safety-architecture/)**
 

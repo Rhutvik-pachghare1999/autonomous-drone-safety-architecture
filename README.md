@@ -27,7 +27,7 @@ Foundation models are powerful but non-deterministic. In a flight stack, a singl
 | Control | HOCBF (Relative Degree 4), CasADi symbolic math, OSQP |
 | AI / RL | PPO Asymmetric Actor-Critic, ONNX Runtime C API |
 | Simulation | NVIDIA Isaac Sim 4.5, PhysX 5.4 |
-| Formal Methods | Z3 solver, BFS over FSM, 7 proven invariants |
+| Formal Methods | FSM/Z3 safety specification planned — not implemented in this repo |
 | State Estimation | 15-state EKF, GPS/IMU/Baro/VIO fusion |
 | Consensus | HotStuff BFT, ZMQ PUB/SUB, observability-weighted voting |
 
@@ -39,7 +39,7 @@ Foundation models are powerful but non-deterministic. In a flight stack, a singl
 
 **Zero-copy IPC via `/dev/shm`** — the VLA model (Python, best-effort core) writes commands to a POSIX shared memory region. The safety filter (C99, SCHED_FIFO prio 99, isolated core) reads it with a single `mmap` pointer dereference. No serialization. No syscalls. ~50–100ns latency. This replaces ZeroMQ, ROS2 DDS, and MAVLink entirely in the hot-path.
 
-**Property P7** — fires RTL when `tr(P[px,py,ψ]) ≥ 25 m²`. That's 1-σ horizontal uncertainty exceeding 5m. The drone stops trusting its own position estimate *before* it acts on it. Deterministic fallback, not a heuristic. Most systems detect bad estimates after the fact — this one stops the drone from using them in the first place.
+**Property P7 (specified, not formally proven)** — the EKF gating module is designed to command return-to-launch when `tr(P[px,py,ψ]) ≥ 25 m²`. The implementation (`src/estimation/ekf_gating.py`) evaluates this threshold and sets `p7_triggered`, but the FSM that converts that signal into a guaranteed RTL within one 100 ms cycle is specified, not yet implemented or model-checked. See `ROADMAP.md` § "Formal verification roadmap (P1–P7)".
 
 ---
 
@@ -91,7 +91,7 @@ Foundation models are powerful but non-deterministic. In a flight stack, a singl
 
 2. **15-state EKF with observability Gramian** — rank drops 6→4 under GPS denial. VIO (OpenVINS-derived noise) restores rank to 6. Air-gap architecture: the physics plant writes ground-truth to `/dev/shm/aisp_gt_state`, the EKF reads it as a VIO measurement but never writes back. Prevents the filter from confirming its own estimates.
 
-3. **DO-178C-inspired FSM with Z3 proofs** — 7 states, 24 transitions, 7 invariants (P1–P7). BFS exhaustive proof over all reachable states. P7 is the new one: fires RTL when EKF covariance collapses, before the drone acts on bad estimates.
+3. **DO-178C-inspired mode ladder (FSM specified, not formally verified)** — P1–P7 are written down as the intended safety properties, and the EKF gating module implements the P7 threshold check. The actual FSM with Z3/FSM model checking is not implemented in this repo; it lives in `ROADMAP.md` as planned verification work.
 
 4. **Observability-weighted HotStuff consensus** — I didn't want a separate fault-detection layer. Instead I tied BFT voting power directly to EKF covariance. A GPS-denied node gets w=0.008; GPS-active nodes get w=0.976. The Byzantine node silences itself — it can't reach 2/3 quorum no matter what it votes.
 
@@ -113,17 +113,26 @@ Foundation models are powerful but non-deterministic. In a flight stack, a singl
 
 ---
 
-## Formal Safety Properties
+## Formal Safety Properties (Specified, Not Proven)
+
+The properties below are the *design targets* for a future FSM/Z3 verification layer. They are **not** proven invariants in the current codebase. What is implemented is noted for each property.
 
 ```
-P1 — Geofence breach        → RTL in ≤ 1 cycle (100ms)
-P2 — DISARMED always reachable (BFS proof over all states)
-P3 — Can't go DISARMED → FLYING without ARM + TAKEOFF
-P4 — 5s watchdog timeout    → EMERGENCY_LAND
-P5 — No deadlocks (every state has ≥1 exit)
-P6 — NaN/Inf inputs rejected before FSM sees them
-P7 — EKF covariance collapse → RTL before bad estimates cause damage
+P1 — Geofence breach        → RTL in ≤ 1 cycle (100ms)                [planned]
+P2 — DISARMED always reachable (BFS proof over all states)            [planned]
+P3 — Can't go DISARMED → FLYING without ARM + TAKEOFF                 [planned]
+P4 — 5s watchdog timeout    → EMERGENCY_LAND                          [planned]
+P5 — No deadlocks (every state has ≥1 exit)                           [planned]
+P6 — NaN/Inf inputs rejected before FSM sees them                     [implemented]
+       ↳ src/control/hocbf.cpp filter_thrust() fails safe on non-finite inputs
+       ↳ src/rt/safety_filter.c hocbf_filter() fails safe on non-finite state
+       ↳ tests/test_input_validation.py: 17 pytest cases
+P7 — EKF covariance collapse → RTL before bad estimates cause damage  [partial]
+       ↳ src/estimation/ekf_gating.py computes sigma_sq and sets p7_triggered
+       ↳ FSM RTL action is planned, not implemented
 ```
+
+For the full roadmap see `ROADMAP.md` § "Formal verification roadmap (P1–P7)".
 
 ---
 
@@ -176,7 +185,7 @@ python experiments/exp_consensus_fault.py
 ## Engineering Trade-offs & Future Work
 
 - Simulation-first workflow to maximize iteration speed. Next step is porting to a Jetson Orin for hardware-in-the-loop (HIL) validation.
-- DO-178C-inspired, not certified. Full cert needs EASA/FAA, LDRA/VectorCAST, PSAC.
+- DO-178C-inspired, not certified and not formally verified. Full cert needs requirements-based testing, traceability, and tools such as LDRA/VectorCAST; the Z3/FSM proof is planned, not implemented.
 - VIO uses OpenVINS-derived noise params on synthetic data — not a live pipeline.
 - Yaw unobservable under GPS denial. Magnetometer model is the fix.
 - Battery model validated on 18650 cells (2Ah). Project uses 6S LiPo (5Ah). Chemistry differs; recalibration needed for real hardware.
@@ -190,7 +199,7 @@ I'm a Graduate Researcher at ASU finishing my Master's in Robotics & Autonomous 
 
 Looking for full-time roles in the U.S. starting **May 2026** — specifically safety-critical autonomy, real-time embedded systems, and autonomous vehicle software.
 
-**Specialties:** Hard RT Safety Kernels · Formal Verification (Z3) · Robot Learning (PPO) · High-Performance Middleware (POSIX, C99)
+**Specialties:** Hard RT Safety Kernels · Safety-Critical Autonomy · Robot Learning (PPO) · High-Performance Middleware (POSIX, C99)
 
 → [LinkedIn](https://linkedin.com/in/rhutvik-pachghare) · rhutvik.pachghare@asu.edu
 

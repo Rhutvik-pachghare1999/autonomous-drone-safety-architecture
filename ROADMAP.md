@@ -20,8 +20,9 @@
 - [ ] Port to **C++** or **Rust** for deterministic microsecond latency
 - [ ] Create Python bindings via `pybind11`
 
-### 1.3 Formal Safety Kernel
-- [ ] Retain existing 7-state FSM with proven invariants (P1-P6)
+### 1.3 Formal Safety Kernel (planned — not yet implemented)
+- [ ] Design 7-state FSM encoding P1–P7
+- [ ] Model-check invariants with Z3 / BFS over reachable states
 - [ ] Integrate HOCBF as safety filter layer
 - [ ] Benchmark latency: FSM + HOCBF + OSQP solver chain
 
@@ -120,6 +121,26 @@
 ### 6.3 Comparative Analysis ✅ COMPLETE
 - [x] HOCBF RD-2 (kinematic) vs HOCBF4 RD-4 (rigid-body) — both implemented
 - [x] PBFT vs weighted HotStuff — HotStuff: 100% commit at 20% loss; PBFT: O(n²) messages
+
+---
+
+## Formal Verification Roadmap (P1–P7)
+
+The following properties are the *intended* invariants for a future FSM/Z3 verification layer. They are **specified, not proven**, in the current repository.
+
+| ID | Property | Status | Notes |
+|----|----------|--------|-------|
+| P1 | Geofence breach → RTL in ≤ 1 control cycle (100 ms) | planned | FSM RTL action not implemented |
+| P2 | DISARMED always reachable (BFS proof over all states) | planned | No FSM / BFS code exists |
+| P3 | Can't transition DISARMED → FLYING without ARM + TAKEOFF | planned | FSM not implemented |
+| P4 | 5 s watchdog timeout → EMERGENCY_LAND | planned | Watchdog FSM not implemented |
+| P5 | No deadlocks (every state has ≥ 1 exit) | planned | FSM not implemented |
+| P6 | NaN/Inf inputs rejected before FSM sees them | implemented | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_input_validation.py` |
+| P7 | EKF covariance collapse → RTL before bad estimates cause damage | partial | `src/estimation/ekf_gating.py` computes threshold and sets `p7_triggered`; RTL FSM action not implemented |
+
+### Implementation notes
+- The HOCBF filter provides a runtime *safety clamp* (implemented and tested), which is weaker than a full FSM proof.
+- P6/P7 are the only properties with any code today; P1–P5 and the Z3/FSM proof remain future work.
 
 ---
 

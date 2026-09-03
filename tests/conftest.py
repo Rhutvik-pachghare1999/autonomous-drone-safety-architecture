@@ -9,7 +9,12 @@ import os
 import sys
 
 # Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, _ROOT)
+# 'make install' places the compiled hocbf.*.so next to its source in
+# src/control (see CMakeLists.txt). That directory is not on sys.path by
+# default, so add it here — otherwise `import hocbf` fails on a fresh clone.
+sys.path.insert(0, os.path.join(_ROOT, "src", "control"))
 
 
 @pytest.fixture

@@ -25,17 +25,23 @@ IPC: POSIX mmap /dev/shm (tmpfs RAM)
 | Metric  | Measured  | Budget   | Margin  |
 |---------|-----------|----------|---------|
 | Min     | 20 ns     | —        | —       |
-| Mean    | 27.3 ns   | —        | —       |
-| P50     | 30 ns     | —        | —       |
+| Mean    | 22.31 ns  | —        | —       |
+| P50     | 20 ns     | —        | —       |
 | P99     | 31 ns     | 10 μs    | 323×    |
 | P99.9   | 31 ns     | 10 μs    | 323×    |
 | **WCET**| **2,725 ns**| **100 μs** | **36×** |
 
-WCET proven via `clock_gettime(CLOCK_MONOTONIC_RAW)` hardware counter.
-Raw data: `experiments/results/latency_raw.csv`
-Histogram: `experiments/results/latency_histogram.png`
+WCET measured via `clock_gettime(CLOCK_MONOTONIC_RAW)` hardware counter.
+Raw data: `experiments/results/latency_raw.csv` (100,000 rows, committed).
+Processed statistics: `experiments/results/wcet_evt.json`.
 
-## OS Scheduler Jitter — cyclictest (PREEMPT_DYNAMIC kernel)
+## OS Scheduler Jitter
+
+> **Note:** The cyclictest numbers below were measured locally on the author's
+> machine (PREEMPT_DYNAMIC kernel, SCHED_FIFO prio 99, CPU core 2). The raw
+> `cyclictest` output and the `cyclictest_cdf.png` / `latency_histogram.png`
+> images were **not committed**; therefore these values are
+> **unverified artifacts** and should be treated as indicative only.
 
 | Metric  | Measured  | Notes                          |
 |---------|-----------|--------------------------------|
@@ -43,7 +49,9 @@ Histogram: `experiments/results/latency_histogram.png`
 | Mean    | 3.0 μs    | SCHED_FIFO prio 99, CPU core 2         |
 | Max     | 28.0 μs   | Worst-case OS interrupt latency        |
 
-See: `experiments/results/cyclictest_cdf.png`
+The committed jitter evidence is the inter-cycle watchdog inside
+`safety_filter.c`, reported in `experiments/results/wcet_evt.json`:
+max jitter 9,548 ns, P99 jitter 11 ns.
 
 ## RL Policy Inference Path
 
@@ -68,7 +76,7 @@ autonomously using the last known state — the RT loop never blocks on AI.
 
 | Subsystem                  | Budget    | Measured  | Method              |
 |----------------------------|-----------|-----------|---------------------|
-| HOCBF filter (C99)         | **<10 μs**| **2,725 ns**| CLOCK_MONOTONIC_RAW |
+| HOCBF filter (C99)         | **<10 μs**| **2,725 ns** (max, 100k trials) | `clock_gettime(CLOCK_MONOTONIC_RAW)` |
 | mmap IPC read              | <1 μs     | ~50-100ns | L3 cache coherency  |
 | RL policy ONNX forward     | <1 ms     | ~0.5ms    | ONNXRuntime C API   |
 | VLA inference (SmolVLM2)   | <5 s      | ~2.5s     | Best-effort core    |

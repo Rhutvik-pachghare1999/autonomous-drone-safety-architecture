@@ -27,8 +27,9 @@ dist/
 
 # ── Large data files (too big for GitHub, downloadable) ──────────────────────
 experiments/results/nasa_pcoe_discharge.csv
-experiments/results/latency_raw.csv
 experiments/results/ppo_quadrotor.zip
+# latency_raw.csv (1.1 MB) IS committed — it is the raw evidence for the
+# WCET measurement. See docs/WCET_BENCHMARK.md.
 
 # ── Compiled model (keep .onnx — it's small 22KB, useful for reproducibility) ─
 # experiments/results/ppo_policy.onnx  ← KEEP (22KB, needed for RT hot-path)

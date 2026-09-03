@@ -64,6 +64,15 @@ static inline uint64_t ns_now(void) {
 /* ── HOCBF filter — O(1), no heap, no syscalls ───────────────────────────── */
 static inline double hocbf_filter(double pz, double vz, double roll,
                                    double pitch, double T_nom) {
+    /* Fail safe on non-finite input: a NaN would pass through the compares
+     * below unchanged and reach the actuator. If state is untrustworthy,
+     * command hover (m*g); if only T_nom is bad, fall through with the safe
+     * lower bound by treating T_nom as +inf so the lo-clamp wins. */
+    if (!isfinite(pz) || !isfinite(vz) || !isfinite(roll) || !isfinite(pitch)) {
+        double hover = GRAVITY * MASS;
+        return hover > T_MAX ? T_MAX : hover;
+    }
+    if (!isfinite(T_nom)) T_nom = T_MAX;  /* force clamp to feasible set */
     double LgLfh = cos(roll) * cos(pitch) / MASS;
     if (LgLfh < 0.01) LgLfh = 0.01;
     double rhs  = GRAVITY - ALPHA1 * vz - ALPHA2 * pz;

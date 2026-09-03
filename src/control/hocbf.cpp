@@ -75,6 +75,28 @@ public:
      */
     double filter_thrust(double pz, double vz, double roll, double pitch,
                          double T_nom) const {
+        // Input validation at the trust boundary. A VLA/PID upstream can emit
+        // NaN/Inf; std::clamp on a NaN returns NaN, which would reach the
+        // actuators. Fail safe instead: if any input is non-finite, ignore the
+        // (untrusted) nominal command and return the model's safe lower bound
+        // computed from the last finite state we do have. Non-finite state
+        // inputs fall back to hover thrust (m*g).
+        if (!std::isfinite(T_nom) || !std::isfinite(pz) || !std::isfinite(vz) ||
+            !std::isfinite(roll) || !std::isfinite(pitch)) {
+            const bool state_ok = std::isfinite(pz) && std::isfinite(vz) &&
+                                  std::isfinite(roll) && std::isfinite(pitch);
+            if (!state_ok) {
+                // No trustworthy state: command hover, clamped to actuator range.
+                return std::clamp(p_.mass * p_.g, p_.T_min, p_.T_max);
+            }
+            // State is finite but T_nom is not: return the safe lower bound.
+            const double LgLfh_s = std::max(std::cos(roll) * std::cos(pitch) / p_.mass, 0.05);
+            const double rhs_s = p_.g - p_.alpha1 * vz - p_.alpha2 * pz;
+            const double lb_raw = rhs_s / LgLfh_s;
+            const double lb = (lb_raw > 0.0) ? lb_raw * p_.conservatism : lb_raw;
+            return std::clamp(std::max(p_.T_min, lb), p_.T_min, p_.T_max);
+        }
+
         // Lie derivatives
         const double Lf2h_free = -p_.g;                              // ∂²h/∂t² with u=0
         const double LgLfh = std::cos(roll) * std::cos(pitch) / p_.mass;

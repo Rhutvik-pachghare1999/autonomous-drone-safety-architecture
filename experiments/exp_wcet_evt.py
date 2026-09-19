@@ -22,7 +22,8 @@ EVT Method (Gumbel / Type-I Extreme Value Distribution):
 Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems
 """
 
-import csv, json, os
+import csv
+import json
 import numpy as np
 
 RESULTS_DIR = "experiments/results"
@@ -115,7 +116,7 @@ def run() -> dict:
         'deadline_pass': bool(lats.max() < DEADLINE_NS),
     }
 
-    print(f"\n── Empirical percentiles ────────────────────────────────────")
+    print("\n── Empirical percentiles ────────────────────────────────────")
     print(f"  N          : {n:,}")
     print(f"  Min        : {stats['min_ns']} ns")
     print(f"  Mean       : {stats['mean_ns']:.1f} ns")
@@ -157,7 +158,7 @@ def run() -> dict:
         'p99_jitter_ns':  float(np.percentile(jitters, 99)),
         'jitter_pass_50us': bool(jitters.max() < 50_000),
     }
-    print(f"\n── OS jitter (inter-cycle) ──────────────────────────────────")
+    print("\n── OS jitter (inter-cycle) ──────────────────────────────────")
     print(f"  Max jitter : {jitter_stats['max_jitter_ns']} ns  ({jitter_stats['max_jitter_ns']/1000:.1f} µs)")
     print(f"  P99 jitter : {jitter_stats['p99_jitter_ns']:.0f} ns")
     print(f"  < 50µs     : {'PASS ✓' if jitter_stats['jitter_pass_50us'] else 'WARN'}")

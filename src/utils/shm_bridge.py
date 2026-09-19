@@ -22,11 +22,11 @@ class VLASharedMemoryPublisher:
         self.shm_name = shm_name
         self.size = 64
         self.seq = 0
-        
+
         # Create/open the file in /dev/shm (tmpfs, strictly RAM)
         fd = os.open(self.shm_name, os.O_CREAT | os.O_RDWR)
         os.ftruncate(fd, self.size)
-        
+
         # Memory map
         self.shm = mmap.mmap(fd, self.size, mmap.MAP_SHARED, mmap.PROT_WRITE)
         os.close(fd)
@@ -38,7 +38,7 @@ class VLASharedMemoryPublisher:
         data = struct.pack('=Qddd?', self.seq, vx, vy, vz, True)
         self.shm.seek(0)
         self.shm.write(data)
-        
+
     def close(self):
         self.shm.close()
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     try:
         while True:
             # Simulate a VLA generating an adversarial downward vector
-            pub.publish(2.0, 0.0, -5.0) 
+            pub.publish(2.0, 0.0, -5.0)
             time.sleep(0.5) # 2 Hz
     except KeyboardInterrupt:
         pub.close()

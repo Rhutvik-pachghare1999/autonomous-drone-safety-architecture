@@ -327,7 +327,6 @@ def test_weighted_quorum() -> None:
     Simulates 4 nodes: 3 GPS-active (w≈1), 1 GPS-denied (w≈0.01).
     The GPS-denied node proposes a different state — quorum should reject it.
     """
-    from dataclasses import replace
 
     def _make_vote(node_id: int, state: list, var: float, gps: bool) -> ConsensusMessage:
         snap = EKFSnapshot(state[0], state[1], state[2], var, var, var * 0.4, gps)

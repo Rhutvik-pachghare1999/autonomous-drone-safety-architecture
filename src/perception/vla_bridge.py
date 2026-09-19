@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from typing import Optional
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForImageTextToText, BitsAndBytesConfig
-from transformers import QuantoQuantizedCache, QuantizedCacheConfig
 
 # ── Model selection ───────────────────────────────────────────────────────────
 # SmolVLM2-500M: fits in 3.7GB VRAM (0.74GB weights + 4-bit quantized KV cache)

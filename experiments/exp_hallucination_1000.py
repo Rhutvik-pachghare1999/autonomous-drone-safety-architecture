@@ -23,7 +23,9 @@ as a function of commanded vz, with the collision-free boundary marked.
 Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems
 """
 
-import json, os, sys
+import json
+import os
+import sys
 import numpy as np
 
 RESULTS_DIR = "experiments/results"
@@ -204,7 +206,7 @@ def _plot(results: list, vz_commands: np.ndarray) -> None:
         ax3.grid(True, alpha=0.3)
 
         # Annotate overall result
-        ax3.text(0.5, 0.15, f'100% Collision-Free\n✓ PROVED',
+        ax3.text(0.5, 0.15, '100% Collision-Free\n✓ PROVED',
                  transform=ax3.transAxes, ha='center', va='center',
                  fontsize=14, fontweight='bold', color='green',
                  bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.3))

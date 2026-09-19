@@ -30,7 +30,8 @@ References:
 Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems
 """
 
-import json, os
+import json
+import os
 import numpy as np
 
 RESULTS_DIR = "experiments/results"

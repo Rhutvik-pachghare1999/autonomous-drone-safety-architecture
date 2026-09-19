@@ -21,7 +21,9 @@ quorum rule should reject the Byzantine state in all rounds.
 Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems
 """
 
-import json, os, random, time
+import json
+import os
+import time
 import numpy as np
 
 RESULTS_DIR = "experiments/results"
@@ -30,7 +32,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.consensus_node import (
-    ConsensusMessage, EKFSnapshot, _state_hash, Phase, SIGMA_WARN_SQ, BFT_THRESHOLD
+    ConsensusMessage, EKFSnapshot, _state_hash, Phase, BFT_THRESHOLD
 )
 
 # ── Network simulation ────────────────────────────────────────────────────────
@@ -148,7 +150,7 @@ def run() -> dict:
     mean_lat      = float(np.mean(latencies_ms)) if latencies_ms else 0.0
     p99_lat       = float(np.percentile(latencies_ms, 99)) if latencies_ms else 0.0
 
-    print(f'\n── Results ──────────────────────────────────────────────────')
+    print('\n── Results ──────────────────────────────────────────────────')
     print(f'  Commit rate          : {commit_rate*100:.1f}%  ({commits}/{N_ROUNDS})')
     print(f'  Byzantine rejection  : {byz_rej_rate*100:.1f}%  ({byzantine_rejected}/{N_ROUNDS})')
     print(f'  Mean commit latency  : {mean_lat:.3f} ms')
@@ -157,7 +159,7 @@ def run() -> dict:
     print(f'  Min quorum fraction  : {np.min(quorum_fracs):.3f}')
 
     # Node trust weights
-    print(f'\n── Node trust weights ───────────────────────────────────────')
+    print('\n── Node trust weights ───────────────────────────────────────')
     for i, (vpx, vpy, vpsi, gps, byz) in enumerate(NODE_CONFIGS):
         snap = EKFSnapshot(0,0,2, vpx, vpy, vpsi, gps)
         tag = ' [BYZANTINE]' if byz else (' [DEGRADED]' if not gps else '')
@@ -241,7 +243,7 @@ def _plot(round_results: list, quorum_fracs: list) -> None:
 
         bars = ax3.bar(range(N_NODES), weights, color=colors, alpha=0.8)
         ax3.axhline(BFT_THRESHOLD, color='red', linestyle='--', linewidth=1.5,
-                    label=f'2/3 threshold')
+                    label='2/3 threshold')
         ax3.set_xticks(range(N_NODES))
         ax3.set_xticklabels(labels, fontsize=7)
         ax3.set_ylabel('Trust weight w_i')

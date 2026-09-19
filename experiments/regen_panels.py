@@ -2,7 +2,8 @@
 Regenerate wcet_panel2.png, hallucination_panel1.png, consensus_panel3.png
 with correct figure sizing so they fit poster cards without clipping.
 """
-import csv, json, os
+import csv
+import json
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')

@@ -11,7 +11,6 @@ Outputs:
 import subprocess
 import json
 import time
-import math
 import sys
 import os
 import numpy as np

@@ -17,18 +17,18 @@ Architecture (Xiao & Belta 2022, Makoviychuk et al. 2021):
 from isaacsim import SimulationApp
 _app = SimulationApp({"headless": True, "renderer": "RayTracedLighting"})
 
-import math, sys, os, json
+import math
+import sys
+import os
+import json
 import numpy as np
-import torch
 import gymnasium as gym
 from gymnasium import spaces
 from typing import Optional
 
-import omni.usd
 from isaacsim.core.api import World
 from isaacsim.core.api.objects import DynamicCuboid
 from omni.physx import get_physx_interface, get_physx_simulation_interface
-from pxr import Gf
 import carb
 
 # Resolve project root relative to this file — works regardless of cwd

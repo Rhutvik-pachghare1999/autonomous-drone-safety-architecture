@@ -4,7 +4,7 @@
 #
 # Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
 
-from typing import Dict, Tuple
+from typing import Tuple
 import numpy as np
 from dataclasses import dataclass
 
@@ -52,17 +52,17 @@ class DomainRandomizer:
         - Sensor noise characteristics
         - Environmental conditions (wind, air density)
     """
-    
+
     def __init__(self, seed: int = 42):
         """Initialize domain randomizer with RNG seed"""
         self.rng = np.random.default_rng(seed)
-        
+
         # Nominal parameters (baseline quadrotor)
         self.nominal_mass = 2.0  # kg
         self.nominal_inertia = np.diag([0.0347, 0.0458, 0.0977])  # kg·m²
         self.nominal_thrust_coeff = 1.0
         self.nominal_drag = 0.1
-        
+
     def randomize_physics(self) -> PhysicsParams:
         """
         Randomize physical parameters with aggressive variation.
@@ -72,26 +72,26 @@ class DomainRandomizer:
         """
         # Mass: ±30% variation
         mass = self.nominal_mass * self.rng.uniform(0.7, 1.3)
-        
+
         # Inertia: ±15% variation per axis
         inertia_scale = self.rng.uniform(0.85, 1.15, size=3)
         inertia = self.nominal_inertia * inertia_scale
-        
+
         # Motor thrust coefficient: ±20% variation
         thrust_coeff = self.nominal_thrust_coeff * self.rng.uniform(0.8, 1.2)
-        
+
         # Torque coefficient: ±20% variation
         torque_coeff = 0.05 * self.rng.uniform(0.8, 1.2)
-        
+
         # Drag coefficient: ±25% variation
         drag_coeff = self.nominal_drag * self.rng.uniform(0.75, 1.25)
-        
+
         # Arm length: ±5% variation (mechanical tolerance)
         arm_length = 0.25 * self.rng.uniform(0.95, 1.05)
-        
+
         # Motor time constant: ±30% variation
         motor_tau = 0.02 * self.rng.uniform(0.7, 1.3)
-        
+
         return PhysicsParams(
             mass=mass,
             inertia=inertia,
@@ -101,7 +101,7 @@ class DomainRandomizer:
             arm_length=arm_length,
             motor_time_constant=motor_tau
         )
-    
+
     def randomize_sensors(self) -> SensorNoiseParams:
         """
         Randomize sensor noise characteristics.
@@ -117,7 +117,7 @@ class DomainRandomizer:
             barometer_noise=self.rng.uniform(0.1, 1.0),       # m
             magnetometer_noise=self.rng.uniform(0.01, 0.1)    # rad
         )
-    
+
     def randomize_environment(self) -> EnvironmentParams:
         """
         Randomize environmental conditions.
@@ -128,19 +128,19 @@ class DomainRandomizer:
         # Wind: mean velocity 0-5 m/s, turbulence 0-2 m/s
         wind_mean = self.rng.uniform(-5.0, 5.0, size=3)
         wind_std = self.rng.uniform(0.0, 2.0)
-        
+
         # Wind model: randomly select Dryden or von Kármán
         wind_model = self.rng.choice(["dryden", "von_karman"])
-        
+
         # Air density: ±10% variation (altitude/temperature effects)
         air_density = 1.225 * self.rng.uniform(0.9, 1.1)  # kg/m³
-        
+
         # Gravity: ±0.5% variation (latitude effects)
         gravity = 9.81 * self.rng.uniform(0.995, 1.005)
-        
+
         # Ground effect height: 0.5-2.0 m
         ground_effect_height = self.rng.uniform(0.5, 2.0)
-        
+
         return EnvironmentParams(
             wind_mean=wind_mean,
             wind_std=wind_std,
@@ -149,7 +149,7 @@ class DomainRandomizer:
             gravity=gravity,
             ground_effect_height=ground_effect_height
         )
-    
+
     def randomize_all(self) -> Tuple[PhysicsParams, SensorNoiseParams, EnvironmentParams]:
         """
         Randomize all parameters simultaneously.
@@ -162,7 +162,7 @@ class DomainRandomizer:
             self.randomize_sensors(),
             self.randomize_environment()
         )
-    
+
     def apply_motor_failure(self, num_motors: int = 4) -> np.ndarray:
         """
         Simulate motor failure scenario.
@@ -174,35 +174,35 @@ class DomainRandomizer:
             Motor health array [0.0-1.0] per motor (1.0 = healthy)
         """
         motor_health = np.ones(num_motors)
-        
+
         # 10% chance of partial motor failure
         if self.rng.random() < 0.1:
             failed_motor = self.rng.integers(0, num_motors)
             motor_health[failed_motor] = self.rng.uniform(0.3, 0.7)
-        
+
         return motor_health
 
 
 def test_domain_randomization():
     """Test domain randomization with statistics"""
     randomizer = DomainRandomizer(seed=42)
-    
+
     # Generate 1000 samples
     masses = []
     for _ in range(1000):
         params = randomizer.randomize_physics()
         masses.append(params.mass)
-    
+
     masses = np.array(masses)
-    print(f"Mass distribution:")
+    print("Mass distribution:")
     print(f"  Mean: {masses.mean():.3f} kg")
     print(f"  Std:  {masses.std():.3f} kg")
     print(f"  Min:  {masses.min():.3f} kg")
     print(f"  Max:  {masses.max():.3f} kg")
-    
+
     # Test full randomization
     physics, sensors, env = randomizer.randomize_all()
-    print(f"\nSample randomization:")
+    print("\nSample randomization:")
     print(f"  Mass: {physics.mass:.3f} kg")
     print(f"  Thrust coeff: {physics.motor_thrust_coeff:.3f}")
     print(f"  GPS noise: {sensors.gps_position_noise:.3f} m")
@@ -351,7 +351,9 @@ class RigidBodyPlant:
         # Write ground-truth velocity to /dev/shm/aisp_gt_state so the EKF
         # VIO injection has a real air-gap source (vx, vy from physics plant).
         try:
-            import mmap as _mmap, struct as _struct, os as _os
+            import mmap as _mmap
+            import struct as _struct
+            import os as _os
             _fmt  = "=dd"
             _size = _struct.calcsize(_fmt)
             _fd   = _os.open("/dev/shm/aisp_gt_state", _os.O_CREAT | _os.O_RDWR, 0o666)

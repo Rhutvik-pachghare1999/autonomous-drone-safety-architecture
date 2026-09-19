@@ -27,7 +27,6 @@ Outputs:
 Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems
 """
 
-import io
 import json
 import os
 import urllib.request
@@ -52,7 +51,7 @@ EOL_FRACTION = 0.70   # 30% fade = end-of-life (NASA EOL criterion)
 # ── Data loading ──────────────────────────────────────────────────────────────
 
 def _download(url: str, dest: str) -> None:
-    print(f"Downloading NASA PCoE dataset (~20 MB)...")
+    print("Downloading NASA PCoE dataset (~20 MB)...")
     urllib.request.urlretrieve(url, dest)
     print(f"  Saved: {dest}")
 

@@ -33,8 +33,8 @@ jobs:
         run: pip install ruff && ruff check . --select E,F,W --ignore E501
         continue-on-error: true
 
-      - name: HOCBF tests
-        run: PYTHONPATH=. pytest tests/test_hocbf.py -v
+      - name: Unit tests (HOCBF + input validation)
+        run: PYTHONPATH=. pytest tests/ -v
 
       - name: EKF gating smoke test
         run: PYTHONPATH=. python src/estimation/ekf_gating.py

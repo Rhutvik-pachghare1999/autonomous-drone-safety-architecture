@@ -31,7 +31,7 @@ except ImportError:
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 SIGMA_WARN_SQ    = 5.0    # m² — matches ekf_gating.py
-BFT_THRESHOLD    = 2 / 3  # weighted quorum fraction
+QUORUM_THRESHOLD    = 2 / 3  # weighted quorum fraction
 ROUND_TIMEOUT_S  = 0.5    # seconds before view change
 SHM_EKF_PATH     = "/dev/shm/aisp_ekf_state"
 SHM_CONSENSUS    = "/dev/shm/aisp_consensus"
@@ -245,7 +245,7 @@ class ConsensusNode:
         Returns the agreed state vector if quorum is reached, else None.
 
         Quorum rule:
-            sum(w_i for voters of hash H) >= BFT_THRESHOLD * sum(w_i for all)
+            sum(w_i for voters of hash H) >= QUORUM_THRESHOLD * sum(w_i for all)
 
         This is a simple weighted majority vote where weight derives from
         EKF observability (covariance). NOT Byzantine fault tolerance.
@@ -267,13 +267,13 @@ class ConsensusNode:
 
         # Find the hash with the highest weighted support
         best_hash = max(hash_weights, key=lambda h: hash_weights[h])
-        if hash_weights[best_hash] >= BFT_THRESHOLD * total_weight:
+        if hash_weights[best_hash] >= QUORUM_THRESHOLD * total_weight:
             return hash_states[best_hash]
         return None
 
     def run_round(self) -> Optional[List[float]]:
         """
-        Execute one HotStuff consensus round.
+        Execute one observability-weighted voting round.
         Returns agreed state vector, or None if quorum not reached.
         """
         my_msg = self._propose()
@@ -365,7 +365,7 @@ def test_weighted_quorum_gps_denied_cannot_sway() -> None:
 
     # Verify: when GPS-denied nodes are outvoted by GPS-active nodes,
     # the GPS-active state wins — low-weight nodes cannot override the quorum.
-    # Add two GPS-denied nodes that disagree with Byzantine to show weight dominance.
+    # Add two GPS-denied nodes that disagree (outlier/faulty state) to show weight dominance.
     mixed_votes = [
         _make_vote(1, true_state,  0.1,  True),   # w ≈ 0.976 — GPS active
         _make_vote(3, false_state, 20.0, False),  # w ≈ 0.008 — GPS denied
@@ -383,7 +383,7 @@ def test_weighted_quorum_gps_denied_cannot_sway() -> None:
     print(f"  GPS-denied weight : {votes[2].trust_weight:.4f}")
     total_w = sum(v.trust_weight for v in votes) + my_msg.trust_weight
     true_w  = sum(v.trust_weight for v in votes[:2]) + my_msg.trust_weight
-    print(f"  Quorum fraction   : {true_w/total_w:.3f} >= {BFT_THRESHOLD:.3f} ✓")
+    print(f"  Quorum fraction   : {true_w/total_w:.3f} >= {QUORUM_THRESHOLD:.3f} ✓")
 
 
 if __name__ == "__main__":

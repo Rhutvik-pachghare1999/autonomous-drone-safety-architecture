@@ -20,7 +20,7 @@ jobs:
         run: sudo apt-get install -y cmake pybind11-dev python3-pybind11
 
       - name: Install Python dependencies
-        run: pip install numpy scipy casadi pyzmq osqp pytest pybind11
+        run: pip install numpy scipy casadi pyzmq osqp pytest pybind11 hypothesis
 
       - name: Build C++ HOCBF extension
         run: |

@@ -32,7 +32,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.consensus_node import (
-    ConsensusMessage, EKFSnapshot, _state_hash, Phase, BFT_THRESHOLD
+    ConsensusMessage, EKFSnapshot, _state_hash, Phase, QUORUM_THRESHOLD
 )
 
 # ── Network simulation ────────────────────────────────────────────────────────
@@ -41,22 +41,22 @@ LATENCY_MAX_MS   = 50.0   # asymmetric: 0–50ms per link
 N_NODES          = 5
 N_ROUNDS         = 100
 TRUE_STATE       = [0.0, 0.0, 2.0]
-BYZANTINE_STATE  = [100.0, 100.0, 2.0]
+FAULTY_STATE  = [100.0, 100.0, 2.0]
 
-# Node configurations: (var_px, var_py, var_psi, gps_active, is_byzantine)
+# Node configurations: (var_px, var_py, var_psi, gps_active, is_faulty)
 NODE_CONFIGS = [
     (0.1,  0.1,  0.04, True,  False),   # Node 0: GPS active, honest
     (0.1,  0.1,  0.04, True,  False),   # Node 1: GPS active, honest
     (0.1,  0.1,  0.04, True,  False),   # Node 2: GPS active, honest
     (8.0,  8.0,  3.2,  False, False),   # Node 3: GPS degraded, honest
-    (20.0, 20.0, 8.0,  False, True),    # Node 4: GPS denied, Byzantine
+    (20.0, 20.0, 8.0,  False, True),    # Node 4: GPS denied, faulty (outlier state)
 ]
 
 
 def make_vote(node_id: int, round_num: int, rng: np.random.Generator) -> ConsensusMessage:
-    vpx, vpy, vpsi, gps, is_byz = NODE_CONFIGS[node_id]
+    vpx, vpy, vpsi, gps, is_flt = NODE_CONFIGS[node_id]
     snap = EKFSnapshot(0.0, 0.0, 2.0, vpx, vpy, vpsi, gps)
-    state = BYZANTINE_STATE if is_byz else TRUE_STATE
+    state = FAULTY_STATE if is_flt else TRUE_STATE
     return ConsensusMessage(
         node_id=node_id, round_num=round_num, phase=Phase.PROPOSE.name,
         state_hash=_state_hash(state), state_vector=state,
@@ -95,7 +95,7 @@ def weighted_quorum(votes: list[ConsensusMessage],
 
     best = max(hash_w, key=lambda h: hash_w[h])
     frac = hash_w[best] / total_w
-    if frac >= BFT_THRESHOLD:
+    if frac >= QUORUM_THRESHOLD:
         return hash_s[best], frac
     return None, frac
 
@@ -128,7 +128,7 @@ def run() -> dict:
         latency_ms = (time.perf_counter() - t0) * 1000
 
         committed = agreed is not None
-        gps_denied_rej = (agreed != BYZANTINE_STATE) if committed else True
+        gps_denied_rej = (agreed != FAULTY_STATE) if committed else True
 
         if committed:
             commits += 1
@@ -218,8 +218,8 @@ def _plot(round_results: list, quorum_fracs: list) -> None:
         # Middle: quorum fraction over rounds
         ax2 = axes[1]
         ax2.plot(rounds, quorum_fracs, 'steelblue', linewidth=1, alpha=0.7)
-        ax2.axhline(BFT_THRESHOLD, color='red', linestyle='--', linewidth=2,
-                    label=f'2/3 threshold ({BFT_THRESHOLD:.2f})')
+        ax2.axhline(QUORUM_THRESHOLD, color='red', linestyle='--', linewidth=2,
+                    label=f'2/3 threshold ({QUORUM_THRESHOLD:.2f})')
         ax2.set_xlabel('Round')
         ax2.set_ylabel('Weighted quorum fraction')
         ax2.set_title('Quorum Fraction per Round\n(weighted by EKF trust)')
@@ -242,7 +242,7 @@ def _plot(round_results: list, quorum_fracs: list) -> None:
             colors.append('coral' if byz else ('orange' if not gps else 'steelblue'))
 
         bars = ax3.bar(range(N_NODES), weights, color=colors, alpha=0.8)
-        ax3.axhline(BFT_THRESHOLD, color='red', linestyle='--', linewidth=1.5,
+        ax3.axhline(QUORUM_THRESHOLD, color='red', linestyle='--', linewidth=1.5,
                     label='2/3 threshold')
         ax3.set_xticks(range(N_NODES))
         ax3.set_xticklabels(labels, fontsize=7)

@@ -111,7 +111,7 @@ def regen_consensus():
         'GPS active\n(Node 1)': 0.25,
         'GPS active\n(Node 2)': 0.25,
         'GPS\ndegraded':        8.0,
-        'Byzantine\n(GPS denied)': 125.0,
+        'Faulty\n(GPS denied)': 125.0,
     }
     labels = list(sigma2_vals.keys())
     weights = [np.exp(-s2 / (2 * sigma2_warn)) for s2 in sigma2_vals.values()]

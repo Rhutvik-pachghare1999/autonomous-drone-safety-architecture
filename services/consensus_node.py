@@ -1,7 +1,10 @@
-# Observability-weighted HotStuff consensus for drone swarms.
+# Observability-weighted voting consensus for drone swarms.
 # Trust weight w_i = exp(-σ²_pos / (2·σ_warn²)) links EKF covariance to vote weight.
-# GPS-denied nodes get w≈0 and cannot corrupt the quorum even if Byzantine.
+# GPS-denied nodes get w≈0 and cannot sway the quorum.
 # Reads from /dev/shm/aisp_ekf_state, writes agreed state to /dev/shm/aisp_consensus.
+#
+# This is NOT Byzantine fault tolerance (no signatures, no 3f+1, no view change).
+# It is a weighted voting protocol where weight derives from estimation quality.
 #
 # Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
 
@@ -43,8 +46,8 @@ _EKF_SHM_SIZE = 64
 
 
 class Phase(Enum):
-    PREPARE  = auto()
-    PRE_VOTE = auto()
+    PROPOSE  = auto()
+    VOTE     = auto()
     COMMIT   = auto()
 
 
@@ -159,17 +162,19 @@ class EKFSharedMemory:
 
 class ConsensusNode:
     """
-    Single node in the observability-weighted HotStuff swarm.
+    Single node in the observability-weighted voting swarm.
 
     Each node:
       1. Reads its own EKF state from shared memory
-      2. Broadcasts a PREPARE message with its state proposal + trust weight
-      3. Collects PREPARE messages from peers
+      2. Broadcasts a PROPOSE message with its state proposal + trust weight
+      3. Collects PROPOSE messages from peers
       4. Commits if weighted quorum is reached
       5. Writes agreed state to /dev/shm/aisp_consensus
 
     The weighted quorum rule ensures GPS-denied nodes cannot corrupt
     the agreed state even if they report fabricated positions.
+
+    This is a weighted voting protocol, NOT Byzantine fault tolerance.
     """
 
     def __init__(self, node_id: int, n_nodes: int,
@@ -204,7 +209,7 @@ class ConsensusNode:
         return ConsensusMessage(
             node_id      = self.node_id,
             round_num    = self._round,
-            phase        = Phase.PREPARE.name,
+            phase        = Phase.PROPOSE.name,
             state_hash   = _state_hash(state),
             state_vector = state,
             trust_weight = snap.trust_weight,
@@ -219,7 +224,7 @@ class ConsensusNode:
             self._pub.send_string(msg.to_json())
 
     def _collect_votes(self, timeout_s: float) -> List[ConsensusMessage]:
-        """Collect PREPARE votes from peers within timeout."""
+        """Collect PROPOSE votes from peers within timeout."""
         votes = []
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline and self._sub is not None:
@@ -233,7 +238,7 @@ class ConsensusNode:
         return votes
 
     def _weighted_quorum(self, votes: List[ConsensusMessage],
-                         my_msg: ConsensusMessage) -> Optional[List[float]]:
+                          my_msg: ConsensusMessage) -> Optional[List[float]]:
         """
         Check if a weighted quorum agrees on a state hash.
 
@@ -242,8 +247,8 @@ class ConsensusNode:
         Quorum rule:
             sum(w_i for voters of hash H) >= BFT_THRESHOLD * sum(w_i for all)
 
-        This is the observability-weighted extension of HotStuff's
-        (n - f) quorum, where f = n/3 Byzantine nodes.
+        This is a simple weighted majority vote where weight derives from
+        EKF observability (covariance). NOT Byzantine fault tolerance.
         """
         all_votes = votes + [my_msg]
         total_weight = sum(v.trust_weight for v in all_votes)
@@ -321,9 +326,9 @@ class ConsensusNode:
 
 # ── Standalone test ───────────────────────────────────────────────────────────
 
-def test_weighted_quorum() -> None:
+def test_weighted_quorum_gps_denied_cannot_sway() -> None:
     """
-    Unit test: verify that GPS-denied nodes cannot swing the quorum.
+    Unit test: verify that GPS-denied nodes (low observability) cannot sway the quorum.
     Simulates 4 nodes: 3 GPS-active (w≈1), 1 GPS-denied (w≈0.01).
     The GPS-denied node proposes a different state — quorum should reject it.
     """
@@ -331,7 +336,7 @@ def test_weighted_quorum() -> None:
     def _make_vote(node_id: int, state: list, var: float, gps: bool) -> ConsensusMessage:
         snap = EKFSnapshot(state[0], state[1], state[2], var, var, var * 0.4, gps)
         return ConsensusMessage(
-            node_id=node_id, round_num=0, phase=Phase.PREPARE.name,
+            node_id=node_id, round_num=0, phase=Phase.PROPOSE.name,
             state_hash=_state_hash(state), state_vector=state,
             trust_weight=snap.trust_weight,
             var_px=snap.var_px, var_py=snap.var_py, var_psi=snap.var_psi,
@@ -342,7 +347,7 @@ def test_weighted_quorum() -> None:
 
     # 3 GPS-active nodes agree on [0, 0, 2]
     true_state  = [0.0, 0.0, 2.0]
-    false_state = [100.0, 100.0, 2.0]  # Byzantine GPS-denied node
+    false_state = [100.0, 100.0, 2.0]  # GPS-denied node proposes different position
 
     votes = [
         _make_vote(1, true_state,  0.1,  True),   # w ≈ 0.990
@@ -355,12 +360,12 @@ def test_weighted_quorum() -> None:
 
     assert agreed is not None, "Quorum should be reached"
     assert agreed == true_state, (
-        f"Wrong state agreed: {agreed} (Byzantine node should be silenced)"
+        f"Wrong state agreed: {agreed} (GPS-denied node should be outvoted)"
     )
 
-    # Verify: when GPS-denied Byzantine nodes are outvoted by GPS-active nodes,
-    # the GPS-active state wins — Byzantine nodes cannot override the quorum.
-    # Add one GPS-active node that disagrees with Byzantine to show weight dominance.
+    # Verify: when GPS-denied nodes are outvoted by GPS-active nodes,
+    # the GPS-active state wins — low-weight nodes cannot override the quorum.
+    # Add two GPS-denied nodes that disagree with Byzantine to show weight dominance.
     mixed_votes = [
         _make_vote(1, true_state,  0.1,  True),   # w ≈ 0.976 — GPS active
         _make_vote(3, false_state, 20.0, False),  # w ≈ 0.008 — GPS denied
@@ -391,7 +396,7 @@ if __name__ == "__main__":
     args = p.parse_args()
 
     if args.test:
-        test_weighted_quorum()
+        test_weighted_quorum_gps_denied_cannot_sway()
     else:
         node = ConsensusNode(args.node_id, args.n_nodes)
         node.run(n_rounds=args.rounds)

@@ -1,22 +1,22 @@
 """
-aBFT Consensus Under Packet Loss and Asymmetric Latency
-========================================================
-Tests the observability-weighted HotStuff consensus protocol under:
+Observability-Weighted Voting Consensus Under Packet Loss and Asymmetric Latency
+================================================================================
+Tests the observability-weighted voting consensus protocol under:
   - 20% random packet loss (simulated at the message layer)
   - Asymmetric latency: 0–50ms per link, randomly assigned
-  - 5-node swarm: 3 GPS-active, 1 GPS-degraded, 1 GPS-denied (Byzantine)
+  - 5-node swarm: 3 GPS-active, 1 GPS-degraded, 1 GPS-denied (low observability)
   - 100 consensus rounds
 
 Metrics reported:
   - Commit rate (% of rounds reaching weighted quorum)
   - Mean commit latency (ms)
-  - Byzantine rejection rate (% of rounds where Byzantine node's state
+  - GPS-denied rejection rate (% of rounds where GPS-denied node's state
     was NOT adopted as the agreed state)
   - Weighted quorum fraction per round
 
-The Byzantine node reports a fabricated position [100, 100, 2] while
+The GPS-denied node reports a fabricated position [100, 100, 2] while
 GPS-active nodes report the true position [0, 0, 2].  The weighted
-quorum rule should reject the Byzantine state in all rounds.
+quorum rule should reject the GPS-denied state in all rounds.
 
 Author: Rhutvik Prashant Pachghare, ASU Robotics & Autonomous Systems
 """
@@ -58,7 +58,7 @@ def make_vote(node_id: int, round_num: int, rng: np.random.Generator) -> Consens
     snap = EKFSnapshot(0.0, 0.0, 2.0, vpx, vpy, vpsi, gps)
     state = BYZANTINE_STATE if is_byz else TRUE_STATE
     return ConsensusMessage(
-        node_id=node_id, round_num=round_num, phase=Phase.PREPARE.name,
+        node_id=node_id, round_num=round_num, phase=Phase.PROPOSE.name,
         state_hash=_state_hash(state), state_vector=state,
         trust_weight=snap.trust_weight,
         var_px=vpx, var_py=vpy, var_psi=vpsi, gps_active=gps,
@@ -103,13 +103,13 @@ def weighted_quorum(votes: list[ConsensusMessage],
 def run() -> dict:
     rng = np.random.default_rng(42)
     print('=' * 60)
-    print('Experiment 4: aBFT Consensus Under Packet Loss')
+    print('Experiment 4: Observability-Weighted Voting Consensus Under Packet Loss')
     print(f'  Nodes: {N_NODES}  |  Rounds: {N_ROUNDS}')
     print(f'  Packet loss: {PACKET_LOSS_RATE*100:.0f}%  |  Max latency: {LATENCY_MAX_MS}ms')
     print('=' * 60)
 
     commits = 0
-    byzantine_rejected = 0
+    gps_denied_rejected = 0
     quorum_fracs = []
     latencies_ms = []
     round_results = []
@@ -128,41 +128,41 @@ def run() -> dict:
         latency_ms = (time.perf_counter() - t0) * 1000
 
         committed = agreed is not None
-        byz_rejected = (agreed != BYZANTINE_STATE) if committed else True
+        gps_denied_rej = (agreed != BYZANTINE_STATE) if committed else True
 
         if committed:
             commits += 1
             latencies_ms.append(latency_ms)
-        if byz_rejected:
-            byzantine_rejected += 1
+        if gps_denied_rej:
+            gps_denied_rejected += 1
 
         quorum_fracs.append(frac)
         round_results.append({
             'round': r, 'committed': committed,
             'agreed_state': agreed, 'quorum_frac': frac,
-            'byzantine_rejected': byz_rejected,
+            'gps_denied_rejected': gps_denied_rej,
             'n_delivered': len(peer_votes) + 1,
             'latency_ms': latency_ms,
         })
 
     commit_rate   = commits / N_ROUNDS
-    byz_rej_rate  = byzantine_rejected / N_ROUNDS
+    gps_denied_rej_rate  = gps_denied_rejected / N_ROUNDS
     mean_lat      = float(np.mean(latencies_ms)) if latencies_ms else 0.0
     p99_lat       = float(np.percentile(latencies_ms, 99)) if latencies_ms else 0.0
 
     print('\n── Results ──────────────────────────────────────────────────')
-    print(f'  Commit rate          : {commit_rate*100:.1f}%  ({commits}/{N_ROUNDS})')
-    print(f'  Byzantine rejection  : {byz_rej_rate*100:.1f}%  ({byzantine_rejected}/{N_ROUNDS})')
-    print(f'  Mean commit latency  : {mean_lat:.3f} ms')
-    print(f'  P99 commit latency   : {p99_lat:.3f} ms')
-    print(f'  Mean quorum fraction : {np.mean(quorum_fracs):.3f}')
-    print(f'  Min quorum fraction  : {np.min(quorum_fracs):.3f}')
+    print(f'  Commit rate           : {commit_rate*100:.1f}%  ({commits}/{N_ROUNDS})')
+    print(f'  GPS-denied rejection  : {gps_denied_rej_rate*100:.1f}%  ({gps_denied_rejected}/{N_ROUNDS})')
+    print(f'  Mean commit latency   : {mean_lat:.3f} ms')
+    print(f'  P99 commit latency    : {p99_lat:.3f} ms')
+    print(f'  Mean quorum fraction  : {np.mean(quorum_fracs):.3f}')
+    print(f'  Min quorum fraction   : {np.min(quorum_fracs):.3f}')
 
     # Node trust weights
     print('\n── Node trust weights ───────────────────────────────────────')
     for i, (vpx, vpy, vpsi, gps, byz) in enumerate(NODE_CONFIGS):
         snap = EKFSnapshot(0,0,2, vpx, vpy, vpsi, gps)
-        tag = ' [BYZANTINE]' if byz else (' [DEGRADED]' if not gps else '')
+        tag = ' [GPS-DENIED]' if byz else (' [DEGRADED]' if not gps else '')
         print(f'  Node {i}: w={snap.trust_weight:.4f}  gps={gps}{tag}')
 
     _plot(round_results, quorum_fracs)
@@ -174,7 +174,7 @@ def run() -> dict:
             'max_latency_ms': LATENCY_MAX_MS,
         },
         'commit_rate':          commit_rate,
-        'byzantine_rejection_rate': byz_rej_rate,
+        'gps_denied_rejection_rate': gps_denied_rej_rate,
         'mean_commit_latency_ms': mean_lat,
         'p99_commit_latency_ms':  p99_lat,
         'mean_quorum_fraction':   float(np.mean(quorum_fracs)),
@@ -193,25 +193,25 @@ def _plot(round_results: list, quorum_fracs: list) -> None:
 
         fig, axes = plt.subplots(1, 3, figsize=(14, 4))
         fig.suptitle(
-            f'aBFT Consensus Under {PACKET_LOSS_RATE*100:.0f}% Packet Loss + '
+            f'Observability-Weighted Voting Under {PACKET_LOSS_RATE*100:.0f}% Packet Loss + '
             f'Asymmetric Latency (0–{LATENCY_MAX_MS}ms)\n'
-            f'{N_NODES}-node swarm: 3 GPS-active, 1 GPS-degraded, 1 Byzantine GPS-denied',
+            f'{N_NODES}-node swarm: 3 GPS-active, 1 GPS-degraded, 1 GPS-denied',
             fontsize=10
         )
 
         rounds = [r['round'] for r in round_results]
         committed = [int(r['committed']) for r in round_results]
-        byz_rej   = [int(r['byzantine_rejected']) for r in round_results]
+        gps_denied_rej   = [int(r['gps_denied_rejected']) for r in round_results]
 
-        # Left: commit and Byzantine rejection per round
+        # Left: commit and GPS-denied rejection per round
         ax = axes[0]
         ax.fill_between(rounds, committed, alpha=0.4, color='steelblue',
                         label='Committed')
-        ax.fill_between(rounds, byz_rej, alpha=0.3, color='coral',
-                        label='Byzantine rejected')
+        ax.fill_between(rounds, gps_denied_rej, alpha=0.3, color='coral',
+                        label='GPS-denied rejected')
         ax.set_xlabel('Round')
         ax.set_ylabel('Binary (1=yes)')
-        ax.set_title('Commit & Byzantine Rejection\nper Round')
+        ax.set_title('Commit & GPS-Denied Rejection\nper Round')
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
 
@@ -219,7 +219,7 @@ def _plot(round_results: list, quorum_fracs: list) -> None:
         ax2 = axes[1]
         ax2.plot(rounds, quorum_fracs, 'steelblue', linewidth=1, alpha=0.7)
         ax2.axhline(BFT_THRESHOLD, color='red', linestyle='--', linewidth=2,
-                    label=f'BFT threshold ({BFT_THRESHOLD:.2f})')
+                    label=f'2/3 threshold ({BFT_THRESHOLD:.2f})')
         ax2.set_xlabel('Round')
         ax2.set_ylabel('Weighted quorum fraction')
         ax2.set_title('Quorum Fraction per Round\n(weighted by EKF trust)')
@@ -236,7 +236,7 @@ def _plot(round_results: list, quorum_fracs: list) -> None:
             from services.consensus_node import EKFSnapshot
             snap = EKFSnapshot(0,0,2, vpx, vpy, vpsi, gps)
             weights.append(snap.trust_weight)
-            tag = 'Byzantine\n(GPS denied)' if byz else \
+            tag = 'GPS-denied' if byz else \
                   ('GPS\ndegraded' if not gps else f'GPS active\n(Node {i})')
             labels.append(tag)
             colors.append('coral' if byz else ('orange' if not gps else 'steelblue'))

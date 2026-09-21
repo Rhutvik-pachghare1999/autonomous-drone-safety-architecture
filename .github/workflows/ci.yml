@@ -38,6 +38,9 @@ jobs:
       - name: Unit tests (HOCBF + input validation)
         run: PYTHONPATH=. pytest tests/ -v
 
+      - name: Watchdog C test (real src/rt/watchdog.c)
+        run: cd build && ctest --output-on-failure -R watchdog_test
+
       - name: EKF gating smoke test
         run: PYTHONPATH=. python src/estimation/ekf_gating.py
 

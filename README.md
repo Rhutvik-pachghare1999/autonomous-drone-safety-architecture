@@ -23,9 +23,11 @@ foundation-model/RL hallucinations in real time.
 |---|---|---|
 | C99 + pybind11 HOCBF altitude safety filter | implemented, tested | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_hocbf.py`, `tests/test_input_validation.py` |
 | NaN/Inf input validation / fail-safe | implemented, tested | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_input_validation.py` |
+| Actuator infeasibility handling (T_lb > T_max → hover fallback) | implemented, tested | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_hocbf.py::test_infeasible_safe_fallback` |
 | POSIX `/dev/shm` zero-copy command IPC | implemented | `src/utils/shm_bridge.py`, `src/rt/safety_filter.c` |
 | EKF covariance gating / mode ladder (P7) | partially implemented | `src/estimation/ekf_gating.py` computes threshold; RTL FSM action is planned |
-| Observability-weighted HotStuff consensus | implemented, tested | `services/consensus_node.py`, `experiments/exp_consensus_fault.py` |
+| Stale VLA watchdog (STARTUP/FRESH/STALE state machine) | implemented, tested | `src/rt/safety_filter.c`, `tests/test_hocbf.py` watchdog tests |
+| Observability-weighted voting consensus | implemented, tested | `services/consensus_node.py`, `experiments/exp_consensus_fault.py` |
 | VLA bridge (SmolVLM2) | implemented, not validated here | `src/perception/vla_bridge.py` — requires GPU + HF model download |
 | PPO policy + ONNXRuntime C hot-path | implemented, not validated here | `experiments/results/ppo_policy.onnx`, `src/rt/safety_filter.c` — requires ONNX build |
 | Formal FSM / Z3 invariants (P1–P7) | planned, not implemented | `ROADMAP.md` § "Formal verification roadmap" |
@@ -47,22 +49,24 @@ Hard-RT core (SCHED_FIFO prio 99, isolated)
   └── safety_filter.c ................ mmap read → HOCBF clamp → actuator
        ├── HOCBF filter .............. O(1) arithmetic, WCET 2,725 ns
        ├── jitter watchdog ........... per-cycle deviation from expected
-       └── stale-VLA fallback ........ RL hover if VLA silent > 100 ms
+       ├── stale-VLA watchdog ........ STARTUP/FRESH/STALE state machine, hover fallback
+       └── infeasibility handling .... T_lb > T_max → hover thrust fallback
 
 State estimation:
   └── ekf_gating.py .................. 15-state EKF mode ladder (NOMINAL / DEGRADED / COLLAPSED)
        └── P7 threshold: tr(P[px,py,ψ]) ≥ 25 m² → set p7_triggered
 
 Swarm consensus:
-  └── consensus_node.py .............. observability-weighted HotStuff quorum
+  └── consensus_node.py .............. observability-weighted voting quorum
        └── writes /dev/shm/aisp_consensus for EKF gating
 ```
 
-Only the HOCBF clamp and jitter watchdog run in the hard-RT path and are
-covered by tests. The VLA bridge, RL/ONNX policy, EKF gating FSM action, and
-Isaac Sim / SITL loop either require external runtime dependencies (Isaac Sim,
-ONNX runtime library, GPU, downloaded VLA weights) or are planned; see the
-status column in "What is implemented" and `docs/ARCHITECTURE.md`.
+Only the HOCBF clamp, jitter watchdog, stale watchdog, and infeasibility
+handling run in the hard-RT path and are covered by tests. The VLA bridge,
+RL/ONNX policy, EKF gating FSM action, and Isaac Sim / SITL loop either
+require external runtime dependencies (Isaac Sim, ONNX runtime library, GPU,
+downloaded VLA weights) or are planned; see the status column in "What is
+implemented" and `docs/ARCHITECTURE.md`.
 
 ---
 
@@ -75,7 +79,7 @@ status column in "What is implemented" and `docs/ARCHITECTURE.md`.
 | `src/estimation/ekf_gating.py` | EKF covariance gating, P7 threshold, VIO injection, consensus read |
 | `src/perception/vla_bridge.py` | SmolVLM2 VLA bridge (requires GPU + transformers) |
 | `src/utils/shm_bridge.py`, `shm_bridge.h` | `/dev/shm` layout definitions |
-| `services/consensus_node.py` | Observability-weighted HotStuff node |
+| `services/consensus_node.py` | Observability-weighted voting node |
 | `experiments/*.py` | Reproducible experiments; see "Quick start" for which ones run here |
 | `experiments/results/*.json`, `*.csv`, `*.png` | Committed measurement artifacts |
 | `docs/WCET_BENCHMARK.md` | How the 2,725 ns WCET was produced and reproduced |
@@ -176,7 +180,7 @@ this environment. ONNX-linked and Isaac-Sim paths are documented in
 | C filter no-ONNX run | `gcc -O3 -DNO_ONNX -o /tmp/sf src/rt/safety_filter.c -lm -lrt && /tmp/sf 1000 0` | builds and runs | terminal output |
 | Consensus quorum | `python3 services/consensus_node.py --test` | PASS | terminal output |
 
-All 30 pytest cases pass with Python 3.12 in a clean checkout after the
+All 39 pytest cases pass with Python 3.12 in a clean checkout after the
 `conftest.py` fix.
 
 ---
@@ -194,7 +198,7 @@ All 30 pytest cases pass with Python 3.12 in a clean checkout after the
 | EKF rank GPS denied | 6 → 4 | `experiments/results/observability_gramian.json` | IMU+Baro only loses horizontal position. |
 | VIO restores rank | 4 → 6 | `experiments/results/observability_gramian.json` | With OpenVINS-derived noise model. |
 | Consensus commit rate | 100% (100 / 100 rounds) | `experiments/results/consensus_fault.json` | 20% packet loss + 50 ms max latency. |
-| Byzantine rejection | 100% (100 / 100) | `experiments/results/consensus_fault.json` | Byzantine GPS-denied node cannot reach 2/3 weighted quorum. |
+| GPS-denied rejection | 100% (100 / 100) | `experiments/results/consensus_fault.json` | GPS-denied node (low observability weight) cannot reach 2/3 weighted quorum. |
 | Battery poly-4 RMSE | 0.016 Ah (B0005), 0.030 Ah (B0006), 0.014 Ah (B0007) | `experiments/results/battery_validation.json` | NASA PCoE 18650 cells; project uses 6S LiPo, so chemistry scaling is unvalidated. |
 | Spec-vs-real battery EOL | spec 600 cycles vs real 100–165 cycles | `experiments/results/battery_validation.json` | Linear spec model overestimates usable life by ~4–6×. |
 
@@ -218,14 +222,16 @@ All 30 pytest cases pass with Python 3.12 in a clean checkout after the
    never writes back. This prevents the filter from confirming its own drift
    under GPS denial.
 
-4. **Observability-weighted consensus.** Vote weight is tied to EKF covariance
+- **Observability-weighted consensus.** Vote weight is tied to EKF covariance
    rather than adding a separate fault detector. GPS-denied nodes naturally
-   receive near-zero weight, so a Byzantine node in that state cannot sway
-   the 2/3 quorum.
+   receive near-zero weight, so a low-observability node cannot sway
+   the 2/3 quorum. This is **weighted voting, not Byzantine fault tolerance**
+   (no signatures, no 3f+1, no view change protocol).
 
 5. **Separate best-effort and hard-RT paths.** VLA inference (~seconds) and
    RL policy inference (~milliseconds) run on best-effort cores; only the
-   O(1) HOCBF clamp runs under `SCHED_FIFO` priority 99 with memory locked.
+   O(1) HOCBF clamp, jitter watchdog, stale watchdog, and infeasibility
+   handling run under `SCHED_FIFO` priority 99 with memory locked.
 
 ---
 
@@ -243,8 +249,8 @@ All 30 pytest cases pass with Python 3.12 in a clean checkout after the
   implemented. See `ROADMAP.md`.
 
 - **Simulation-only.** No hardware-in-the-loop, flight logs, or real-vehicle
-   validation. The zero-copy IPC path has not been exercised against a live
-   flight controller.
+  validation. The zero-copy IPC path has not been exercised against a live
+  flight controller.
 
 - **Yaw unobservable without magnetometer.** Under GPS denial the EKF cannot
   observe yaw; the current model does not include a magnetometer.
@@ -261,6 +267,23 @@ All 30 pytest cases pass with Python 3.12 in a clean checkout after the
   `safety_filter.c` is compiled out by default (`-DNO_ONNX`) because the
   ONNX Runtime shared library is not present in this checkout.
 
+- **ONNX observation domain mismatch.** The PPO policy (`ppo_policy.onnx`)
+  was trained on full 13-dim state `[px,py,pz, vx,vy,vz, qw,qx,qy,qz, wx,wy,wz]`
+  with noise injection. The C inference loop only has `pz, vz` available
+  (indices 2, 5); all other fields are zeroed. This is a known domain gap.
+  See `safety_filter.c` `OBS_IDX_*` defines and `tests/test_hocbf.py::test_onnx_obs_layout_matches_training`.
+
+- **C++ `std::atomic` in shm_bridge.h may not be lock-free / size-compatible.**
+  `shm_bridge.h` uses `std::atomic<uint64_t>` and `std::atomic<bool>` which
+  may differ in size/alignment from the Python `struct.pack('=Qddd?')` layout
+  used by the deployed C path. The deployed C path (`safety_filter.c`) uses
+  a plain struct matching Python's 33-byte layout; the C++ subscriber is an
+  alternative not used in the hard-RT loop.
+
+- **EKF shared memory (`/dev/shm/aisp_ekf_state`) has no writer in this repo.**
+  `consensus_node.py` reads it but no component writes to it — planned for
+  future integration with the EKF estimator.
+
 - **Cyclictest OS jitter images not committed.** The 2.0–28.0 µs scheduler
   jitter numbers in `docs/LATENCY_BUDGET.md` were measured locally but the
   raw data and CDF plots were not committed; treat them as indicative.
@@ -268,6 +291,10 @@ All 30 pytest cases pass with Python 3.12 in a clean checkout after the
 - **Static README badges removed.** The old "13/13 tests" and "WCET 2725 ns"
   shields were hardcoded and are now removed. Only the live GitHub Actions
   badge remains.
+
+- **Tests require Python 3.12.** The `hocbf` pybind11 module is built for
+  Python 3.12 and will `ImportError` under other interpreters. Run tests via
+  `python3.12 -m pytest tests/ -q` (39 tests pass).
 
 ---
 

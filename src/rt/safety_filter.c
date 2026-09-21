@@ -4,6 +4,7 @@
  *
  * Build (no ONNX):  gcc -O3 -march=native -DNO_ONNX -o build/safety_filter src/rt/safety_filter.c src/rt/watchdog.c -lm -lrt
  * Build (with ONNX): gcc -O3 -march=native -I build/onnxruntime_include -o build/safety_filter_onnx src/rt/safety_filter.c src/rt/watchdog.c -lm -lrt <onnxruntime.so>
+ * Build SIL replay:  gcc -O3 -march=native -DSIL_REPLAY -o build/sil_runner src/rt/safety_filter.c src/rt/watchdog.c -lm -lrt
  *
  * Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
  */
@@ -269,6 +270,7 @@ static void rt_setup(int cpu_core) {
 }
 
 /* ── Main ────────────────────────────────────────────────────────────────── */
+#ifndef SIL_REPLAY
 int main(int argc, char* argv[]) {
     int   n_trials  = (argc > 1) ? atoi(argv[1]) : 10000;
     int   cpu_core  = (argc > 2) ? atoi(argv[2]) : 2;
@@ -517,7 +519,7 @@ int main(int argc, char* argv[]) {
         fclose(f);
     }
 
-    free(lat_hocbf); free(lat_total); free(lat_jitter);
+free(lat_hocbf); free(lat_total); free(lat_jitter);
     free(sorted_h);  free(sorted_t);
     munmap(shm, SHM_SIZE);
     if (sitl_mode) sitl_close(&sitl);
@@ -526,3 +528,100 @@ int main(int argc, char* argv[]) {
 #endif
     return (hocbf_wcet < 100000) ? 0 : 1;
 }
+#endif /* !SIL_REPLAY */
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * SIL_REPLAY MODE — Software-in-the-Loop replay for CI/verification
+ * ════════════════════════════════════════════════════════════════════════════
+ * This mode reads VLA commands from shared memory (written by sim/sil_harness.py),
+ * runs the watchdog + HOCBF filter, and logs a CSV row per cycle:
+ *   t_ns, pz, vz, vla_vz_nom, is_fresh, vla_state, T_nom, T_safe, was_infeasible, intervened
+ *
+ * Build: gcc -O3 -march=native -DSIL_REPLAY -o build/sil_runner src/rt/safety_filter.c src/rt/watchdog.c -lm -lrt
+ * Run:   ./build/sil_runner <num_cycles> <output_csv>
+ */
+
+#ifdef SIL_REPLAY
+
+int main(int argc, char* argv[]) {
+    int n_cycles = (argc > 1) ? atoi(argv[1]) : 1000;
+    const char* out_csv = (argc > 2) ? argv[2] : "experiments/results/sil_replay.csv";
+
+    /* Open shared memory (read-only, created by Python harness) */
+    int fd = open(SHM_PATH, O_RDONLY);
+    if (fd == -1) { perror("open shm (SIL_REPLAY)"); exit(1); }
+    VLACommand* shm = (VLACommand*)mmap(NULL, SHM_SIZE,
+                        PROT_READ, MAP_SHARED, fd, 0);
+    close(fd);
+    if (shm == MAP_FAILED) { perror("mmap (SIL_REPLAY)"); exit(1); }
+
+    watchdog_init();
+
+    /* Open output CSV */
+    FILE* f = fopen(out_csv, "w");
+    if (!f) { perror("fopen sil_replay.csv"); exit(1); }
+    fprintf(f, "t_ns,pz,vz,vla_vz_nom,is_fresh,vla_state,T_nom,T_safe,was_infeasible,intervened\n");
+
+    double pz = 2.0, vz = 0.0;
+    const double dt = 0.001;  /* 1 kHz simulation step */
+
+    for (int i = 0; i < n_cycles; i++) {
+        uint64_t t_ns = ns_now();
+
+        /* Read VLA command */
+        double vla_vz_nom = shm->vz_nom;
+        uint64_t now = t_ns;
+
+        /* VLA watchdog: check freshness and update state */
+        bool vla_fresh = vla_watchdog_check(shm, now);
+        VLAState vla_state = watchdog_state();
+
+        /* Compute T_nom from VLA command (hover + proportional to vz_nom) */
+        double T_nom;
+        if (vla_fresh && vla_state == VLA_STATE_FRESH) {
+            T_nom = MASS * GRAVITY + MASS * vla_vz_nom * 2.0;
+        } else {
+            T_nom = MASS * GRAVITY;  // hover fallback when stale/startup
+        }
+
+        /* HOCBF filter — O(1) arithmetic */
+        double T_safe = hocbf_filter(pz, vz, 0.0, 0.0, T_nom);
+
+        /* Check if filter intervened */
+        bool was_infeasible = false;
+        if (!isfinite(T_nom) || T_nom > T_MAX) was_infeasible = true;
+        double LgLfh = cos(0.0) * cos(0.0) / MASS;
+        if (LgLfh < 0.05) LgLfh = 0.05;
+        double rhs = GRAVITY - ALPHA1 * vz - ALPHA2 * pz;
+        double T_lb = rhs / LgLfh;
+        if (T_lb > 0.0) T_lb *= CONSERVATISM;
+        double lo = T_lb > T_MIN ? T_lb : T_MIN;
+        if (lo > T_MAX) was_infeasible = true;
+
+        bool intervened = (T_safe != T_nom) || was_infeasible;
+
+        /* Write CSV row */
+        fprintf(f, "%lu,%.6f,%.6f,%.6f,%d,%d,%.6f,%.6f,%d,%d\n",
+                (unsigned long)t_ns, pz, vz, vla_vz_nom,
+                vla_fresh ? 1 : 0, vla_state,
+                T_nom, T_safe,
+                was_infeasible ? 1 : 0,
+                intervened ? 1 : 0);
+
+        /* Point-mass vertical model update */
+        vz += (T_safe / MASS - GRAVITY) * dt;
+        pz += vz * dt;
+        if (pz < 0.0) pz = 0.0;
+
+        /* Sleep to approximate 1 kHz cycle (best effort, not RT) */
+        struct timespec ts = {0, 1000000};  /* 1 ms */
+        nanosleep(&ts, NULL);
+    }
+
+    fclose(f);
+    munmap(shm, SHM_SIZE);
+    printf("SIL_REPLAY: %d cycles written to %s\n", n_cycles, out_csv);
+    return 0;
+}
+
+#endif /* SIL_REPLAY */

@@ -27,3 +27,13 @@ add_executable(watchdog_test tests/watchdog_test.c src/rt/watchdog.c)
 target_include_directories(watchdog_test PRIVATE src/rt)
 target_link_libraries(watchdog_test m rt)
 add_test(NAME watchdog_test COMMAND watchdog_test)
+
+# SIL_REPLAY runner — software-in-the-loop replay for CI/verification
+# Builds safety_filter.c with SIL_REPLAY mode (reads /dev/shm/aisp_vla_cmd,
+# runs watchdog + HOCBF, logs CSV). Used by sim/sil_harness.py.
+add_executable(sil_runner src/rt/safety_filter.c src/rt/watchdog.c)
+target_compile_definitions(sil_runner PRIVATE SIL_REPLAY NO_ONNX)
+target_include_directories(sil_runner PRIVATE src/rt)
+target_link_libraries(sil_runner m rt)
+# Note: actual SIL integration is tested via Python harness (sim/sil_harness.py)
+# which creates the shared memory. CTest only verifies the binary builds.

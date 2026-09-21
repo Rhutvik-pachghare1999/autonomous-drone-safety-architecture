@@ -6,25 +6,30 @@
 
 static VLAState vla_state = VLA_STATE_STARTUP;
 static uint64_t last_vla_time = 0;
+static uint64_t last_seq = 0;  /* Track last seen sequence number */
 
 void watchdog_init(void) {
     vla_state = VLA_STATE_STARTUP;
     last_vla_time = 0;
+    last_seq = 0;
 }
 
 bool vla_watchdog_check(const VLACommand* shm, uint64_t now) {
-    /* In STARTUP or STALE: any new command (is_new_data=1) is accepted
-     * as fresh regardless of timestamp. Only in FRESH state do we
-     * enforce the 100ms staleness window. */
+    /* In STARTUP or STALE: accept any new data (seq changed or first data).
+     * In FRESH: require seq changed AND within 100ms window. */
     bool fresh = false;
+    uint64_t seq = shm->sequence_number;
+    bool has_new_data = shm->is_new_data && (seq != last_seq);
+
     if (vla_state == VLA_STATE_FRESH) {
-        fresh = shm->is_new_data && (now - last_vla_time < VLA_STALE_NS);
+        fresh = has_new_data && (now - last_vla_time < VLA_STALE_NS);
     } else {
-        fresh = shm->is_new_data;  /* STARTUP or STALE: accept any new data */
+        fresh = has_new_data;  /* STARTUP or STALE: accept any new data */
     }
 
     if (fresh) {
         last_vla_time = now;
+        last_seq = seq;
         if (vla_state == VLA_STATE_STARTUP || vla_state == VLA_STATE_STALE) {
             vla_state = VLA_STATE_FRESH;
         }

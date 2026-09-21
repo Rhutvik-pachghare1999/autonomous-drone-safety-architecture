@@ -66,6 +66,10 @@ public:
      * Analytical solution (1-variable, 1-constraint QP):
      *   T* = clamp(T_nom, T_lb, T_max)
      *
+     * If the feasible set is empty (T_lb > T_max), returns hover thrust
+     * (m*g clamped to actuator limits) as a safe fallback instead of
+     * returning T_max which would violate the CBF constraint.
+     *
      * @param pz    Altitude (m), must be >= 0
      * @param vz    Vertical velocity (m/s), positive = up
      * @param roll  Roll angle (rad)
@@ -115,6 +119,14 @@ public:
         const double T_lb_raw = rhs / LgLfh_safe;
         const double T_lb = (T_lb_raw > 0.0) ? T_lb_raw * p_.conservatism : T_lb_raw;
 
+        // Check for infeasibility: required safe thrust exceeds actuator max.
+        // If T_lb > T_max, the feasible set [max(T_min, T_lb), T_max] is empty.
+        // Returning T_max would violate the CBF constraint. Instead, fall back
+        // to hover thrust (m*g) which is the safest physically achievable action.
+        if (T_lb > p_.T_max) {
+            return std::clamp(p_.mass * p_.g, p_.T_min, p_.T_max);
+        }
+
         // Analytical QP solution: project T_nom onto feasible set
         return std::clamp(T_nom, std::max(p_.T_min, T_lb), p_.T_max);
     }
@@ -131,6 +143,7 @@ public:
     struct SafeCommand {
         double vx, vy, T;
         bool was_filtered;
+        bool was_infeasible;
     };
 
     SafeCommand filter_vla_command(double pz, double vz, double roll, double pitch,
@@ -139,6 +152,15 @@ public:
         // Nominal thrust: hover + proportional to desired vz
         const double T_hover = p_.mass * p_.g;
         const double T_nom = T_hover + p_.mass * vz_nom * 2.0;  // simple P-gain
+
+        // Lie derivatives for infeasibility check (mirrors filter_thrust logic)
+        const double Lf2h_free = -p_.g;
+        const double LgLfh = std::cos(roll) * std::cos(pitch) / p_.mass;
+        const double LgLfh_safe = std::max(LgLfh, 0.05);
+        const double rhs = -Lf2h_free - p_.alpha1 * vz - p_.alpha2 * pz;
+        const double T_lb_raw = rhs / LgLfh_safe;
+        const double T_lb = (T_lb_raw > 0.0) ? T_lb_raw * p_.conservatism : T_lb_raw;
+        const bool infeasible = (T_lb > p_.T_max);
 
         const double T_safe = filter_thrust(pz, vz, roll, pitch, T_nom);
 
@@ -151,7 +173,7 @@ public:
         }
 
         const bool filtered = (T_safe != T_nom) || (h_mag > v_max);
-        return {vx_safe, vy_safe, T_safe, filtered};
+        return {vx_safe, vy_safe, T_safe, filtered, infeasible};
     }
 
     /** Lock all current and future memory pages — call once at startup. */
@@ -412,10 +434,11 @@ PYBIND11_MODULE(hocbf, m) {
         .def_readwrite("conservatism", &aisp::control::HOCBFParams::conservatism);
 
     py::class_<aisp::control::HOCBF::SafeCommand>(m, "SafeCommand")
-        .def_readonly("vx",           &aisp::control::HOCBF::SafeCommand::vx)
-        .def_readonly("vy",           &aisp::control::HOCBF::SafeCommand::vy)
-        .def_readonly("T",            &aisp::control::HOCBF::SafeCommand::T)
-        .def_readonly("was_filtered", &aisp::control::HOCBF::SafeCommand::was_filtered);
+        .def_readonly("vx",            &aisp::control::HOCBF::SafeCommand::vx)
+        .def_readonly("vy",            &aisp::control::HOCBF::SafeCommand::vy)
+        .def_readonly("T",             &aisp::control::HOCBF::SafeCommand::T)
+        .def_readonly("was_filtered",  &aisp::control::HOCBF::SafeCommand::was_filtered)
+        .def_readonly("was_infeasible", &aisp::control::HOCBF::SafeCommand::was_infeasible);
 
     py::class_<aisp::control::HOCBF>(m, "HOCBF")
         .def(py::init<aisp::control::HOCBFParams>(), py::arg("params") = aisp::control::HOCBFParams{})

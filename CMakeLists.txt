@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(aisp_hocbf VERSION 2.0.0 LANGUAGES CXX)
+project(aisp_hocbf VERSION 2.0.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,3 +20,10 @@ target_compile_options(hocbf PRIVATE
 
 # Install .so next to the source for direct import
 install(TARGETS hocbf LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/src/control)
+
+# Watchdog C test — exercises the real src/rt/watchdog.c (single source of truth)
+enable_testing()
+add_executable(watchdog_test tests/watchdog_test.c src/rt/watchdog.c)
+target_include_directories(watchdog_test PRIVATE src/rt)
+target_link_libraries(watchdog_test m rt)
+add_test(NAME watchdog_test COMMAND watchdog_test)

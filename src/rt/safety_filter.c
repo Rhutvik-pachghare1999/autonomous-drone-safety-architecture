@@ -2,8 +2,8 @@
  * Hard-RT safety filter: mmap read → ONNX policy → HOCBF clamp → UDP to SITL
  * WCET measured: 2725 ns (SCHED_FIFO prio 99, CPU core 2, 100k trials)
  *
- * Build (no ONNX):  gcc -O3 -march=native -DNO_ONNX -o build/safety_filter src/rt/safety_filter.c -lm -lrt
- * Build (with ONNX): gcc -O3 -march=native -I build/onnxruntime_include -o build/safety_filter_onnx src/rt/safety_filter.c -lm -lrt <onnxruntime.so>
+ * Build (no ONNX):  gcc -O3 -march=native -DNO_ONNX -o build/safety_filter src/rt/safety_filter.c src/rt/watchdog.c -lm -lrt
+ * Build (with ONNX): gcc -O3 -march=native -I build/onnxruntime_include -o build/safety_filter_onnx src/rt/safety_filter.c src/rt/watchdog.c -lm -lrt <onnxruntime.so>
  *
  * Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
  */
@@ -23,22 +23,17 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #ifndef NO_ONNX
 #include <onnxruntime_c_api.h>
 #endif
 
-/* ── Shared memory layout (matches shm_bridge.py) ────────────────────────── */
+#include "watchdog.h"
+
+/* ── Shared memory config (safety-filter specific) ─────────────────────────── */
 #define SHM_PATH  "/dev/shm/aisp_vla_cmd"
 #define SHM_SIZE  64
-#define VLA_STALE_NS  100000000ULL  /* 100ms — if VLA silent, RL takes over */
-
-typedef struct __attribute__((aligned(64))) {
-    uint64_t sequence_number;
-    double   vx_nom, vy_nom, vz_nom;
-    uint8_t  is_new_data;
-    char     _pad[31];
-} VLACommand;
 
 /* ── HOCBF parameters ────────────────────────────────────────────────────── */
 #define MASS    2.0
@@ -47,6 +42,27 @@ typedef struct __attribute__((aligned(64))) {
 #define ALPHA2  1.0
 #define T_MAX   (4.0 * MASS * GRAVITY)
 #define T_MIN   0.0
+#define CONSERVATISM  1.08  /* reality-gap buffer (matches hocbf.cpp) */
+
+/* ── ONNX observation layout (must match training: sim/quadrotor_rl.py _actor_obs) ──
+ * obs[13] = [px, py, pz, vx, vy, vz, qw, qx, qy, qz, wx, wy, wz]
+ * Training adds noise: pos+N(0,0.05), vel+N(0,0.10).
+ * Inference here has ONLY pz, vz from the benchmark loop.
+ * Other fields zeroed → domain mismatch. Known limitation.
+ */
+#define OBS_IDX_PX   0
+#define OBS_IDX_PY   1
+#define OBS_IDX_PZ   2
+#define OBS_IDX_VX   3
+#define OBS_IDX_VY   4
+#define OBS_IDX_VZ   5
+#define OBS_IDX_QW   6
+#define OBS_IDX_QX   7
+#define OBS_IDX_QY   8
+#define OBS_IDX_QZ   9
+#define OBS_IDX_WX   10
+#define OBS_IDX_WY   11
+#define OBS_IDX_WZ   12
 
 /* ── Jitter watchdog ─────────────────────────────────────────────────────── */
 /* Inter-cycle jitter = |actual_interval - expected_interval|.
@@ -55,6 +71,7 @@ typedef struct __attribute__((aligned(64))) {
  * we measure the deviation from the mean cycle time instead.
  * Alert threshold: 50 μs = 50,000 ns (matches LATENCY_BUDGET.md SLA). */
 #define JITTER_WARN_NS  50000ULL   /* 50 μs */
+
 static inline uint64_t ns_now(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
@@ -63,7 +80,7 @@ static inline uint64_t ns_now(void) {
 
 /* ── HOCBF filter — O(1), no heap, no syscalls ───────────────────────────── */
 static inline double hocbf_filter(double pz, double vz, double roll,
-                                   double pitch, double T_nom) {
+                                    double pitch, double T_nom) {
     /* Fail safe on non-finite input: a NaN would pass through the compares
      * below unchanged and reach the actuator. If state is untrustworthy,
      * command hover (m*g); if only T_nom is bad, fall through with the safe
@@ -74,10 +91,21 @@ static inline double hocbf_filter(double pz, double vz, double roll,
     }
     if (!isfinite(T_nom)) T_nom = T_MAX;  /* force clamp to feasible set */
     double LgLfh = cos(roll) * cos(pitch) / MASS;
-    if (LgLfh < 0.01) LgLfh = 0.01;
+    if (LgLfh < 0.05) LgLfh = 0.05;  /* wider floor matches hocbf.cpp (cos 87°) */
     double rhs  = GRAVITY - ALPHA1 * vz - ALPHA2 * pz;
     double T_lb = rhs / LgLfh;
+    if (T_lb > 0.0) T_lb *= CONSERVATISM;  /* reality-gap buffer matches hocbf.cpp */
     double lo   = T_lb > T_MIN ? T_lb : T_MIN;
+
+    /* Infeasibility check: if required safe thrust exceeds T_MAX, the
+     * feasible set is empty. Returning T_MAX would violate the CBF
+     * constraint. Fall back to hover thrust (m*g) as the safest
+     * physically achievable action. */
+    if (lo > T_MAX) {
+        double hover = GRAVITY * MASS;
+        return hover > T_MAX ? T_MAX : hover;
+    }
+
     if (T_nom < lo)   return lo;
     if (T_nom > T_MAX) return T_MAX;
     return T_nom;
@@ -302,7 +330,6 @@ int main(int argc, char* argv[]) {
 
     /* ── Hot-path benchmark ─────────────────────────────────────────────── */
     double pz = 2.0, vz = 0.0;
-    uint64_t last_vla_time  = ns_now();
     uint64_t last_cycle_t   = ns_now();  /* jitter watchdog: previous cycle start */
 
     for (int i = 0; i < n_trials; i++) {
@@ -340,20 +367,22 @@ int main(int argc, char* argv[]) {
         double vy = shm->vy_nom;
         double vz_nom = shm->vz_nom;
         uint64_t now = ns_now();
-        int vla_fresh = shm->is_new_data &&
-                        (now - last_vla_time < VLA_STALE_NS);
-        if (vla_fresh) last_vla_time = now;
+
+        /* VLA watchdog: check freshness and update state */
+        bool vla_fresh = vla_watchdog_check(shm, now);
 
         double T_nom;
 
 #ifndef NO_ONNX
         /* 2. RL policy forward pass (if ONNX loaded) */
         if (onnx_ok) {
-            float obs[13] = {
-                (float)pz, (float)vz, 0.0f, 0.0f, 0.0f, 0.0f,  /* pos, vel */
-                1.0f, 0.0f, 0.0f, 0.0f,                          /* quat w,x,y,z */
-                0.0f, 0.0f, 0.0f                                  /* omega */
-            };
+            /* obs[13] order MUST match training: [px, py, pz, vx, vy, vz, qw, qx, qy, qz, wx, wy, wz]
+             * Benchmark loop only has pz, vz. px,py,vx,vy,qx,qy,qz,wx,wy,wz zeroed.
+             * This is a known domain mismatch — see OBS_IDX_* defines above. */
+            float obs[13] = {0};
+            obs[OBS_IDX_PZ] = (float)pz;
+            obs[OBS_IDX_VZ] = (float)vz;
+            obs[OBS_IDX_QW] = 1.0f;  // identity quaternion
             float action[4] = {0};
             onnx_infer(&pol, obs, 13, action, 4);
             T_nom = action_to_thrust(action[0]);
@@ -361,18 +390,27 @@ int main(int argc, char* argv[]) {
             /* VLA is a strategic planner, not a tactical pilot.
              * A 2.5s-latency command must NOT touch the thrust channel.
              * The RL policy runs the inner loop; VLA updates goals only.
-             * The stale-data check above already gates vla_fresh correctly,
-             * but even fresh VLA velocity → thrust blending is wrong:
+             * Even fresh VLA velocity → thrust blending is wrong:
              * by the time the VLA parsed the scene the drone has moved ~12m.
              * Blend coefficient is 0.0 — RL policy is sole thrust authority. */
             (void)vla_fresh; (void)vz_nom; (void)vx; (void)vy;
         } else {
-            /* No ONNX: hover at gravity compensation */
-            T_nom = MASS * GRAVITY;
-            (void)vla_fresh; (void)vz_nom; (void)vx; (void)vy;
+            /* No ONNX: use hover thrust unless VLA is fresh */
+            if (vla_fresh && watchdog_state() == VLA_STATE_FRESH) {
+                T_nom = MASS * GRAVITY + MASS * vz_nom * 2.0;
+            } else {
+                T_nom = MASS * GRAVITY;  // hover fallback when stale/startup
+            }
+            (void)vx; (void)vy;
         }
 #else
-        T_nom = MASS * GRAVITY + MASS * vz_nom * 2.0;
+        /* NO_ONNX mode: use VLA command only when fresh; else hover */
+        if (vla_fresh && watchdog_state() == VLA_STATE_FRESH) {
+            T_nom = MASS * GRAVITY + MASS * vz_nom * 2.0;
+        } else {
+            T_nom = MASS * GRAVITY;  // hover fallback when stale/startup
+        }
+        (void)vx; (void)vy;
 #endif
 
         /* 3. HOCBF filter — O(1) arithmetic */
@@ -388,7 +426,9 @@ int main(int argc, char* argv[]) {
             float roll_cmd  = 0.0f, pitch_cmd = 0.0f, yaw_rate = 0.0f;
 #ifndef NO_ONNX
             if (onnx_ok) {
-                float obs[13] = {0}; obs[2] = (float)pz;
+                float obs[13] = {0};
+                obs[OBS_IDX_PZ] = (float)pz;
+                obs[OBS_IDX_QW] = 1.0f;
                 float action[4] = {0};
                 onnx_infer(&pol, obs, 13, action, 4);
                 roll_cmd  = action[1] * 0.3f;

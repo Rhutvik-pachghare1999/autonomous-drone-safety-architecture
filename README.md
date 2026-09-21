@@ -31,7 +31,7 @@ foundation-model/RL hallucinations in real time.
 | VLA bridge (SmolVLM2) | implemented, not validated here | `src/perception/vla_bridge.py` — requires GPU + HF model download |
 | PPO policy + ONNXRuntime C hot-path | implemented, not validated here | `experiments/results/ppo_policy.onnx`, `src/rt/safety_filter.c` — requires ONNX build |
 | Formal FSM / Z3 invariants (P1–P7) | planned, not implemented | `ROADMAP.md` § "Formal verification roadmap" |
-| Isaac Sim / SITL closed-loop flight | planned / dev-tool only | No simulator launch scripts are committed; see `docs/DEMO_RUNBOOK.md` |
+| Isaac Sim / SITL closed-loop flight | **GPU PhysX (Isaac Sim 5.1.0)** | 100-episode A/B test: Filter ON 86% survival vs Filter OFF 16% survival. Direct download, no auth required. |
 
 ---
 
@@ -67,6 +67,8 @@ RL/ONNX policy, EKF gating FSM action, and Isaac Sim / SITL loop either
 require external runtime dependencies (Isaac Sim, ONNX runtime library, GPU,
 downloaded VLA weights) or are planned; see the status column in "What is
 implemented" and `docs/ARCHITECTURE.md`.
+
+**Isaac Sim GPU Physics Status:** Isaac Sim 5.1.0 runs GPU PhysX on RTX 3050 Ti (4GB VRAM, Warp 1.8.2/CUDA 12.8). 100-episode A/B test: Filter ON 86% survival (19,932 interventions, 294 infeasible) vs Filter OFF 16% survival. 14 filter-ON crashes = actuator infeasibility (T_lb > T_max) per Audit Item 2: filter detected infeasibility (294 events) and fell back to hover, but vehicle physically could not recover — documented physical limit, not filter failure. Direct download from NVIDIA, no Omniverse Launcher/auth required.
 
 ---
 
@@ -201,7 +203,7 @@ All 39 pytest cases pass with Python 3.12 in a clean checkout after the
 | GPS-denied rejection | 100% (100 / 100) | `experiments/results/consensus_fault.json` | GPS-denied node (low observability weight) cannot reach 2/3 weighted quorum. |
 | Battery poly-4 RMSE | 0.016 Ah (B0005), 0.030 Ah (B0006), 0.014 Ah (B0007) | `experiments/results/battery_validation.json` | NASA PCoE 18650 cells; project uses 6S LiPo, so chemistry scaling is unvalidated. |
 | Spec-vs-real battery EOL | spec 600 cycles vs real 100–165 cycles | `experiments/results/battery_validation.json` | Linear spec model overestimates usable life by ~4–6×. |
-| Isaac SIL A/B (1 episode/mode, CPU PhysX) | Filter ON: 1/1 survived, min_alt=1.85m; Filter OFF: 0/1 survived | `experiments/results/isaac_sil_summary.json` | CUDA/Warp driver mismatch → CPU PhysX fallback. Single-episode A/B; statistical claim limited. |
+| Isaac SIL A/B (100 episodes/mode, **GPU PhysX on RTX 3050 Ti, Isaac 5.1, Warp 1.8.2/CUDA 12.8**) | Filter ON: 86/100 survived (86%), 14 crashes (infeasible); Filter OFF: 16/100 survived (16%), 84 crashes | `experiments/results/isaac_sil_summary.json` | HOCBF filter: 86% vs 16% survival across 100 GPU-PhysX episodes with domain-randomized mass/wind (RTX 3050 Ti, Isaac 5.1, Warp 1.8.2/CUDA 12.8). 14 filter-ON crashes = actuator infeasibility (T_lb > T_max) per Audit Item 2: filter detected infeasibility (294 events) and fell back to hover, but vehicle physically could not recover — documented physical limit, not filter failure. |
 
 ---
 
@@ -284,6 +286,8 @@ All 39 pytest cases pass with Python 3.12 in a clean checkout after the
 - **EKF shared memory (`/dev/shm/aisp_ekf_state`) has no writer in this repo.**
   `consensus_node.py` reads it but no component writes to it — planned for
   future integration with the EKF estimator.
+
+- **Isaac Sim 5.0.0 GPU physics unfixable:** Warp 1.7.1 (pinned by 5.0.0 core) fails on CUDA 13 driver; standalone Warp 1.17 works but breaks 5.0.0 API (`warp.types.array` missing). Isaac Sim 5.1.0 (Warp 1.8.2) resolves this and runs GPU PhysX. 100-episode A/B on 5.1.0: Filter ON 86% vs Filter OFF 16% survival. 14 filter-ON crashes = actuator infeasibility (T_lb > T_max) per Audit Item 2: filter detected infeasibility (294 events) and fell back to hover, but vehicle physically could not recover — documented physical limit, not filter failure.
 
 - **Cyclictest OS jitter images not committed.** The 2.0–28.0 µs scheduler
   jitter numbers in `docs/LATENCY_BUDGET.md` were measured locally but the

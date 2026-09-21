@@ -38,6 +38,7 @@ static void test_startup_fresh_first_command(void) {
     watchdog_init();
     VLACommand cmd = {0};
     cmd.is_new_data = 1;
+    cmd.sequence_number = 1;  // First sequence number
     uint64_t now = 500000000ULL;  // large monotonic value
     bool r = vla_watchdog_check(&cmd, now);
     assert_true("STARTUP→FRESH on first fresh command", r && watchdog_state() == VLA_STATE_FRESH,
@@ -48,13 +49,14 @@ static void test_stale_after_timeout(void) {
     watchdog_init();
     VLACommand cmd = {0};
     cmd.is_new_data = 1;
+    cmd.sequence_number = 1;
     uint64_t now = 1000000000ULL;
     vla_watchdog_check(&cmd, now);  // first fresh
     assert_true("initial FRESH", watchdog_state() == VLA_STATE_FRESH, "");
 
-    /* Advance time by 150ms (no new data) */
+    /* Advance time by 150ms (no new data - same sequence) */
     now += 150000000ULL;
-    cmd.is_new_data = 0;
+    cmd.is_new_data = 0;  // seq still 1
     vla_watchdog_check(&cmd, now);
     assert_true("FRESH→STALE after 100ms timeout", watchdog_state() == VLA_STATE_STALE,
                 "should transition to STALE");
@@ -64,6 +66,7 @@ static void test_recover_on_new_fresh(void) {
     watchdog_init();
     VLACommand cmd = {0};
     cmd.is_new_data = 1;
+    cmd.sequence_number = 1;
     uint64_t now = 1000000000ULL;
     vla_watchdog_check(&cmd, now);  // FRESH
 
@@ -73,9 +76,10 @@ static void test_recover_on_new_fresh(void) {
     vla_watchdog_check(&cmd, now);
     assert_true("went STALE", watchdog_state() == VLA_STATE_STALE, "");
 
-    /* New fresh command arrives */
+    /* New fresh command arrives with NEW sequence number */
     now += 50000000ULL;
     cmd.is_new_data = 1;
+    cmd.sequence_number = 2;  // NEW sequence
     bool r = vla_watchdog_check(&cmd, now);
     assert_true("STALE→FRESH on new data", r && watchdog_state() == VLA_STATE_FRESH,
                 "should recover to FRESH");
@@ -85,6 +89,7 @@ static void test_no_recover_on_stale_data(void) {
     watchdog_init();
     VLACommand cmd = {0};
     cmd.is_new_data = 1;
+    cmd.sequence_number = 1;
     uint64_t now = 1000000000ULL;
     vla_watchdog_check(&cmd, now);  // FRESH
 
@@ -94,9 +99,10 @@ static void test_no_recover_on_stale_data(void) {
     vla_watchdog_check(&cmd, now);
     assert_true("went STALE", watchdog_state() == VLA_STATE_STALE, "");
 
-    /* Old command arrives (is_new_data=0) — should stay STALE */
+    /* Old command arrives (same seq=1, is_new_data=0) — should stay STALE */
     now += 10000000ULL;
     cmd.is_new_data = 0;
+    cmd.sequence_number = 1;
     bool r = vla_watchdog_check(&cmd, now);
     assert_true("STALE stays STALE on old data", !r && watchdog_state() == VLA_STATE_STALE,
                 "should stay STALE");
@@ -106,6 +112,7 @@ static void test_fresh_timeout_exact_boundary(void) {
     watchdog_init();
     VLACommand cmd = {0};
     cmd.is_new_data = 1;
+    cmd.sequence_number = 1;
     uint64_t now = 1000000000ULL;
     vla_watchdog_check(&cmd, now);  // FRESH
 

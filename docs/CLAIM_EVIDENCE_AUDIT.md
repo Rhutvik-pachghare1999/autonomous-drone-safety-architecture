@@ -55,7 +55,7 @@ Last updated: 2026-09-03.
 |---|---|---|---|
 | VLA bridge loads SmolVLM2 and parses velocities | `src/perception/vla_bridge.py` | Code exists; not run here because `transformers`, `torch`, GPU, and model download are required | implemented-unvalidated |
 | ONNXRuntime C hot-path runs policy forward pass | `src/rt/safety_filter.c` lines 86–169 | Code exists; default build uses `-DNO_ONNX` because `onnxruntime.so` is not present | implemented-unvalidated |
-| Isaac Sim / SITL closed-loop flight | Not present as a committed launch script | No simulator launch scripts in repo; `docs/DEMO_RUNBOOK.md` documents prereqs | planned |
+| Isaac Sim / SITL closed-loop flight (GPU PhysX A/B, 100 eps/mode) | `sim/isaac_sil_eval.py`, `experiments/results/isaac_sil_summary.json` | `~/.local/share/ov/pkg/isaac_sim-5.1.0/python.sh sim/isaac_sil_eval.py --episodes 100` → Filter ON 86% survival vs Filter OFF 16% survival; 14 filter-ON crashes = infeasibility (T_lb > T_MAX), 294 infeasible events detected & hover fallback executed | verified |
 | HOCBF4 4th-order torque filter | `src/control/hocbf.cpp` lines 178–392 | Code implemented and bound, but no test/experiment calls it | implemented-unvalidated |
 
 ## Formal verification / safety properties
@@ -87,7 +87,7 @@ Last updated: 2026-09-03.
 
 ## Summary counts
 
-- **Verified:** 23
-- **Implemented-unvalidated:** 4
-- **Planned:** 2 (full FSM/Z3 proof, Isaac Sim/SITL runbook)
+- **Verified:** 24
+- **Implemented-unvalidated:** 3
+- **Planned:** 1 (full FSM/Z3 proof)
 - **Stale → corrected/removed:** 5

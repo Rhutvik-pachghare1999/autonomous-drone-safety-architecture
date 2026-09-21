@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-09-20 23:25:21",
+  "isaac_sim_version": "5.0.0 (CPU PhysX - CUDA/Warp unavailable)",
+  "onnx_policy": "ppo_policy.onnx",
+  "episodes_per_mode": 1,
+  "seed": 42,
+  "filter_enabled": {
+    "survived": 1,
+    "total": 1,
+    "survival_rate": 1.0,
+    "crashes": 0,
+    "total_interventions": 2,
+    "total_infeasible": 0
+  },
+  "filter_disabled": {
+    "survived": 0,
+    "total": 1,
+    "survival_rate": 0.0,
+    "crashes": 1
+  },
+  "key_finding": "Single-episode A/B under CPU PhysX (CUDA/Warp unavailable) demonstrates safety filter mechanism: filter ON survives at safe altitude with interventions; filter OFF crashes. Statistical claim limited to n=1 per mode due to CUDA/Warp driver mismatch preventing GPU acceleration.",
+  "episodes": [
+    {
+      "episode": 0,
+      "filter_mode": "enabled",
+      "min_altitude": 1.8491169214248657,
+      "max_altitude": 2.0,
+      "final_altitude": 1.9137555360794067,
+      "survived": true,
+      "crash": false,
+      "interventions": 2,
+      "infeasible_events": 0,
+      "mean_reward": 0.0,
+      "steps": 500,
+      "mass": 2.328747258267156,
+      "wind_std": 1.2995197204317648
+    },
+    {
+      "episode": 0,
+      "filter_mode": "disabled",
+      "min_altitude": 0.09314566105604172,
+      "max_altitude": 2.0,
+      "final_altitude": 0.09314566105604172,
+      "survived": false,
+      "crash": true,
+      "interventions": 0,
+      "infeasible_events": 0,
+      "mean_reward": 0.0,
+      "steps": 66,
+      "mass": 2.182759115241093,
+      "wind_std": 1.1957976511775672
+    }
+  ]
+}

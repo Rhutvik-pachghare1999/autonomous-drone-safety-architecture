@@ -41,8 +41,18 @@ jobs:
       - name: Watchdog C test (real src/rt/watchdog.c)
         run: cd build && ctest --output-on-failure -R watchdog_test
 
+      - name: SIL replay test (C watchdog + SIL runner)
+        run: |
+          cd build
+          ./sil_runner 10 sil_replay_test.csv
+          test -f sil_replay_test.csv
+
       - name: EKF gating smoke test
         run: PYTHONPATH=. python src/estimation/ekf_gating.py
+
+      - name: CasADi Lie derivative experiment
+        run: PYTHONPATH=. python experiments/exp_lie_derivatives.py
+        continue-on-error: true
 
       - name: Consensus unit test
         run: PYTHONPATH=. python services/consensus_node.py --test

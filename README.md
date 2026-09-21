@@ -201,6 +201,7 @@ All 39 pytest cases pass with Python 3.12 in a clean checkout after the
 | GPS-denied rejection | 100% (100 / 100) | `experiments/results/consensus_fault.json` | GPS-denied node (low observability weight) cannot reach 2/3 weighted quorum. |
 | Battery poly-4 RMSE | 0.016 Ah (B0005), 0.030 Ah (B0006), 0.014 Ah (B0007) | `experiments/results/battery_validation.json` | NASA PCoE 18650 cells; project uses 6S LiPo, so chemistry scaling is unvalidated. |
 | Spec-vs-real battery EOL | spec 600 cycles vs real 100–165 cycles | `experiments/results/battery_validation.json` | Linear spec model overestimates usable life by ~4–6×. |
+| Isaac SIL A/B (1 episode/mode, CPU PhysX) | Filter ON: 1/1 survived, min_alt=1.85m; Filter OFF: 0/1 survived | `experiments/results/isaac_sil_summary.json` | CUDA/Warp driver mismatch → CPU PhysX fallback. Single-episode A/B; statistical claim limited. |
 
 ---
 

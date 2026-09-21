@@ -43,6 +43,10 @@ jobs:
 
       - name: SIL replay test (C watchdog + SIL runner)
         run: |
+          # sil_runner reads /dev/shm/aisp_vla_cmd (normally created by the Python
+          # harness). Seed it here via the real publisher so the smoke test exercises
+          # the actual binary + real shared-memory path.
+          PYTHONPATH=. python -c "from src.utils.shm_bridge import VLASharedMemoryPublisher; p=VLASharedMemoryPublisher(); p.publish(0.0, 0.0, 0.0)"
           cd build
           ./sil_runner 10 sil_replay_test.csv
           test -f sil_replay_test.csv

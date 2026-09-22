@@ -104,14 +104,16 @@ sudo ./build/safety_filter_onnx 100000 2 experiments/results/ppo_policy.onnx --s
 ## 3. VLA bridge live inference
 
 ### Purpose
-Run `src/perception/vla_bridge.py` against the real SmolVLM2-500M model to
-parse camera images + text prompts into velocity commands.
+Run `src/perception/vla_bridge.py` against the real SmolVLM2-2.2B model
+(`HuggingFaceTB/SmolVLM2-2.2B-Instruct`, NF4 4-bit) to parse images + text
+prompts into velocity commands. An older 500M-Video-Instruct configuration is
+superseded.
 
 ### Prerequisites
 - [ ] CUDA-capable GPU with ≥ 4 GB VRAM.
 - [ ] `transformers`, `torch`, `pillow`, `bitsandbytes` installed.
-- [ ] Hugging Face cache accessible; model `HuggingFaceTB/SmolVLM2-500M-Video-Instruct`
-      downloaded (~500M).
+- [ ] Hugging Face cache accessible; model `HuggingFaceTB/SmolVLM2-2.2B-Instruct`
+      downloaded (~4.4 GB).
 - [ ] `/dev/shm/aisp_vla_cmd` writable by the Python process.
 
 ### Run
@@ -125,7 +127,7 @@ PY
 ```
 
 ### Expected observable outputs
-- [ ] Console prints `Loading HuggingFaceTB/SmolVLM2-500M-Video-Instruct ...`.
+- [ ] Console prints `Loading HuggingFaceTB/SmolVLM2-2.2B-Instruct ...`.
 - [ ] VRAM usage reported (expected ~0.7–3.7 GB depending on quantization).
 - [ ] `cmd` contains parsed `vx, vy, vz` and `latency_ms`.
 - [ ] Command is written to `/dev/shm/aisp_vla_cmd` by your wrapper script.

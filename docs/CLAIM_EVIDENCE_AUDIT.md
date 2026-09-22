@@ -53,9 +53,10 @@ Last updated: 2026-09-03.
 
 | Claim | Source location | Evidence | Status |
 |---|---|---|---|
-| VLA bridge loads SmolVLM2 and parses velocities | `src/perception/vla_bridge.py` | Code exists; not run here because `transformers`, `torch`, GPU, and model download are required | implemented-unvalidated |
+| VLA bridge loads SmolVLM2 and parses velocities | `src/perception/vla_bridge.py` | **Now validated in the Isaac Sim loop** (`sim/vla_crazyflie_flight.py`, `experiments/results/vla_crazyflie_episode.jsonl`): SmolVLM2-2.2B-4bit, 9/9 queries parsed `model_structured` | verified |
+| Real Crazyflie 2.X VLA flight + HOCBF A/B | `sim/vla_crazyflie_flight.py`, `sim/hocbf_crazyflie_ab.py`, `experiments/results/crazyflie_vla_ab.json` | Isaac 5.1 GPU PhysX; dive −3.0 m/s: OFF crashes t=1.56 s, ON min_z=0.753 m; dive −1.2 m/s: OFF crashes, ON min_z=0.753 m. See `docs/REAL_CRAZYFLIE_VLA_SIM.md`, plot `experiments/results/crazyflie_vla_ab.png` | verified |
 | ONNXRuntime C hot-path runs policy forward pass | `src/rt/safety_filter.c` lines 86–169 | Code exists; default build uses `-DNO_ONNX` because `onnxruntime.so` is not present | implemented-unvalidated |
-| Isaac Sim / SITL closed-loop flight (GPU PhysX A/B, 100 eps/mode) | `sim/isaac_sil_eval.py`, `experiments/results/isaac_sil_summary.json` | `~/.local/share/ov/pkg/isaac_sim-5.1.0/python.sh sim/isaac_sil_eval.py --episodes 100` → Filter ON 86% survival vs Filter OFF 16% survival; 14 filter-ON crashes = infeasibility (T_lb > T_MAX), 294 infeasible events detected & hover fallback executed | verified |
+| ~~Isaac Sim / SITL closed-loop flight (GPU PhysX A/B, 100 eps/mode)~~ — cuboid surrogate | `sim/isaac_sil_eval.py`, `experiments/results/isaac_sil_summary.json` | **SUPERSEDED.** 86%/16% survival was flown on an ad-hoc 2 kg cuboid point-mass surrogate, not the real Crazyflie. Kept for history; real-vehicle evidence is the `crazyflie_vla_ab` row above | superseded |
 | HOCBF4 4th-order torque filter | `src/control/hocbf.cpp` lines 178–392 | Code implemented and bound, but no test/experiment calls it | implemented-unvalidated |
 
 ## Formal verification / safety properties

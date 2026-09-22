@@ -86,15 +86,17 @@ def run_arm(name: str, seq, use_filter: bool) -> dict:
 
         env.world.step(render=False)
         min_z = min(min_z, z)
-        if i % 25 == 0:
+        if i % 5 == 0:  # 0.1 s resolution — committed to JSON, drives the plot
             trace.append([round(t, 2), round(z, 4), round(vz, 4), round(T_used, 4)])
+        if i % 25 == 0:
             print(f"  t={t:5.2f}s z={z:+6.3f} vz={vz:+5.2f} T={T_used:.3f}", flush=True)
         if z <= 0.03:
             crashed = True
+            trace.append([round(t + DT, 3), round(z, 4), round(vz, 4), round(T_used, 4)])
             print(f"  *** CRASH at t={t+DT:.2f}s (z={z:.3f}) ***", flush=True)
             break
 
-    crash_t = (i + 1) * DT if crashed else None
+    crash_t = round((i + 1) * DT, 3) if crashed else None
     result = {
         "arm": name, "filter_on": use_filter,
         "min_z_m": round(min_z, 4), "crashed": crashed,

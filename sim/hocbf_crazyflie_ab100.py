@@ -27,7 +27,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
 import crazyflie_env as cfenv                      # creates SimulationApp
 from vla_crazyflie_flight import CrazyflieController, quat_to_roll_pitch, DT
-import hocbf
+try:
+    import hocbf                                    # compiled C++ pybind11 module (preferred)
+    _HOCBF_IMPL = "cpp"
+except ImportError:
+    import hocbf_py as hocbf                         # verified pure-Python port (identical
+    _HOCBF_IMPL = "python"                           # to C++, 2450-case cross-check) — used on
+                                                     # the Isaac runtime container (no compiler)
+print(f"[hocbf] using {_HOCBF_IMPL} implementation", flush=True)
 
 RESULTS = os.path.join(REPO, "experiments", "results")
 N_EP = int(sys.argv[1]) if len(sys.argv) > 1 else 100

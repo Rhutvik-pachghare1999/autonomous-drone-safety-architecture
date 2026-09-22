@@ -23,8 +23,9 @@ mkdir -p /scratch/$USER && cd /scratch/$USER
 git clone -b crazyflie-vla-sim https://github.com/Rhutvik-pachghare1999/autonomous-drone-safety-architecture.git
 export XDG_CACHE_HOME=/scratch/$USER/.cache HF_HOME=/scratch/$USER/.hf
 
-# Isaac Sim 5.1 container (one-time, ~9 GB download; I/O only, login node OK):
-module load apptainer/1.4.5
+# Isaac Sim 5.1 container (one-time, ~9 GB download; I/O only, login node OK).
+# squashfs module required — mksquashfs is not on the login node by default:
+module load apptainer/1.4.5 squashfs-4.6.1-gcc-11.2.0
 export APPTAINER_CACHEDIR=/scratch/$USER/.apptainer APPTAINER_TMPDIR=/scratch/$USER/tmp
 apptainer pull --name /scratch/$USER/isaac-sim-5.1.sif docker://nvcr.io/nvidia/isaac-sim:5.1.0
 

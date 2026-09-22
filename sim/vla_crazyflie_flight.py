@@ -32,7 +32,10 @@ import numpy as np
 from isaacsim.core.prims import RigidPrim
 
 sys.path.insert(0, os.path.join(REPO, "src", "perception"))
-from vla_bridge import VLABridge, MODEL_ID  # 4-bit SmolVLM2-2.2B
+# NOTE: VLABridge (SmolVLM2 + transformers/bitsandbytes) is imported LAZILY inside
+# the functions that actually run the VLM. The scripted-command A/B
+# (hocbf_crazyflie_ab100.py) only needs CrazyflieController + helpers and must not
+# require `transformers` (absent from the Isaac runtime container).
 
 MASS   = cfenv.MASS    # 0.027 kg
 G      = cfenv.G
@@ -217,6 +220,7 @@ MISSION = [
 
 
 def run_phase2() -> None:
+    from vla_bridge import VLABridge, MODEL_ID  # lazy: only needed for the VLM run
     print("=" * 78)
     print("PHASE 2 — SmolVLM2-2.2B (4-bit) PILOTS THE REAL CRAZYFLIE (no safety filter)")
     print("=" * 78)

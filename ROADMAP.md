@@ -8,16 +8,20 @@
 ## Phase 1: Foundation & Safety Infrastructure (Weeks 1-2)
 
 ### 1.1 Physics & Simulation Environment
-- [ ] Migrate from pure Python 6DOF to **NVIDIA Isaac Sim** or **PyBullet**
-- [ ] Implement full rigid-body dynamics (motor torque → thrust chain)
-- [ ] Add ground effect, turbulent wind models, and aerodynamic disturbances
-- [ ] Validate against real quadrotor flight data
+- [x] Migrate from pure Python 6DOF to **NVIDIA Isaac Sim** (5.1.0, GPU PhysX)
+- [x] Implement full rigid-body dynamics (real Crazyflie 2.X USD, PhysX body forces)
+- [ ] Add ground effect, turbulent wind models, and aerodynamic disturbances (no vortex-ring / rotor CFD yet)
+- [ ] Validate against real quadrotor flight data (sim-only so far)
+
+> Note: earlier `isaac_sil_*` A/B numbers (86%/16%) were flown on a **2 kg cuboid point-mass
+> surrogate**, not the real vehicle, and are **superseded** by the real Crazyflie 2.X result
+> (`docs/REAL_CRAZYFLIE_VLA_SIM.md`). See README + `docs/CLAIM_EVIDENCE_AUDIT.md`.
 
 ### 1.2 High-Order Control Barrier Function (HOCBF)
-- [ ] Mathematically derive HOCBF for quadrotor (relative degree 2)
-- [ ] Map position constraints → roll/pitch/thrust acceleration limits
-- [ ] Implement OSQP-based QP solver for real-time constraint satisfaction
-- [ ] Port to **C++** or **Rust** for deterministic microsecond latency
+- [x] Mathematically derive HOCBF for quadrotor (relative degree 2)
+- [ ] Map position constraints → roll/pitch/thrust acceleration limits (altitude channel done; full 3D pending)
+- [ ] Implement OSQP-based QP solver (current: analytical 1-var QP, no OSQP dependency)
+- [x] Port to **C++** for deterministic microsecond latency (pybind11 module, re-parameterized for 27 g Crazyflie)
 - [ ] Create Python bindings via `pybind11`
 
 ### 1.3 Formal Safety Kernel (planned — not yet implemented)
@@ -169,12 +173,12 @@ The following properties are the *intended* invariants for a future FSM/Z3 verif
 
 | Deliverable | Target Date | Status |
 |-------------|-------------|--------|
-| Isaac Sim migration | Week 2 | ✅ Complete |
+| Isaac Sim migration | Week 2 | ✅ Complete — Isaac 5.1 GPU PhysX; real Crazyflie 2.X (cuboid A/B superseded) |
 | HOCBF C++ implementation (RD-2 + RD-4) | Week 2 | ✅ Complete |
 | RL policy trained | Week 4 | ✅ Complete |
 | VLA integration | Week 6 | ✅ Complete |
 | NASA PCoE battery validation | Week 8 | ✅ Complete — EOL at cycle ~100–165, not 600 |
-| aBFT consensus (integrated into EKF gating) | Week 10 | ✅ Complete |
+| Observability-weighted voting consensus (into EKF gating) | Week 10 | ✅ Complete — NOT Byzantine fault tolerant (no 3f+1/signatures) |
 | All experiments complete | Week 12 | ✅ Complete (7 experiments) |
 | Paper draft | Week 14 | 🔄 In Progress |
 | Defense ready | Week 16 | 🔄 In Progress |

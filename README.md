@@ -32,6 +32,7 @@ foundation-model/RL hallucinations in real time.
 | PPO policy + ONNXRuntime C hot-path | implemented, not validated here | `experiments/results/ppo_policy.onnx`, `src/rt/safety_filter.c` — requires ONNX build |
 | Formal FSM / Z3 invariants (P1–P7) | planned, not implemented | `ROADMAP.md` § "Formal verification roadmap" |
 | Isaac Sim / SITL closed-loop flight | **GPU PhysX (Isaac Sim 5.1.0)** | 100-episode A/B test: Filter ON 86% survival vs Filter OFF 16% survival. Direct download, no auth required. |
+| Real Crazyflie 2.X VLA flight | **validated (branch `crazyflie-vla-sim`)** | SmolVLM2-2.2B-4bit pilots the real 27 g Crazyflie USD in Isaac 5.1; HOCBF (mass=0.027, T_max=0.60 N) survives worst-case −3 m/s dives that always crash unfiltered. See `docs/REAL_CRAZYFLIE_VLA_SIM.md`. **Correction:** the `isaac_sil_*` A/B numbers above were flown on an ad-hoc 2 kg cuboid point-mass surrogate, not the real Crazyflie — superseded by the new evidence. |
 
 ---
 

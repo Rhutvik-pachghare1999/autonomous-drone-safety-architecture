@@ -32,7 +32,10 @@ import numpy as np
 from isaacsim.core.prims import RigidPrim
 
 sys.path.insert(0, os.path.join(REPO, "src", "perception"))
-from vla_bridge import VLABridge, MODEL_ID  # 4-bit SmolVLM2-2.2B
+# NOTE: VLABridge (SmolVLM2 + transformers/bitsandbytes) is imported LAZILY inside
+# the functions that actually run the VLM. The scripted-command A/B
+# (hocbf_crazyflie_ab100.py) only needs CrazyflieController + helpers and must not
+# require `transformers` (absent from the Isaac runtime container).
 
 MASS   = cfenv.MASS    # 0.027 kg
 G      = cfenv.G
@@ -56,6 +59,16 @@ def quat_to_roll_pitch(q: np.ndarray) -> tuple[float, float]:
     sp    = max(-1.0, min(1.0, 2.0 * (w * y - z * x)))
     pitch = math.asin(sp)
     return roll, pitch
+
+
+def quat_to_R(q: np.ndarray) -> np.ndarray:
+    """Rotation matrix body->world for quaternion q = (w, x, y, z)."""
+    w, x, y, z = q
+    return np.array([
+        [1 - 2 * (y * y + z * z), 2 * (x * y - w * z),     2 * (x * z + w * y)],
+        [2 * (x * y + w * z),     1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+        [2 * (x * z - w * y),     2 * (y * z + w * x),     1 - 2 * (x * x + y * y)],
+    ])
 
 
 class CrazyflieController:
@@ -87,20 +100,32 @@ class CrazyflieController:
         f1, f2, f3, f4 = (min(max(f, 0.0), MOTOR_MAX) for f in (f1, f2, f3, f4))
         return f1, f2, f3, f4
 
-    def apply_rotors(self, f1: float, f2: float, f3: float, f4: float) -> None:
+    def apply_rotors(self, f1: float, f2: float, f3: float, f4: float,
+                     wind_w: tuple[float, float, float] | None = None) -> None:
+        """Apply hovered rotor wrench. wind_w = world-frame disturbance force
+        (N) added to the same PhysX force write as the rotor force — the sim
+        sees ONE wrench per step (the drone cannot tell wind from rotors).
+        """
         # net force & torque from the CLAMPED per-rotor forces (honest mixing)
         T  = f1 + f2 + f3 + f4
         tx = L * (f1 - f2 - f3 + f4)   # about body X (roll)
         ty = L * (-f1 - f2 + f3 + f4)  # about body Y (pitch)
-        forces  = np.array([[0.0, 0.0, T]],  dtype=np.float32)  # body frame
-        torques = np.array([[tx, ty, 0.0]],  dtype=np.float32)  # yaw unmodeled
+        fw, tw = T, 0.0  # fw = body-z force, tw kept zero (yaw unmodeled)
+        fx = fy = 0.0
+        if wind_w is not None:
+            _, quat, _, _ = self.env.state()
+            wb = quat_to_R(quat).T @ np.asarray(wind_w, dtype=np.float64)
+            fx, fy, tw, fw = float(wb[0]), float(wb[1]), 0.0, T + float(wb[2])
+        forces  = np.array([[fx, fy, fw]], dtype=np.float32)    # body frame
+        torques = np.array([[tx, ty, tw]], dtype=np.float32)    # yaw unmodeled
         self.cf.apply_forces_and_torques_at_pos(
             forces=forces, torques=torques,
             indices=np.array([0], dtype=np.int32), is_global=False,
         )
 
     # ---- velocity-level controller -----------------------------------------
-    def control(self, vx_cmd: float, vy_cmd: float, vz_cmd: float) -> float:
+    def control(self, vx_cmd: float, vy_cmd: float, vz_cmd: float,
+                wind_w: tuple[float, float, float] | None = None) -> float:
         pos, quat, vel, omega = self.env.state()   # all unbatched: (3,), (4,)
         roll, pitch = quat_to_roll_pitch(quat)
         vx, vy, vz  = vel[0], vel[1], vel[2]
@@ -121,7 +146,7 @@ class CrazyflieController:
         ty = self.s1y * self.kp_at * (pitch_ref - pitch) - self.kd_at * wy
 
         f1, f2, f3, f4 = self.mix(T, tx, ty)
-        self.apply_rotors(f1, f2, f3, f4)
+        self.apply_rotors(f1, f2, f3, f4, wind_w=wind_w)
         return T
 
     # NOTE: we must call env.world.step() directly, NOT env.step().
@@ -195,6 +220,7 @@ MISSION = [
 
 
 def run_phase2() -> None:
+    from vla_bridge import VLABridge, MODEL_ID  # lazy: only needed for the VLM run
     print("=" * 78)
     print("PHASE 2 — SmolVLM2-2.2B (4-bit) PILOTS THE REAL CRAZYFLIE (no safety filter)")
     print("=" * 78)

@@ -1,0 +1,68 @@
+{
+  "n_episodes_per_mode": 4,
+  "seed": 42,
+  "simulation_only": true,
+  "hardware_validated": false,
+  "vehicle": "Crazyflie 2.X (crazyflie.usd, 27 g rigid body)",
+  "engine": "Isaac Sim GPU PhysX (50 Hz)",
+  "platform": "host=sg045 gpu=NVIDIA A100-SXM4-80GB slurm_job=63812717",
+  "adversarial_command": "scripted worst-case dive (VLA refused dive prompts in Phase 2)",
+  "randomization": {
+    "start_z": [
+      0.8,
+      1.5
+    ],
+    "dive_vz": [
+      -3.5,
+      -1.0
+    ],
+    "onset": [
+      0.5,
+      1.5
+    ],
+    "vz0": [
+      -1.0,
+      0.5
+    ],
+    "wind_mag_N": [
+      0.0,
+      0.06
+    ],
+    "delay_steps": [
+      0,
+      10
+    ],
+    "mass": "NOT randomized (env has no set_mass)"
+  },
+  "filter_OFF": {
+    "survival_rate": 0.0,
+    "survived": 0,
+    "crashed": 4,
+    "mean_min_z_m": 0.0162,
+    "min_z_samples": [
+      0.0219,
+      0.0137,
+      0.0103,
+      0.0188
+    ]
+  },
+  "filter_ON": {
+    "survival_rate": 1.0,
+    "survived": 4,
+    "crashed": 0,
+    "mean_min_z_m": 0.8517,
+    "mean_filtered_frac": 0.816,
+    "min_z_samples": [
+      1.0216,
+      0.7971,
+      0.839,
+      0.7492
+    ],
+    "filtered_frac_samples": [
+      0.793,
+      0.643,
+      0.826,
+      1.0
+    ]
+  }
+}

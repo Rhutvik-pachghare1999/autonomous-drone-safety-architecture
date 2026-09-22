@@ -81,3 +81,5 @@ models/
 *.usda
 *.usdc
 *.usdz
+
+!assets/crazyflie.usd

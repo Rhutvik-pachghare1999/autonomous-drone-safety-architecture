@@ -3,7 +3,7 @@
 Verified cluster facts (2026-09-22):
 - Login: `ssh sol` (sol.asu.edu). Login node = sol-login03. **Never run heavy work on the
   login node — submit Slurm jobs.**
-- Scheduler: Slurm. GPU partitions: `general`, `public`. GPUs: A100 (40/80GB), A30, L40, H100.
+- Scheduler: Slurm. GPU partitions: `public` (`general` is now privately-owned. GPUs: A100 (40/80GB), A30, L40, H100.
   Request e.g. `--gres=gpu:a100:1`. Max walltime 7–14 days.
 - Isaac Sim: `module load isaacsim/5.0` → adds `/packages/apps/isaacsim/5.0/kit` to PATH;
   use `python.sh` / `isaacsim.sh` from there.

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=isaac-gpucheck
-#SBATCH --partition=general
+#SBATCH --partition=public
 #SBATCH --gres=gpu:a100:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G

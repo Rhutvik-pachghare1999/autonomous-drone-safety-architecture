@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=cf-ab1000
-#SBATCH --partition=general
+#SBATCH --partition=public
 #SBATCH --gres=gpu:a100:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G

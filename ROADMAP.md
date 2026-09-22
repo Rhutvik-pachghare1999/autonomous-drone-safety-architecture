@@ -14,8 +14,9 @@
 - [ ] Validate against real quadrotor flight data (sim-only so far)
 
 > Note: earlier `isaac_sil_*` A/B numbers (86%/16%) were flown on a **2 kg cuboid point-mass
-> surrogate**, not the real vehicle, and are **superseded** by the real Crazyflie 2.X result
-> (`docs/REAL_CRAZYFLIE_VLA_SIM.md`). See README + `docs/CLAIM_EVIDENCE_AUDIT.md`.
+> surrogate**, not the real vehicle, and are **superseded** by the real Crazyflie 2.X result:
+> a **500-episode randomized A/B (ASU Sol, Isaac 5.1 GPU PhysX): filter OFF 0% vs ON 100%
+> survival** (`experiments/results/crazyflie_vla_ab500.json`, see `docs/REAL_CRAZYFLIE_VLA_SIM.md`).
 
 ### 1.2 High-Order Control Barrier Function (HOCBF)
 - [x] Mathematically derive HOCBF for quadrotor (relative degree 2)

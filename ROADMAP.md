@@ -88,19 +88,22 @@
 
 ---
 
-## Phase 5: Asynchronous Byzantine Fault Tolerance (aBFT) ✅ COMPLETE
+## Phase 5: Observability-Weighted Voting Consensus ✅ COMPLETE (NOT Byzantine fault tolerant)
 
 ### 5.1 Consensus Protocol Implementation
-- [x] Implement observability-weighted HotStuff consensus (`services/consensus_node.py`)
+- [x] Implement observability-weighted voting consensus (`services/consensus_node.py`)
+      — NOT Byzantine fault tolerant: no 3f+1 quorum, no signed messages, no view change.
 - [x] Causally link EKF covariance to vote weight: `w_i = exp(-tr(P_i[px,py,ψ]) / (2σ²_warn))`
 - [x] Wire consensus output into EKF gating (`src/estimation/ekf_gating.py`): DEGRADED mode
       blends EKF position with swarm-agreed position weighted by consensus trust
 - [x] Reads/writes `/dev/shm/aisp_consensus` (zero-copy mmap, flight-loop compatible)
 
-### 5.2 Byzantine Failure Testing ✅ COMPLETE
-- [x] 5-node swarm: 3 GPS-active (w≈0.976), 1 GPS-degraded (w≈0.147), 1 Byzantine GPS-denied (w≈0.008)
-- [x] 20% packet loss + asymmetric latency (0–50ms): commit rate 100%, Byzantine rejection 100%
+### 5.2 Faulty-Node (Outlier) Testing ✅ COMPLETE
+- [x] 5-node swarm: 3 GPS-active (w≈0.976), 1 GPS-degraded (w≈0.147), 1 faulty GPS-denied (w≈0.008)
+- [x] 20% packet loss + asymmetric latency (0–50ms): commit rate 100%, faulty-outlier rejection 100%
 - [x] Results: `experiments/results/consensus_fault.json`, `experiments/results/consensus_fault.png`
+- Scope note: this demonstrates weighted-voting robustness to a low-weight outlier, NOT
+  tolerance of an adversarial Byzantine node under a formal BFT threat model.
 
 ---
 
@@ -115,7 +118,7 @@
 - [x] Exp 1: VLA hallucination blocking — 1000 trials, 100% survival, `hallucination_1000.png`
 - [x] Exp 2: HOCBF constraint satisfaction — 10,000 domain-rand trials, 0 violations
 - [x] Exp 3: Zero-shot sim-to-real robustness — ±40% mass, σ=2.0 wind
-- [x] Exp 4: aBFT consensus under Byzantine failures — 100% commit, 100% Byzantine rejection
+- [x] Exp 4: weighted-voting consensus with a faulty outlier node — 100% commit, 100% outlier rejection (NOT a Byzantine threat model)
 - [x] Exp 5: NASA PCoE battery validation — B0005/B0006/B0007, RMSE poly-4=0.016 Ah
       **Key finding:** spec linear model predicts EOL at cycle 600; real cells hit EOL at
       cycle 100–165. Mission feasibility boundary is 4× tighter than the spec assumed.
@@ -124,7 +127,7 @@
 
 ### 6.3 Comparative Analysis ✅ COMPLETE
 - [x] HOCBF RD-2 (kinematic) vs HOCBF4 RD-4 (rigid-body) — both implemented
-- [x] PBFT vs weighted HotStuff — HotStuff: 100% commit at 20% loss; PBFT: O(n²) messages
+- [x] weighted-voting vs PBFT (reference): weighted voting 100% commit at 20% loss; true PBFT would need O(n²) signed messages + 3f+1 (not implemented)
 
 ---
 
@@ -192,7 +195,7 @@ Physics/Sim → HOCBF (RD-2 + RD-4) → RL Training → VLA Integration → Benc
                 ↓
            Safety Kernel (FSM + HOCBF + P7)
                 ↓
-           aBFT Consensus → EKF Gating (DEGRADED blend) ✅ INTEGRATED
+           Weighted-voting consensus → EKF Gating (DEGRADED blend) ✅ INTEGRATED
 ```
 
 ---
@@ -214,7 +217,7 @@ Physics/Sim → HOCBF (RD-2 + RD-4) → RL Training → VLA Integration → Benc
 1. **Safety:** 100% collision-free flight under adversarial VLA inputs
 2. **Latency:** Safety kernel <100μs (C++/Rust implementation)
 3. **Robustness:** Zero-shot sim-to-real transfer via domain randomization
-4. **Consensus:** Swarm maintains semantic agreement under 30% Byzantine failures
+4. **Consensus:** Swarm maintains semantic agreement when a low-weight faulty (outlier) node disagrees — weighted voting, not a formal Byzantine guarantee
 5. **Publication:** Accepted to ICRA/IROS/RSS 2026
 
 ---

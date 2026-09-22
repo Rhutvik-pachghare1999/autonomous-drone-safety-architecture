@@ -8,6 +8,43 @@ repository today. Each block is tagged with its maturity:
 - **implemented-unvalidated** — code exists but was not run in this environment.
 - **planned** — specified in design docs or roadmap, but no implementation.
 
+## 0. Validated real-vehicle pipeline (Isaac Sim 5.1, branch `crazyflie-vla-sim`)
+
+This pipeline ran end-to-end on the real Crazyflie 2.X USD asset:
+SmolVLM2-2.2B-4bit → velocity command → HOCBF (mass=0.027 kg, T_max=0.60 N)
+→ 4-rotor controller → PhysX rigid body. See `docs/REAL_CRAZYFLIE_VLA_SIM.md`
+for console traces and `experiments/results/crazyflie_vla_ab.png` for the
+headline A/B plot.
+
+```mermaid
+flowchart LR
+  subgraph BestEffort["Best-effort cores (SCHED_OTHER)"]
+    VLA["SmolVLM2-2.2B VLA (4-bit)<br/>image + mission text → vx, vy, vz"]
+    RL["PPO / RL policy<br/>(optional ONNX hot path)"]
+  end
+
+  subgraph SafetyKernel["Hard real-time safety kernel (SCHED_FIFO)"]
+    WD["Stale-data watchdog<br/>STARTUP → FRESH → STALE"]
+    HOCBF["HOCBF safety filter (C++/C99)<br/>mass = 0.027 kg, T_max = 0.60 N<br/>project command onto safe set"]
+  end
+
+  subgraph Physical["Physical layer (Isaac Sim 5.1 GPU PhysX)"]
+    CTRL["Velocity P-controller →<br/>4-rotor X mixer<br/>46 mm arm, 0.15 N/rotor"]
+    CF["Crazyflie 2.X USD rigid body<br/>PhysX body-frame forces + torques"]
+  end
+
+  EKF["EKF covariance gating (P7)"] -.-> VOTE["Observability-weighted<br/>consensus (multi-node)"]
+  VOTE -.->|"state confidence"| HOCBF
+
+  VLA -->|"velocity cmd (0.5 Hz)"| WD
+  RL -->|"nominal thrust"| HOCBF
+  WD -->|"FRESH: pass · STALE: hover"| HOCBF
+  HOCBF -->|"safe thrust + clipped velocity"| CTRL
+  CTRL -->|"net force + torque"| CF
+  CF -->|"z, vz, roll, pitch @ 50 Hz"| HOCBF
+  CF -->|"state feedback"| CTRL
+```
+
 ---
 
 ## 1. Top-level data flow
@@ -46,8 +83,8 @@ repository today. Each block is tagged with its maturity:
 
 | Block | File | Status | Notes |
 |---|---|---|---|
-| SmolVLM2-500M VLA model load & inference | `src/perception/vla_bridge.py` | implemented-unvalidated | Requires `transformers`, `torch`, `bitsandbytes`, GPU, and a ~500M HF download. Not run here. |
-| Free-text velocity parser | `src/perception/vla_bridge.py` `_parse_velocity()` | implemented-unvalidated | Unit-tested indirectly only through inspection. |
+| SmolVLM2-2.2B (NF4 4-bit) VLA model load & inference | `src/perception/vla_bridge.py` | implemented-tested | Loaded and flown in-loop on the real Crazyflie in Isaac Sim 5.1 (`sim/vla_crazyflie_flight.py`, `experiments/results/vla_crazyflie_episode.jsonl`); 9/9 queries parsed `model_structured`. CPU fp32 latency ~2 min/query on this box — VLA runs at 0.5 Hz. |
+| Velocity parser (structured + keyword fallback) | `src/perception/vla_bridge.py` `parse_velocity_text` | implemented-tested | Emits `parse_source` provenance (`model_structured` / `keyword_*` / `fallback_hover`); observed 100% `model_structured` in the logged episode. |
 | Write velocity to `/dev/shm/aisp_vla_cmd` | `src/utils/shm_bridge.py` | implemented-tested | Layout matches `safety_filter.c` `VLACommand` struct. |
 
 **Data format:** `/dev/shm/aisp_vla_cmd` is a 64-byte POSIX shared memory
@@ -137,8 +174,10 @@ loss and 0–50 ms latency. Result: 100% commit rate, 100% Byzantine rejection.
    inference path, but it is compiled out by default because the ONNX Runtime
    library is not in this checkout.
 
-2. **VLA bridge:** depends on a 500M Hugging Face download, GPU, and
-   `bitsandbytes`. It is not exercised here.
+2. **VLA bridge:** SmolVLM2-2.2B (4-bit NF4 via `bitsandbytes`) is exercised
+   in the Isaac Sim loop (`sim/vla_crazyflie_flight.py`,
+   `experiments/results/vla_crazyflie_episode.jsonl`); deprecated 500M
+   configuration superseded.
 
 3. **SITL / Isaac Sim:** the UDP packet format is defined, but no simulator
    launch script or Isaac Sim instance is committed or run here.

@@ -4,7 +4,9 @@
 
 ```
 CPU Cores 0-1  (Best-Effort, SCHED_OTHER)
-  ├── VLA inference     (SmolVLM2-500M, ~2.5s/query)
+  ├── VLA inference     (SmolVLM2-2.2B 4-bit; measured: ~2.5 s/query on the
+  │                      2-kg nominal RTX GPU path; ~118-123 s/query fp32-CPU on
+  │                      the 4 GB-VRAM Isaac box — vla_crazyflie_episode.jsonl)
   ├── RL policy forward (PPO ONNX, ~0.5ms/step)
   └── Telemetry logging
 
@@ -79,7 +81,7 @@ autonomously using the last known state — the RT loop never blocks on AI.
 | HOCBF filter (C99)         | **<10 μs**| **2,725 ns** (max, 100k trials) | `clock_gettime(CLOCK_MONOTONIC_RAW)` |
 | mmap IPC read              | <1 μs     | ~50-100ns | L3 cache coherency  |
 | RL policy ONNX forward     | <1 ms     | ~0.5ms    | ONNXRuntime C API   |
-| VLA inference (SmolVLM2)   | <5 s      | ~2.5s     | Best-effort core    |
+| VLA inference (SmolVLM2-2.2B 4-bit) | <5 s   | ~2.5 s (GPU, target HW); 118–123 s fp32-CPU on the 4 GB-VRAM Isaac box (measured, `vla_crazyflie_episode.jsonl`) | Best-effort core |
 | OS scheduler jitter        | <50 μs    | 5.0 μs (P99) | cyclictest          |
 | End-to-end RT loop         | **<2 ms** | **<1 ms** | Measured            |
 

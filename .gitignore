@@ -68,3 +68,16 @@ CLAUDE.md
 problem/
 pyrightconfig.json
 .vscode/
+
+# ── HuggingFace / model caches (crazyflie-vla-sim) ───────────────────────────
+.hf_cache/
+hf_cache/
+models/
+*.gguf
+*.safetensors
+
+# ── Copied USD assets (load from Isaac install; never commit binaries) ────────
+*.usd
+*.usda
+*.usdc
+*.usdz

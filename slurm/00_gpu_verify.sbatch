@@ -8,25 +8,23 @@
 #SBATCH --output=%x-%j.out
 # ---------------------------------------------------------------------------
 # STEP 0 (Sol): prove GPU PhysX actually initializes before any big run.
-# Isaac 5.0 had a Warp/CUDA-13 cuDeviceGetUuid bug on our 4GB laptop — verify
-# it does NOT recur on Sol's driver. If wp.init() fails here, switch to the
-# apptainer Isaac 5.1 container (see slurm/README_SOL.md).
+# Isaac Sim 5.1 via apptainer (docker://nvcr.io/nvidia/isaac-sim:5.1.0) because
+#  - module isaacsim/5.0 is only the compatibility-check kit (no SimulationApp)
+#  - pip isaacsim needs glibc 2.35; Sol is glibc 2.28 (RHEL 8.10)
+# Container userland carries its own glibc, so PhysX on the A100 works.
+# PASS = "GPU_DEVICES: ['cuda:0']" + falling z-trace + CLEAN_EXIT.
 # Submit:  cd /scratch/$USER/autonomous-drone-safety-architecture && sbatch slurm/00_gpu_verify.sbatch
 # ---------------------------------------------------------------------------
 set -e
 module purge
-module load isaacsim/5.0
+module load apptainer/1.4.5
 
+SIF=/scratch/$USER/isaac-sim-5.1.sif
+[ -f "$SIF" ] || { echo "SIF_MISSING: $SIF (run apptainer pull first)"; exit 1; }
 REPO=/scratch/$USER/autonomous-drone-safety-architecture
-CF=$(find /packages/apps/isaacsim/5.0 -name crazyflie.usd 2>/dev/null | head -1)
-[ -z "$CF" ] && CF=$REPO/assets/crazyflie.usd   # fallback: repo-vendored copy
 
-# keep all caches off /home (only 26 GB free) — everything on /scratch
-export HOME_ORIG=$HOME
-export XDG_CACHE_HOME=/scratch/$USER/.cache
-export HF_HOME=/scratch/$USER/.hf
-export OMNI_KIT_ALLOW_ROOT=1
-mkdir -p "$XDG_CACHE_HOME" "$HF_HOME"
+export APPTAINER_CACHEDIR=/scratch/$USER/.apptainer
+export APPTAINER_TMPDIR=/scratch/$USER/tmp
 
 cat > /tmp/gpu_verify_$$.py <<'PY'
 import sys
@@ -37,7 +35,7 @@ import warp as wp
 try:
     wp.init(); log("GPU_DEVICES:", wp.get_cuda_devices())
 except Exception as e:
-    log("WARP_FAIL:", str(e)[:200]); app.close(); sys.exit(2)
+    log("WARP_FAIL:", repr(e)[:300]); app.close(); sys.exit(2)
 import os, numpy as np
 from isaacsim.core.api import World
 from isaacsim.core.utils.stage import add_reference_to_stage
@@ -52,17 +50,20 @@ UsdPhysics.MassAPI.Apply(prim).CreateMassAttr(0.027)
 if not prim.HasAPI(UsdPhysics.RigidBodyAPI): UsdPhysics.RigidBodyAPI.Apply(prim)
 from isaacsim.core.prims import RigidPrim
 cf = RigidPrim("/World/cf2"); world.reset()
-cf.set_world_poses(positions=np.array([[0.0,0.0,1.0]]))
+cf.set_world_poses(positions=np.array([[0.0, 0.0, 1.0]]))
 log("STEP z(m)")
 for i in range(120):
     world.step(render=False)
     if i % 15 == 0:
-        p,_ = cf.get_world_poses(); log(f"{i:4d} {float(np.array(p)[0][2]):.4f}")
+        p, _ = cf.get_world_poses(); log(f"{i:4d} {float(np.array(p)[0][2]):.4f}")
 app.close(); log("CLEAN_EXIT")
 PY
 
-export CF_USD="$CF"
-echo "Using Crazyflie USD: $CF"
-srun isaacsim.sh --no-window --/app/quitAfter=0 || true   # noop guard for some builds
-python.sh /tmp/gpu_verify_$$.py
+export CF_USD=$REPO/assets/crazyflie.usd   # vendored in the repo
+echo "CF_USD=$CF_USD  node=$(hostname)  gpu=$CUDA_VISIBLE_DEVICES"
+apptainer exec --nv \
+  --home /scratch/$USER/solhome \
+  --bind /scratch/$USER/autonomous-drone-safety-architecture:/repo,/tmp:/tmp \
+  --env CF_USD=$CF_USD,XDG_CACHE_HOME=/scratch/$USER/.cache,HF_HOME=/scratch/$USER/.hf,OMNI_KIT_ALLOW_ROOT=1 \
+  "$SIF" /isaac-sim/python.sh /tmp/gpu_verify_$$.py
 rm -f /tmp/gpu_verify_$$.py

@@ -113,8 +113,17 @@ def run():
             "delay_steps":  int(rng.integers(R_DELAY[0], R_DELAY[1] + 1)),
         })
 
-    import torch, platform
-    gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
+    try:
+        import torch
+        gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
+    except Exception:
+        import subprocess as _sp
+        try:
+            gpu = _sp.check_output(
+                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+                text=True).strip().splitlines()[0]
+        except Exception:
+            gpu = "unknown"
     platform_tag = (f"host={os.uname().nodename} gpu={gpu} "
                     f"slurm_job={os.environ.get('SLURM_JOB_ID', '-')}")
 

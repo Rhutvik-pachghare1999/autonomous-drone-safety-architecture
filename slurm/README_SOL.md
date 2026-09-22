@@ -5,9 +5,13 @@ Verified cluster facts (2026-09-22):
   login node — submit Slurm jobs.**
 - Scheduler: Slurm. GPU partitions: `public` (`general` is now privately-owned. GPUs: A100 (40/80GB), A30, L40, H100.
   Request e.g. `--gres=gpu:a100:1`. Max walltime 7–14 days.
-- Isaac Sim: `module load isaacsim/5.0` → adds `/packages/apps/isaacsim/5.0/kit` to PATH;
-  use `python.sh` / `isaacsim.sh` from there.
-- Containers: `apptainer/1.4.5` (fallback for Isaac 5.1 if 5.0 GPU init fails).
+- Isaac Sim in-flight: `module load isaacsim/5.0` is ONLY the compatibility-check
+  kit (verified 2026-09-22: `/packages/apps/isaacsim/5.0` has no `isaacsim` python
+  package, no physics exts — `from isaacsim import SimulationApp` fails).
+  PyPI install fails too: the wheel is `manylinux_2_35` but Sol is glibc 2.28
+  (RHEL 8.10). **Working route: apptainer 1.4.5 + `nvcr.io/nvidia/isaac-sim:5.1.0`**
+  (anonymous pull via Docker-v2 token confirmed 2026-09-22; no NGC login needed).
+  Pull once on the login node to `/scratch/$USER/isaac-sim-5.1.sif`.
 - Storage: `/home` = 100 GB (nearly full — DO NOT put data/models/caches here).
   `/scratch` = 3.7 PB BeeGFS — clone the repo, HF cache, datasets, and results here.
 - Python envs: `module load mamba/latest`. cudnn cuda12/13 available.
@@ -17,8 +21,18 @@ Verified cluster facts (2026-09-22):
 ssh sol
 mkdir -p /scratch/$USER && cd /scratch/$USER
 git clone -b crazyflie-vla-sim https://github.com/Rhutvik-pachghare1999/autonomous-drone-safety-architecture.git
-cd autonomous-drone-safety-architecture
 export XDG_CACHE_HOME=/scratch/$USER/.cache HF_HOME=/scratch/$USER/.hf
+
+# Isaac Sim 5.1 container (one-time, ~9 GB download; I/O only, login node OK):
+module load apptainer/1.4.5
+export APPTAINER_CACHEDIR=/scratch/$USER/.apptainer APPTAINER_TMPDIR=/scratch/$USER/tmp
+apptainer pull --name /scratch/$USER/isaac-sim-5.1.sif docker://nvcr.io/nvidia/isaac-sim:5.1.0
+
+# pybind11 headers for the in-job HOCBF build (compute nodes have no internet):
+cd /scratch/$USER
+/scratch/$USER/isaac311/bin/pip download -q --no-deps pybind11 -d /tmp/pb \
+  && unzip -o -q /tmp/pb/pybind11-*.whl -d /tmp/pbx \
+  && mkdir -p pybind11_include && cp -r /tmp/pbx/pybind11/include/pybind11 pybind11_include/pybind11
 ```
 
 ## Step 0 — PROVE GPU PhysX works on Sol before any big run

@@ -20,6 +20,9 @@
 set -euo pipefail
 module purge
 module load apptainer/1.4.5
+# apptainer's bundled mksquashfs is not on PATH (pull FATAL: "exec:
+# "mksquashfs": executable file not found in $PATH" — observed job 63841500)
+export PATH=/usr/libexec/apptainer/bin:$PATH
 
 OUT=/scratch/$USER/isaac-sim-6.0.1.sif
 export APPTAINER_CACHEDIR=/scratch/$USER/.apptainer_cache

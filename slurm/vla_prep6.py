@@ -231,6 +231,17 @@ def main() -> int:
     text = proc.apply_chat_template(msgs, add_generation_prompt=True)
     with torch.inference_mode():
         inputs = proc(text=text, images=img, return_tensors="pt").to("cuda:0")
+        # replicate vla_bridge.VLABridge._patch_vision_inputs: SmolVLM keeps
+        # its vision conv in the load dtype (bf16 here) while the processor
+        # always emits float32 pixel_values -- cast or conv2d raises
+        # "Input type (FloatTensor) and weight type (BFloat16Type)"
+        # (latent on the 5.1 branch: its 4-bit path never hit this and the
+        #  fp32 fallback exercised neither; ps prep proves bf16 on 6.0).
+        if "pixel_values" in inputs:
+            inputs["pixel_values"] = \
+                inputs["pixel_values"].to(model.model.vision_model
+                                          .patch_embeddings.patch_embedding
+                                          .weight.dtype)
         out = model.generate(**inputs, max_new_tokens=SMOKE_MAX_NEW_TOKENS)
     print(f"[prep6] smoke generate OK -> "
           f"{proc.decode(out[0])[:80]!r}", flush=True)

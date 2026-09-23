@@ -52,6 +52,19 @@ sys.path.insert(0, os.path.join(REPO, "src", "perception"))       # for lazy vla
 # crazyflie_env creates the headless SimulationApp at import time (must be first)
 import crazyflie_env as cfenv
 
+# 6.0-container caveat (job 63847627): exposing $PYLIBS pip torch on PYTHONPATH
+# at kit startup triggers isaacsim.core.deprecation_manager -> ml_archive
+# prebundle libtorch_cuda.so to resolve against our pip NCCL ->
+# "undefined symbol: ncclDevCommCreate" and kit exits(0) WITHOUT running this
+# script.  $PYLIBS is appended ONLY AFTER SimulationApp is up (the kit's
+# prebundle stays dormant that way).  The lazy vla_bridge import in run()
+# is the FIRST torch import in this process.
+_pylibs = os.environ.get("PYLIBS", "")
+if _pylibs and os.path.isdir(_pylibs) and _pylibs not in sys.path:
+    sys.path.insert(0, _pylibs)
+    print(f"[realcam] PYLIBS appended post-SimulationApp: {_pylibs}",
+          flush=True)
+
 from vla_crazyflie_flight import (CrazyflieController, quat_to_roll_pitch,
                                   DT, MISSION)
 import hocbf_py as hocbf   # pure-Python HOCBF port (container-safe; verified

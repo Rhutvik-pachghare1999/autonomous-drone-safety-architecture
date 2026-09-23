@@ -65,8 +65,14 @@ run() {
     --env HF_HOME=/scratch/$USER/.hf \
     --env HF_HUB_OFFLINE=1 \
     --env TRANSFORMERS_OFFLINE=1 \
-    --env PYTHONPATH=$PYLIBS \
+    --env PYLIBS=/scratch/$USER/pylibs6 \
     "$SIF" "$@"; RC=$?; echo "APPTAINER_RC=$RC"; return $RC; }
+# NOTE: $PYLIBS is NOT on PYTHONPATH at kit startup on purpose — the 6.0 kit's
+# deprecation_manager would try to import torch at ext-scan time, the dormant
+# ml_archive prebundle libtorch_cuda.so then fails against pip NCCL and kit
+# exits(0) without running the script (job 63847627).  vla_realcam_flight.py
+# appends $PYLIBS to sys.path AFTER SimulationApp is up (first torch import
+# happens via the lazy vla_bridge import).
 
 run /isaac-sim/python.sh /repo/sim/vla_realcam_flight.py "$N_EP"; RC=$?
 echo "RUN_EXIT_CODE=$RC"

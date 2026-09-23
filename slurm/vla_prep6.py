@@ -222,7 +222,7 @@ def main() -> int:
         print(f"[prep6] 4-bit load failed ({type(e).__name__}: {e}); "
               f"bf16 fallback", flush=True)
         model = AutoModelForImageTextToText.from_pretrained(
-            MODEL_ID, dtype=torch.bfloat16, device_map="cuda:0")
+            MODEL_ID, torch_dtype=torch.bfloat16, device_map="cuda:0")
         quant = "bf16_cuda"
     print(f"[prep6] model quant={quant}", flush=True)
     img = Image.fromarray(np.zeros((224, 224, 3), np.uint8) + 127)

@@ -142,8 +142,11 @@ def attach_camera(env) -> object:
         sun.CreateAngleAttr(2.0)
 
     cam_path = f"{env.prim_path}/vla_cam"
-    cam = Camera(prim_path=cam_path, resolution=CAM_RES,
-                 frequency=int(round(1.0 / DT)))
+    # NOTE: no `frequency=` — the sensor raises unless the requested frequency
+    # divides the app's rendering frequency (1/60 here, not 50 Hz physics).
+    # We capture on demand via world.render()+get_rgba(), so the sensor tick
+    # frequency is irrelevant.
+    cam = Camera(prim_path=cam_path, resolution=CAM_RES)
     q = _camera_mount_quat()
     t = np.array([CAM_FWD_OFF, 0.0, 0.0], dtype=np.float64)
     mounted = False
@@ -411,4 +414,18 @@ def run() -> None:
 
 
 if __name__ == "__main__":
-    run()
+    # kit python swallows script exceptions and still exits 0 — convert any
+    # failure into a REAL nonzero exit so Slurm marks the job FAILED.
+    try:
+        run()
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        sys.stderr.flush()
+        print("REALCAM_FATAL: run aborted", flush=True)
+        try:
+            cfenv._app.close()
+        except Exception:
+            pass
+        os._exit(1)

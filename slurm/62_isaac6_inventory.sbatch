@@ -26,17 +26,21 @@ run() {
     "$SIF" "$@"
 }
 
-echo "===== apps dir (headless/remote/render related) ====="
-run bash -c 'ls /isaac-sim/apps/ | grep -iE "headless|remote|render|stream" || ls /isaac-sim/apps/'
+echo "===== apps dir (full) ====="
+run bash -c 'ls /isaac-sim/apps/'
 
-echo "===== 6.0 SimulationApp signature ====="
+echo "===== SimulationApp __init__ source (default experience resolution) ====="
 run /isaac-sim/python.sh -c "
 import inspect
-from isaacsim import SimulationApp
-sig = inspect.signature(SimulationApp.__init__)
-print('SIMAPP_SIG:', sig)
-doc = (SimulationApp.__init__.__doc__ or '')[:3000]
-print('SIMAPP_DOC:', doc)
+import isaacsim.simulation_app.simulation_app as m
+src = inspect.getsource(m.SimulationApp.__init__)
+import re
+keep = [l for l in src.splitlines() if re.search(r'experience|headless|exp\.|app\.', l)]
+print('SIMAPP_INIT_EXPERIENCE_LINES:')
+print('\n'.join(keep[:60]))
 "
+
+echo "===== base python kit package block ====="
+run bash -c 'for f in /isaac-sim/apps/isaacsim.exp.base.python.kit /isaac-sim/apps/isaacsim.exp.base.kit /isaac-sim/apps/isaacsim.exp.full.kit; do [ -f "$f" ] && { echo "--- $f"; sed -n "1,40p" "$f"; }; done'
 
 echo "INVENTORY_DONE"

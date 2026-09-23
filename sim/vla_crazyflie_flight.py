@@ -124,8 +124,13 @@ class CrazyflieController:
         )
 
     # ---- velocity-level controller -----------------------------------------
-    def control(self, vx_cmd: float, vy_cmd: float, vz_cmd: float,
-                wind_w: tuple[float, float, float] | None = None) -> float:
+    def compute_wrench(self, vx_cmd: float, vy_cmd: float, vz_cmd: float
+                       ) -> tuple[float, float, float]:
+        """Nominal (T, tx, ty) from the velocity P + attitude PD loops,
+        computed but NOT applied. This is the single-variable ablation
+        isolation point: a matched A/B passes the SAME (T, tx, ty) to the
+        mixer in both arms and only swaps T through the safety filter.
+        """
         pos, quat, vel, omega = self.env.state()   # all unbatched: (3,), (4,)
         roll, pitch = quat_to_roll_pitch(quat)
         vx, vy, vz  = vel[0], vel[1], vel[2]
@@ -144,7 +149,11 @@ class CrazyflieController:
         # attitude PD (sign s1 aligns measured angle with +torque)
         tx = self.s1x * self.kp_at * (roll_ref  - roll)  - self.kd_at * wx
         ty = self.s1y * self.kp_at * (pitch_ref - pitch) - self.kd_at * wy
+        return T, tx, ty
 
+    def control(self, vx_cmd: float, vy_cmd: float, vz_cmd: float,
+                wind_w: tuple[float, float, float] | None = None) -> float:
+        T, tx, ty = self.compute_wrench(vx_cmd, vy_cmd, vz_cmd)
         f1, f2, f3, f4 = self.mix(T, tx, ty)
         self.apply_rotors(f1, f2, f3, f4, wind_w=wind_w)
         return T

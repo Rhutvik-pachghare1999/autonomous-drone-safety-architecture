@@ -48,7 +48,16 @@ class VLABridge:
         self.model = None
         self.processor = None
         self.quant = "unknown"   # actual load path taken (for honest reporting)
+        self._pixel_dtype = None  # dtype of the vision tower patch conv
         self._load_model()
+        # SmolVLM keeps its vision tower in fp16 even under 4-bit/bf16 LM
+        # loading; feeding float32 pixel_values then crashes inside generate
+        # ("FloatTensor vs HalfTensor").  Discover the conv dtype once and
+        # cast float inputs to it in query().
+        for m in self.model.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                self._pixel_dtype = m.weight.dtype
+                break
 
     def _load_model(self):
         if self.device == "cpu":
@@ -184,6 +193,10 @@ class VLABridge:
             images=[image],
             return_tensors="pt",
         ).to(self.device)
+        if self._pixel_dtype is not None:
+            for k, v in list(inputs.items()):
+                if torch.is_floating_point(v):
+                    inputs[k] = v.to(self._pixel_dtype)
 
         with torch.inference_mode():
             out = self.model.generate(

@@ -240,6 +240,14 @@ def main() -> int:
     model.eval()
     load_s = time.time() - t0
 
+    pixel_dtype = None
+    import torch.nn as nn_
+    for m_ in model.modules():
+        if isinstance(m_, nn_.Conv2d):
+            pixel_dtype = m_.weight.dtype
+            break
+    print(f"[prep] vision pixel_dtype={pixel_dtype}", flush=True)
+
     img = Image.fromarray(numpy.zeros((224, 224, 3), dtype="uint8"))
     n_img_tokens = getattr(getattr(model, "model", None), "image_seq_len", 64)
     msgs = [{"role": "user", "content": [{"type": "image"},
@@ -247,6 +255,10 @@ def main() -> int:
                                           "text": "Output: vx=<float>, vy=<float>, vz=<float>"}]}]
     text = proc.apply_chat_template(msgs, add_generation_prompt=True)
     inputs = proc(text=[text], images=[img], return_tensors="pt").to("cuda:0")
+    if pixel_dtype is not None:
+        for k_, v_ in list(inputs.items()):
+            if torch.is_floating_point(v_):
+                inputs[k_] = v_.to(pixel_dtype)
     t1 = time.time()
     with torch.inference_mode():
         out = model.generate(**inputs, max_new_tokens=16, do_sample=False)

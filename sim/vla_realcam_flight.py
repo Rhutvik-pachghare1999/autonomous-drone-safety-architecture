@@ -1,7 +1,14 @@
 # sim/vla_realcam_flight.py
 # Phase 5 (sol-wcet-vla TASK 2): REAL RENDERED CAMERA -> SmolVLM2 (GPU) -> HOCBF
 # guard -> 50 Hz P controller -> motor mixer, on the REAL 27 g Crazyflie 2.X in
-# Isaac Sim 5.1 (headless, GPU PhysX + RTX render).
+# Isaac Sim 6.0.1 (headless, GPU PhysX + RTX render).
+#
+# RUNTIME NOTE: runs on the 6.0.1 container (slurm/33_vla_realcam6.sbatch);
+# 5.1 segfaults Isaac's RTX stack on Sol's 595.71.05 driver
+# (librtx.scenedb.plugin.so, isaac-sim/IsaacSim#677). Capture uses the
+# replicator orchestrator path (Camera.get_rgba() stays empty headless on 6.0
+# — proven by slurm/isaac6_probe3.py). TASK 1 WCET + large A/B stay on 5.1
+# (version split documented in docs/REAL_CRAZYFLIE_VLA_SIM.md).
 #
 # Delta vs Phase 2 (vla_crazyflie_flight.py):
 #   * CAMERA IS REAL: every VLA query consumes an RTX-rendered RGB frame from a
@@ -125,8 +132,17 @@ def attach_camera(env) -> object:
 
     The prim is a CHILD of the rigid body, so it follows every physics step
     and reset_pose() teleport automatically.
+
+    CAPTURE PATH (Isaac Sim 6.0 headless on Sol): Camera.get_rgba() / get_rgb()
+    return EMPTY under the bare headless experience even with
+    throttling.enable_async=False (proven isaac6_probe3 v2, job 63843563).
+    What works there (v1 saved a real 224x224 frame): an explicit replicator
+    render product + rgb annotator driven by rep.orchestrator.step().
+    attach_camera therefore wires `env._rep_orch / _vla_rp / _vla_annot`, and
+    grab_frame() renders the CURRENT state via orchestrator (no physics step).
     """
     from isaacsim.sensors.camera import Camera
+    import omni.replicator.core as rep
     import omni.usd
     from pxr import UsdLux
 
@@ -144,7 +160,7 @@ def attach_camera(env) -> object:
     cam_path = f"{env.prim_path}/vla_cam"
     # NOTE: no `frequency=` — the sensor raises unless the requested frequency
     # divides the app's rendering frequency (1/60 here, not 50 Hz physics).
-    # We capture on demand via world.render()+get_rgba(), so the sensor tick
+    # We capture on demand via rep.orchestrator.step(), so the sensor tick
     # frequency is irrelevant.
     cam = Camera(prim_path=cam_path, resolution=CAM_RES)
     q = _camera_mount_quat()
@@ -164,31 +180,50 @@ def attach_camera(env) -> object:
     if not mounted:
         raise RuntimeError(f"camera mount failed: {errs}")
     cam.initialize()
-    # a couple of rendered warmup steps so the render product is live
-    for _ in range(3):
-        env.world.step(render=True)
+
+    # explicit replicator capture pipeline (headless-safe; proven by
+    # slurm/isaac6_probe3.py v1 on the 6.0.1 container, job 63843563)
+    rp = rep.create.render_product(cam.prim_path, CAM_RES)
+    annot = rep.AnnotatorRegistry.get_annotator("rgb")
+    annot.attach(rp)
+    env._rep_orch = rep.orchestrator
+    env._vla_rp = rp
+    env._vla_annot = annot
+    env._vla_warmed = False
+
     pos, ori = cam.get_world_pose()
     print(f"[cam] prim={cam_path} res={CAM_RES} tilt_deg={CAM_TILT_DEG} "
-          f"world_pos={np.round(pos, 3).tolist()}", flush=True)
+          f"world_pos={np.round(pos, 3).tolist()} (rep-orchestrator capture)",
+          flush=True)
     return cam
 
 
 def grab_frame(env, cam) -> np.ndarray:
-    """Render the CURRENT state (no extra physics step) and return uint8 RGB."""
-    env.world.render()
-    rgb = None
-    try:
-        rgb = cam.get_rgb()
-    except Exception:
-        pass
-    if rgb is None or np.asarray(rgb).size == 0:
-        rgba = np.asarray(cam.get_rgba())
-        rgb = rgba[..., :3]
-    rgb = np.asarray(rgb)
+    """Render the CURRENT state (no extra physics step) and return uint8 RGB.
+
+    Drives rep.orchestrator.step() until the rgb annotator returns a frame
+    (first capture needs a handful of warm renders — probe3 pattern) up to
+    MAX_WARM_RND, then raises REALCAM-relevant RuntimeError if still empty.
+    """
+    import omni.replicator.core as rep
+    MAX_WARM_RND = 20 if not env._vla_warmed else 2
+    rgba = None
+    for k in range(MAX_WARM_RND):
+        rep.orchestrator.step()
+        d = np.asarray(env._vla_annot.get_data())
+        if d.ndim == 3 and d.size:
+            rgba = d
+            if not env._vla_warmed:
+                env._vla_warmed = True
+                print(f"[cam] first valid frame after {k + 1} warm renders",
+                      flush=True)
+            break
+    if rgba is None:
+        raise RuntimeError(
+            f"empty rgb annotator after {MAX_WARM_RND} orchestrator steps")
+    rgb = rgba[..., :3]
     if rgb.dtype != np.uint8:
         rgb = (np.clip(rgb, 0.0, 1.0) * 255.0).astype(np.uint8)
-    if rgb.shape[-1] == 4:
-        rgb = rgb[..., :3]
     return np.ascontiguousarray(rgb)
 
 

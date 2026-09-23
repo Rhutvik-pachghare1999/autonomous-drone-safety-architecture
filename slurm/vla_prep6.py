@@ -26,13 +26,20 @@ MODEL_ID = os.environ.get("SMOLVLM_ID", "HuggingFaceTB/SmolVLM2-2.2B-Instruct")
 SMOKE_MAX_NEW_TOKENS = 16
 
 PKGS = [
+    # pin torch to pre-"_native"-registry era: torch 2.14 routes Llama RoPE's
+    # outer-product bmm through torch.ops._native triton kernels, and the
+    # Isaac SIF ships no C compiler -> generate() dead (job 63846729).
+    # torch 2.9.1 (PyPI = cu128) pre-dates that routing, and bnb 0.46.1 ships
+    # a matching libbitsandbytes_cuda128.so, so the honest-4bit path also
+    # returns; driver 595 (r590) runs all cu12x binaries.
+    "torch==2.9.1",
+    "torchvision==0.24.1",  # SmolVLMVideoProcessor hard-requires it (6.0 kit
+                            # ships none -> pip version matched to pip torch)
     "transformers==4.53.1",
     "bitsandbytes==0.46.1",
     "accelerate",
     "pillow",
     "num2words",            # SmolVLM processor __init__ ImportError w/o it
-    "torchvision",          # SmolVLMVideoProcessor hard-requires it (6.0 kit
-                            # ships none -> pip version matched to pip torch)
 ]
 
 # dists pip pulls as deps that MUST stay pylibs-resident here (torch + its

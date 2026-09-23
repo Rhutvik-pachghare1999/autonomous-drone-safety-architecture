@@ -60,10 +60,19 @@ def main():
                        orientation=np.array([0.0, 0.0, 0.0, 1.0]),
                        camera_axes="usd")
     cam.initialize()
-    for _ in range(5):
+    # first annotator reads return None/empty for a few frames on 6.0
+    # ("A few render frames may be required before data is available") —
+    # retry like the production attach_camera loop (63842244 failed at step 5).
+    rgba = None
+    for k in range(60):
         world.step(render=True)
-    rgba = np.asarray(cam.get_rgba())
-    if rgba.size == 0:
+        if k >= 4 and k % 2 == 0:
+            r = np.asarray(cam.get_rgba())
+            if r.ndim == 3 and r.size:
+                rgba = r
+                print(f"[probe] first valid rgba at step {k}", flush=True)
+                break
+    if rgba is None:
         print("ISAAC6_PROBE: EMPTY_FRAME", flush=True)
         cfenv._app.close()
         os._exit(1)

@@ -2,7 +2,7 @@
 #SBATCH --job-name=inv6-torch
 #SBATCH --partition=public
 #SBATCH --gres=gpu:a100:1
-#SBATCH --mem=8G
+#SBATCH --mem=24G
 #SBATCH --time=00:15:00
 #SBATCH --output=/scratch/%u/inv6-torch-%j.out
 #SBATCH --exclude=sg048,sg049

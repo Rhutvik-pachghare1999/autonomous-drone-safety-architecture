@@ -47,6 +47,7 @@ class VLABridge:
         self.device = device
         self.model = None
         self.processor = None
+        self.quant = "unknown"   # actual load path taken (for honest reporting)
         self._load_model()
 
     def _load_model(self):
@@ -66,12 +67,14 @@ class VLABridge:
                 self.model = AutoModelForImageTextToText.from_pretrained(
                     MODEL_ID, quantization_config=quant_cfg, device_map="cpu",
                 )
+                self.quant = "4bit_nf4_cpu"
             except Exception as e:  # bnb-CPU unsupported -> plain fp32
                 print(f"[vla] CPU 4-bit failed ({type(e).__name__}), falling back to fp32",
                       flush=True)
                 self.model = AutoModelForImageTextToText.from_pretrained(
                     MODEL_ID, torch_dtype=torch.float32, device_map="cpu",
                 )
+                self.quant = "fp32_cpu"
             self.model.eval()
             import os
             rss = 0.0
@@ -88,11 +91,22 @@ class VLABridge:
             bnb_4bit_compute_dtype=torch.bfloat16,
         )
         self.processor = AutoProcessor.from_pretrained(MODEL_ID)
-        self.model = AutoModelForImageTextToText.from_pretrained(
-            MODEL_ID,
-            quantization_config=quant_cfg,
-            device_map="cuda:0",
-        )
+        try:
+            self.model = AutoModelForImageTextToText.from_pretrained(
+                MODEL_ID,
+                quantization_config=quant_cfg,
+                device_map="cuda:0",
+            )
+            self.quant = "4bit_nf4_cuda"
+        except Exception as e:  # bitsandbytes unavailable/broken on this runtime
+            # -> plain bf16 on GPU (Sol datacenter GPUs fit bf16 SmolVLM2-2.2B
+            # alongside Isaac PhysX easily; the 4-bit path was sized for 4 GB).
+            print(f"[vla] GPU 4-bit failed ({type(e).__name__}: {e}), "
+                  "falling back to bf16 on cuda", flush=True)
+            self.model = AutoModelForImageTextToText.from_pretrained(
+                MODEL_ID, torch_dtype=torch.bfloat16, device_map="cuda:0",
+            )
+            self.quant = "bf16_cuda"
         self.model.eval()
         vram = torch.cuda.memory_allocated() / 1024**3
         print(f"Model loaded. VRAM used: {vram:.2f}GB", flush=True)

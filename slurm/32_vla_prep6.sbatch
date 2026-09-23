@@ -32,13 +32,14 @@ if [ ! -f "$REPO/slurm/vla_prep.py" ]; then
 fi
 
 CACHE=/scratch/$USER/isaac_cache6
-mkdir -p "$CACHE"/{kit_cache,kit_data,ov,glcache,computecache,omni_logs,pip}
+PYLIBS=/scratch/$USER/pylibs6
+mkdir -p "$CACHE"/{kit_cache,kit_data,ov,glcache,computecache,omni_logs,pip} "$PYLIBS"
 
 run() {
   apptainer exec --fakeroot --nv \
     --home /scratch/$USER/solhome \
     --bind "$REPO":/repo,/tmp:/tmp,$CACHE/kit_cache:/isaac-sim/kit/cache,$CACHE/kit_data:/isaac-sim/kit/data,$CACHE/ov:/root/.cache/ov,$CACHE/glcache:/root/.cache/nvidia/GLCache,$CACHE/computecache:/root/.nv/ComputeCache,$CACHE/omni_logs:/root/.nvidia-omniverse/logs,$CACHE/pip:/root/.cache/pip \
-    --bind /scratch/$USER/.hf:/scratch/$USER/.hf \
+    --bind "$PYLIBS":/scratch/$USER/pylibs6,/scratch/$USER/.hf:/scratch/$USER/.hf \
     --env OMNI_KIT_ALLOW_ROOT=1,HF_HOME=/scratch/$USER/.hf,PYLIBS=/scratch/$USER/pylibs6,PYTHONUNBUFFERED=1 \
     "$SIF" "$@"; RC=$?; echo "APPTAINER_RC=$RC"; return $RC; }
 

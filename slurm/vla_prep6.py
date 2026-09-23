@@ -2,19 +2,18 @@
 # slurm/vla_prep6.py — one-time Sol prep for TASK 2 on the 6.0.1 CONTAINER
 # (bundle python 3.12; run INSIDE an sbatch job, see 32_vla_prep6.sbatch).
 #
-# Strategy (user-directed, 2026-09-23): the Isaac 6.0 kit python ALREADY ships
-# PyTorch — do NOT install a second torch (pip torch's cu13 stack in pylibs
-# broke bnb's cublasLt discovery, vla-prep6 job 63844202).  Install ONLY
-#   transformers + tokenizers + safetensors (+ a few pure deps) WITH --no-deps
-# into $PYLIBS and layer them on top of the container torch via PYTHONPATH.
-# If the container torch is too old for SmolVLM2-2.2B, REPORT that and stop
-# (fallback = smaller SmolVLM; never replace container torch).
+# Strategy (user-approved, 2026-09-23): the 6.0.1 kit python ships NO torch
+# (verified inv6-torch job 63844887: no torch/nvidia/triton in site-packages)
+# → self-contained pip torch stack INSIDE $PYLIBS.  The 5.1 "shadowing" lesson
+# does not apply (nothing in the container to shadow); clean_shadows here must
+# KEEP torch/triton/nvidia-cu13 wheels so bitsandbytes finds its bundled
+# libcublasLt (bnb failure in job 63844202 was clean_shadows deleting that tree).
 #
-# Steps: net check -> pip --no-deps minimal stack -> clean_shadows
-#   -> import verify (torch from CONTAINER, transformers from PYLIBS)
-#   -> optional bitsandbytes (--no-deps; warn-only) -> weights via HF cache
-#   -> GPU smoke load + one real generation.
-# Exit codes: 0 = OK ; 2 = NO_INTERNET ; 6 = container has no torch.
+# Steps: net check -> pip install (full deps incl. torch) -> clean_shadows
+#   -> import verify (torch + 4-bit bnb load all from PYLIBS)
+#   -> weights via HF cache -> GPU smoke generation.
+# Exit codes: 0 = OK ; 2 = NO_INTERNET ; 5 = torch ended up container-side
+# (there is none) -> hard fail ; 7 = transformers not importable.
 
 import os
 import subprocess
@@ -24,26 +23,25 @@ import time
 PY = sys.executable
 PYLIBS = os.environ.get("PYLIBS", f"/scratch/{os.environ['USER']}/pylibs6")
 MODEL_ID = os.environ.get("SMOLVLM_ID", "HuggingFaceTB/SmolVLM2-2.2B-Instruct")
-MIN_TORCH = (2, 2)          # transformers 4.53 / SmolVLM2 needs >= 2.2
 SMOKE_MAX_NEW_TOKENS = 16
 
-# minimal stack only — NO torch/nvidia (container torch is the only torch)
 PKGS = [
     "transformers==4.53.1",
-    "tokenizers==0.21.4",
-    "safetensors==0.8.0",
+    "bitsandbytes==0.46.1",
+    "accelerate",
+    "pillow",
     "num2words",            # SmolVLM processor __init__ ImportError w/o it
 ]
-TRY_EXTRA = ["bitsandbytes==0.46.1", "pillow", "accelerate", "huggingface_hub",
-             "filelock", "pyyaml", "regex", "requests", "tqdm", "packaging"]
 
+# dists pip pulls as deps that MUST stay pylibs-resident here (torch + its
+# cu13 cuda tree are the ONLY torch available on the 6.0 container)
 KEEP = {
     "transformers", "tokenizers", "safetensors", "huggingface_hub", "hf_xet",
     "accelerate", "bitsandbytes", "cuda_pathfinder", "cuda_bindings",
-    "pillow", "num2words",
+    "torch", "triton", "pillow", "num2words",
 }
 FS_TO_DIST = {"pil": "pillow", "yaml": "pyyaml"}
-EXTRA_REMOVE = {"nvidia", "torchgen", "torch"}   # pip torch must NEVER survive
+EXTRA_REMOVE: set[str] = set()   # nothing force-removed for 6.0 (no shadowing)
 
 
 def sh(cmd: list[str], **kw) -> int:
@@ -104,7 +102,7 @@ def clean_shadows(pylibs: str, have: set[str]) -> list[str]:
     for entry in sorted(os.listdir(pylibs)):
         base = _distinfo_base(entry)
         if base is not None and base not in KEEP and (
-            base in have or base.startswith("nvidia_") or base in EXTRA_REMOVE
+            base in have or base in EXTRA_REMOVE
         ):
             shutil.rmtree(os.path.join(pylibs, entry), ignore_errors=True)
             removed.append(entry)
@@ -115,8 +113,7 @@ def clean_shadows(pylibs: str, have: set[str]) -> list[str]:
         base = FS_TO_DIST.get(_fs_base(entry), _fs_base(entry))
         if base in KEEP:
             continue
-        if (base in EXTRA_REMOVE or base.startswith("torch") or base in have
-                or base in doomed_bases or base.startswith("nvidia_")):
+        if (base in EXTRA_REMOVE or base in have or base in doomed_bases):
             p = os.path.join(pylibs, entry)
             if os.path.isdir(p):
                 shutil.rmtree(p, ignore_errors=True)
@@ -135,68 +132,38 @@ def main() -> int:
           flush=True)
     sh([PY, "-c", "import sys;print('[prep6] py',sys.version.replace(chr(10),' '))"])
 
-    # 0. verify the CONTAINER itself ships a usable torch (user directive:
-    #    never install a second one for the 6.0 container)
-    rc = sh([PY, "-c",
-             "import torch;print('[prep6] container torch',torch.__version__,"
-             "'cuda_avail',torch.cuda.is_available())"])
-    if rc != 0:
-        print("[prep6] FATAL: container torch missing/broken", flush=True)
-        return 6
-    import importlib.metadata as im
-    try:
-        crew = tuple(int(p) for p in im.version("torch").split(".")[:2])
-    except Exception:
-        crew = (0, 0)
-    if crew < MIN_TORCH:
-        print(f"[prep6] WARN container torch {crew} < {MIN_TORCH} required by "
-              f"transformers 4.53/SmolVLM2 — per policy this must fall back to "
-              f"an older/smaller SmolVLM (SMOLVLM_ID override), NOT a pip torch",
-              flush=True)
-        return 6
-
     if not check_internet():
         print("PREP_RESULT: NO_INTERNET", flush=True)
         return 2
 
     os.makedirs(PYLIBS, exist_ok=True)
-    if os.path.isdir(os.path.join(PYLIBS, "transformers")):
-        print("[prep6] transformers already in PYLIBS -> skip pip install",
+    if os.path.isdir(os.path.join(PYLIBS, "transformers")) and os.path.isdir(
+        os.path.join(PYLIBS, "torch")
+    ):
+        print("[prep6] torch+transformers already in PYLIBS -> skip pip install",
               flush=True)
     else:
-        rc = sh([PY, "-m", "pip", "install", "--no-deps",
-                 "--target", PYLIBS, *PKGS])
+        rc = sh([PY, "-m", "pip", "install", "--target", PYLIBS, *PKGS])
         if rc != 0:
-            print("[prep6] FATAL: pip install (core stack) failed", flush=True)
+            print("[prep6] FATAL: pip install failed", flush=True)
             return 4
-    # best-effort extras (bnb may need container CUDA libs at runtime; ok if it
-    # turns out unusable — vla_prep treats bnb as optional, falling to bf16)
-    sh([PY, "-m", "pip", "install", "--no-deps", "--target", PYLIBS, *TRY_EXTRA])
-    # missing-dep autofill: pip ignores deps entirely with --no-deps, so install
-    # any import-time missing pure-python deps of transformers the container
-    # lacks (huggingface_hub etc. are in TRY_EXTRA but presence is container-
-    # dependent; transformers import later is the real gate).
 
     have = _container_dists()
     print(f"[prep6] container provides {len(have)} distributions", flush=True)
-    if "transformers" in have:
-        # container already ships transformers — but version may be old; keep
-        # our pinned one ONLY if the container's is absent (rare) — else rely
-        # on container for dependency closure and remove our copy.
-        print(f"[prep6] NOTE container ships transformers {im.version('transformers') if 'transformers' in have else '?'}; "
-              f"pylibs copy will be kept only for missing deps", flush=True)
     removed = clean_shadows(PYLIBS, have)
-    print(f"[prep6] clean_shadows removed {len(removed)} shadow entries", flush=True)
+    print(f"[prep6] clean_shadows removed {len(removed)} shadow entries "
+          f"(torch/nvidia intentionally KEPT — 6.0 kit ships none)", flush=True)
 
     sys.path.insert(0, PYLIBS)
 
-    # ---- hard verification (user directive: before the realcam run) --------
+    # ---- hard verification: torch + bnb must come from PYLIBS ---------------
     import torch
     troot = os.path.realpath(os.path.dirname(torch.__file__))
     print(f"[prep6] torch {torch.__version__} @ {troot} "
-          f"(must be CONTAINER, not pylibs)", flush=True)
-    if troot.startswith(os.path.realpath(PYLIBS)):
-        print("[prep6] FATAL: pylibs shadows container torch", flush=True)
+          f"(must be PYLIBS: 6.0 kit ships no torch)", flush=True)
+    if not troot.startswith(os.path.realpath(PYLIBS)):
+        print("[prep6] FATAL: container unexpectedly shadows pylibs torch",
+              flush=True)
         return 5
     try:
         import transformers

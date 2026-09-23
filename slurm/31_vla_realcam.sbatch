@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=vla-rc
-#SBATCH --partition=public,htc
+#SBATCH --partition=public
+#SBATCH --exclude=sg048,sg049
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=48G
@@ -12,6 +13,10 @@
 #
 # Prereq: slurm/30_vla_prep.sbatch completed with PREP_RESULT: OK
 #         (deps in /scratch/$USER/pylibs, weights in /scratch/$USER/.hf).
+# NOTE Sol topology: sg048/049 serve ONLY MIG a100.20gb slices (no Vulkan
+# graphics) and htc serves a100.40gb slices — the RTX renderer dies there
+# (carb::graphics::createInstance failed, job 63824988).  Must run on a full
+# a100 from partition=public, excluding sg048/049.
 #
 # Usage:
 #   SMALL proof (2 episodes):  sbatch --export=ALL,N_EP=2 slurm/31_vla_realcam.sbatch

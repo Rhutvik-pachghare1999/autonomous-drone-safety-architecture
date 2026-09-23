@@ -32,6 +32,7 @@ PKGS = [
     "bitsandbytes==0.46.1",
     "accelerate",
     "pillow",
+    "num2words",  # required by SmolVLM processor (__init__ ImportError w/o it)
 ]
 
 # packages pip pulled as deps of PKGS but which MUST stay pylibs-resident even
@@ -169,8 +170,11 @@ def main() -> int:
             print("[prep] FATAL: no pip in container python", flush=True)
             return 3
 
-    if os.path.isdir(os.path.join(PYLIBS, "transformers")):
-        print("[prep] transformers already in PYLIBS -> skip pip install", flush=True)
+    if os.path.isdir(os.path.join(PYLIBS, "transformers")) and os.path.isdir(
+        os.path.join(PYLIBS, "num2words")
+    ):
+        print("[prep] transformers+num2words already in PYLIBS -> skip pip install",
+              flush=True)
     else:
         rc = sh([PY, "-m", "pip", "install", "--target", PYLIBS, *PKGS])
         if rc != 0:

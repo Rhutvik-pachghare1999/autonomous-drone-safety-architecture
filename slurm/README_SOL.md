@@ -52,6 +52,16 @@ apptainer pull isaac-sim-5.1.sif docker://nvcr.io/nvidia/isaac-sim:5.1.0   # nee
 # then run scripts with: apptainer exec --nv isaac-sim-5.1.sif <isaac python> ...
 ```
 
+## WCET / latency benchmark (CPU-only, no Isaac needed)
+```bash
+sbatch --export=ALL,N_TRIALS=100000 slurm/20_wcet_sol.sbatch
+# compiles src/rt/safety_filter.c on the compute node (gcc -O3 -march=native),
+# pins to one allocated core (taskset), writes wcet_sol.json + latency_raw.csv
+# under /scratch/$USER/wcet_sol_run/job_<id>/ — scp small artifacts back and
+# commit from the laptop. Userspace measurement (no SCHED_FIFO); see
+# docs/WCET_BENCHMARK.md §3.
+```
+
 ## Large A/B run
 ```bash
 sbatch --export=ALL,N_EP=1000 slurm/10_crazyflie_ab_large.sbatch
@@ -66,3 +76,54 @@ Only commit small artifacts (JSON, PNG); keep raw traces/datasets on /scratch (g
 ## Honest scope (keep in all artifacts)
 Simulation only (Isaac PhysX), NOT a hardware drone. The adversarial dive is a scripted
 worst-case command (the 2.2B VLA refused dive prompts). Label every Sol artifact accordingly.
+
+## Isaac Sim 6.0.1 (Phase 5 real-camera flight — ONLY under 6.0)
+
+5.1 is retained for: WCET benchmark (TASK 1 numbers), large A/B runs, all
+non-camera work. **6.0.1 is required for RTX camera rendering on Sol**: 5.1's
+RTX stack segfaults on the 595.71.05 compute-node driver
+(`librtx.scenedb.plugin.so`, slug `libtx.scenedb.plugin.so` in
+`omni.hydra.pxr.settings` ui mode — log `dbg4-63829568.out`, upstream issue
+IsaacSim#677). 6.0.1 = 2025.12 Long-Term-Support release with the fixed
+driver contract.
+
+Compat evidence (both `sbatch`-job verified, never login node):
+```
+gate (a) render:  job 63843563  ISAAC6_P3:v1: OK shape=(224,224,3) mean=176.31
+                                  (probe3 = rep-orchestrator capture; bare
+                                   headless SimulationApp config)
+gate (b) A/B:     job 63842534  2-ep A/B unchanged on 6.0 (OFF 0/2, ON 2/2,
+                                  hocbf_py guard) → ISAAC6_COMPAT_DONE
+```
+6.0.1 facts that differ from 5.1 and were learned the hard way (job refs in
+slurm script comments):
+- Container python is 3.12 (5.1 was 3.11) → separate dep tree:
+  `/scratch/$USER/pylibs6` (5.1's `pylibs` is cp311 — not reusable).
+- The kit ships **NO torch at all** (verified job 63844887; 5.1 shipped
+  torch+torchvision). `slurm/vla_prep6.py` installs a self-contained
+  `torch==2.9.1`+`torchvision==0.24.1` (PyPI cu128 wheels) **inside pylibs6**.
+  Torch 2.14 CANNOT be used: its `_native` triton kernels need a host C
+  compiler, and the SIF has none (`Failed to find C compiler`, job 63846729).
+  2.9.1+cu128 additionally restores bitsandbytes 4-bit NF4 (bnb has no cu130
+  binary for torch 2.14; job 63845630).
+- Pylibs must NOT be on PYTHONPATH at kit startup (deprecation_manager then
+  tries the dormant ml_archive prebundle torch → NCCL symbol clash → kit
+  exits(0) silently, job 63847627). `sim/vla_realcam_flight.py` appends
+  `$PYLIBS` to sys.path AFTER SimulationApp is up.
+- Camera capture: `Camera.get_rgba()` returns EMPTY under headless on 6.0
+  (probe3 v2/v3 EMPTY_FRAME). Working recipe (probe3 v1): manual
+  `omni.replicator.core` render_product + rgb annotator +
+  `rep.orchestrator.step()` until the annotator yields a non-empty frame.
+  waitIdle/forceSerial in a custom .kit experience → abort
+  "Destroying busy TaskGroup!" (job 63843303).
+- Writable binds required for all kit caches (`/scratch/$USER/isaac_cache6/`);
+  host parent dirs must exist AND be explicitly bound (unbound /scratch
+  subpaths are EROFS inside the SIF).
+
+Workflow:
+```bash
+sbatch slurm/32_vla_prep6.sbatch                      # one-time deps+weights (≈10 min)
+sbatch --export=ALL,N_EP=2 slurm/33_vla_realcam6.sbatch  # 2-episode proof
+sbatch --export=ALL,N_EP=6 slurm/33_vla_realcam6.sbatch  # demo run
+# outputs: experiments/results/vla_realcam.{jsonl,summary.json...} + ep*_*.png
+```

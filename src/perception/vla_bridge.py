@@ -47,7 +47,17 @@ class VLABridge:
         self.device = device
         self.model = None
         self.processor = None
+        self.quant = "unknown"   # actual load path taken (for honest reporting)
+        self._pixel_dtype = None  # dtype of the vision tower patch conv
         self._load_model()
+        # SmolVLM keeps its vision tower in fp16 even under 4-bit/bf16 LM
+        # loading; feeding float32 pixel_values then crashes inside generate
+        # ("FloatTensor vs HalfTensor").  Discover the conv dtype once and
+        # cast float inputs to it in query().
+        for m in self.model.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                self._pixel_dtype = m.weight.dtype
+                break
 
     def _load_model(self):
         if self.device == "cpu":
@@ -66,12 +76,14 @@ class VLABridge:
                 self.model = AutoModelForImageTextToText.from_pretrained(
                     MODEL_ID, quantization_config=quant_cfg, device_map="cpu",
                 )
+                self.quant = "4bit_nf4_cpu"
             except Exception as e:  # bnb-CPU unsupported -> plain fp32
                 print(f"[vla] CPU 4-bit failed ({type(e).__name__}), falling back to fp32",
                       flush=True)
                 self.model = AutoModelForImageTextToText.from_pretrained(
                     MODEL_ID, torch_dtype=torch.float32, device_map="cpu",
                 )
+                self.quant = "fp32_cpu"
             self.model.eval()
             import os
             rss = 0.0
@@ -88,11 +100,22 @@ class VLABridge:
             bnb_4bit_compute_dtype=torch.bfloat16,
         )
         self.processor = AutoProcessor.from_pretrained(MODEL_ID)
-        self.model = AutoModelForImageTextToText.from_pretrained(
-            MODEL_ID,
-            quantization_config=quant_cfg,
-            device_map="cuda:0",
-        )
+        try:
+            self.model = AutoModelForImageTextToText.from_pretrained(
+                MODEL_ID,
+                quantization_config=quant_cfg,
+                device_map="cuda:0",
+            )
+            self.quant = "4bit_nf4_cuda"
+        except Exception as e:  # bitsandbytes unavailable/broken on this runtime
+            # -> plain bf16 on GPU (Sol datacenter GPUs fit bf16 SmolVLM2-2.2B
+            # alongside Isaac PhysX easily; the 4-bit path was sized for 4 GB).
+            print(f"[vla] GPU 4-bit failed ({type(e).__name__}: {e}), "
+                  "falling back to bf16 on cuda", flush=True)
+            self.model = AutoModelForImageTextToText.from_pretrained(
+                MODEL_ID, torch_dtype=torch.bfloat16, device_map="cuda:0",
+            )
+            self.quant = "bf16_cuda"
         self.model.eval()
         vram = torch.cuda.memory_allocated() / 1024**3
         print(f"Model loaded. VRAM used: {vram:.2f}GB", flush=True)
@@ -170,6 +193,10 @@ class VLABridge:
             images=[image],
             return_tensors="pt",
         ).to(self.device)
+        if self._pixel_dtype is not None:
+            for k, v in list(inputs.items()):
+                if torch.is_floating_point(v):
+                    inputs[k] = v.to(self._pixel_dtype)
 
         with torch.inference_mode():
             out = self.model.generate(

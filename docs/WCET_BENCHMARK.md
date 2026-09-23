@@ -78,3 +78,51 @@ run, not from the filter itself.
 - `-march=native` targets the build host's CPU. It is a desktop convenience,
   not an embedded-target build. Cross-compilation for a flight-controller CPU
   is future work (see README "Limitations").
+
+## 3. ASU Sol cluster run (userspace, shared compute node)
+
+The benchmark was also run on an ASU Sol Slurm compute node to get timing
+evidence on the same cluster hardware that hosts the Isaac Sim A/B runs.
+Script: `slurm/20_wcet_sol.sbatch` — compiles `src/rt/safety_filter.c` on the
+compute node with `gcc -O3 -march=native -DNO_ONNX`, pins the run to one
+allocated core with `taskset`, then computes statistics with
+`experiments/exp_wcet_sol.py` (same Block-Maxima Gumbel method as
+`exp_wcet_evt.py`). One reproducible command:
+
+```bash
+sbatch --export=ALL,N_TRIALS=100000 slurm/20_wcet_sol.sbatch
+```
+
+**Machine** (Slurm job 63814754, node sg048, 2026-09-23): AMD EPYC 7413
+24-Core Processor, kernel Linux 4.18.0-553.124.1.el8_10, gcc 12.5.0, process
+pinned to CPU 12 of the job's allocated set (12-15,33,41-43).
+
+**Honesty scope:** the Slurm job was *unprivileged* — `sched_setscheduler`
+and `mlockall` failed with EPERM (`sched_setscheduler (need CAP_SYS_NICE):
+Operation not permitted` in the job log), so this is a **Linux userspace
+measurement on shared cluster hardware, NOT an RTOS / flight-controller
+number**. The 2,725 ns SCHED_FIFO laptop run above remains the artifact of
+record for RT-scheduled behaviour.
+
+**Measured (100,000 trials, Sol raw CSV `experiments/results/latency_raw_sol.csv`,
+summary `experiments/results/wcet_sol.json`, plot `wcet_sol.png`):**
+
+| Metric | Value (ns) |
+|--------|-----------|
+| min    | 20        |
+| mean   | 26.81     |
+| p50    | 30        |
+| p99    | 31        |
+| p99.9  | 31        |
+| p99.99 | 90        |
+| **max (WCET)** | **4,849** |
+
+EVT Gumbel (Block Maxima, 1,000 blocks × 100): P=1e-9 bound **2,452.1 ns
+(2.45 µs)** — PASS vs the 100 µs deadline. OS inter-cycle jitter: p99 = 11 ns,
+max = 4,970 ns — PASS vs the 50 µs SLA.
+
+Interpretation: on Sol's EPYC 7413 the arithmetic bulk is indistinguishable
+from the laptop RT run (p99 ≈ 31 ns in both). The worst observed sample is a
+single ~4.8 µs OS-preemption outlier — 78× smaller than the 100 µs deadline,
+and the EVT p=1e-9 bound stays at 2.45 µs. The filter's hot path remains
+comfortably inside its latency budget on the cluster hardware as well.

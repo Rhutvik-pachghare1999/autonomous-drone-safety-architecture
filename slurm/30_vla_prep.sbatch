@@ -43,9 +43,9 @@ run() { apptainer exec --fakeroot --nv \
   --env "HF_HOME=/scratch/$USER/.hf" \
   --env "PYLIBS=/scratch/$USER/pylibs" \
   --env "OMNI_KIT_ALLOW_ROOT=1" \
-  "$SIF" "$1"; RC=$?; echo "APPTAINER_RC=$RC"; return $RC; }
+  "$SIF" "$@"; RC=$?; echo "APPTAINER_RC=$RC"; return $RC; }
 
 echo "=== NODE $(hostname) GPU $SLURM_JOB_GPUS ==="
-run "/isaac-sim/python.sh /repo/slurm/vla_prep.py"; RC=$?
+run /isaac-sim/python.sh /repo/slurm/vla_prep.py; RC=$?
 echo "PREP_EXIT_CODE=$RC"
 exit $RC

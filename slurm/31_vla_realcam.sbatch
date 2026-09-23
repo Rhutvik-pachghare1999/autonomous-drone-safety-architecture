@@ -58,10 +58,10 @@ run() { apptainer exec --fakeroot --nv \
   --env "TRANSFORMERS_OFFLINE=1" \
   --env "PYTHONPATH=$PYLIBS" \
   --env "OMNI_KIT_ALLOW_ROOT=1" \
-  "$SIF" "$1"; RC=$?; echo "APPTAINER_RC=$RC"; return $RC; }
+  "$SIF" "$@"; RC=$?; echo "APPTAINER_RC=$RC"; return $RC; }
 
 pushd "$REPO" >/dev/null
-run "/isaac-sim/python.sh sim/vla_realcam_flight.py $N_EP"; RC=$?
+run /isaac-sim/python.sh sim/vla_realcam_flight.py "$N_EP"; RC=$?
 popd >/dev/null
 echo "RUN_EXIT_CODE=$RC"
 exit $RC

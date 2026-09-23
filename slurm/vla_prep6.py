@@ -31,6 +31,8 @@ PKGS = [
     "accelerate",
     "pillow",
     "num2words",            # SmolVLM processor __init__ ImportError w/o it
+    "torchvision",          # SmolVLMVideoProcessor hard-requires it (6.0 kit
+                            # ships none -> pip version matched to pip torch)
 ]
 
 # dists pip pulls as deps that MUST stay pylibs-resident here (torch + its
@@ -38,7 +40,7 @@ PKGS = [
 KEEP = {
     "transformers", "tokenizers", "safetensors", "huggingface_hub", "hf_xet",
     "accelerate", "bitsandbytes", "cuda_pathfinder", "cuda_bindings",
-    "torch", "triton", "pillow", "num2words",
+    "torch", "torchvision", "triton", "pillow", "num2words",
 }
 FS_TO_DIST = {"pil": "pillow", "yaml": "pyyaml"}
 EXTRA_REMOVE: set[str] = set()   # nothing force-removed for 6.0 (no shadowing)

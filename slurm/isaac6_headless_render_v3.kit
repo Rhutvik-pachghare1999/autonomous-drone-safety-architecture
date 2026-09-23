@@ -1,0 +1,55 @@
+# Variant of slurm/isaac6_headless_render.kit WITHOUT the waitIdle /
+# checkForHydraRenderComplete / forceSerial trio — those abort Kit tasking
+# at shutdown ("Destroying busy TaskGroup!", job 63843303) in python-step
+# driven capture.  Keeps the camera-enabling extensions + sync replicator.
+[package]
+title = "IDAIS Python Headless Camera (v3)"
+description = "Headless RTX camera rendering - no waitIdle trio"
+version = "1.0"
+keywords = ["experience", "app", "isaacsim", "python", "camera", "minimal"]
+
+[dependencies]
+"isaacsim.exp.base.python" = {}
+"omni.replicator.core" = {}
+"omni.kit.material.library" = {}
+"omni.kit.viewport.rtx" = {}
+
+[settings]
+app.name = "Isaac-Sim"
+app.version = "6.0.1"
+app.useFabricSceneDelegate = true
+rtx.hydra.readTransformsFromFabricInRenderDelegate = true
+isaac.startup.ros_bridge_extension = ""
+app.vulkan = true
+renderer.multiGpu.maxGpuCount = 1
+
+omni.replicator.asyncRendering = false
+exts."omni.replicator.core".Orchestrator.enabled = true
+
+rtx.post.dlss.execMode = 0
+rtx.pathtracing.maxSamplesPerLaunch = 1000000
+rtx.viewTile.limit = 1000000
+
+[settings.app.renderer]
+skipWhileMinimized = false
+sleepMsOnFocus = 0
+sleepMsOutOfFocus = 0
+
+[settings.app.python]
+interceptSysStdOutput = false
+logSysStdOutput = false
+
+[settings.app.exts]
+folders = [
+    "${exe-path}/exts",
+    "${exe-path}/extscore",
+    "${exe-path}/../exts",
+    "${exe-path}/../extsDeprecated",
+    "${exe-path}/../extscache",
+    "${exe-path}/../extsPhysics",
+    "${exe-path}/../isaacsim/exts",
+    "${exe-path}/../isaacsim/extsDeprecated",
+    "${exe-path}/../isaacsim/extscache",
+    "${exe-path}/../isaacsim/extsPhysics",
+    "${app}",
+]

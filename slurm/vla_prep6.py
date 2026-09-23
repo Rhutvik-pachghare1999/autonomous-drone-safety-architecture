@@ -238,10 +238,14 @@ def main() -> int:
         # (latent on the 5.1 branch: its 4-bit path never hit this and the
         #  fp32 fallback exercised neither; ps prep proves bf16 on 6.0).
         if "pixel_values" in inputs:
-            inputs["pixel_values"] = \
-                inputs["pixel_values"].to(model.model.vision_model
-                                          .patch_embeddings.patch_embedding
-                                          .weight.dtype)
+            pixel_dtype = None
+            for m in model.modules():               # exact bridge parity
+                if isinstance(m, torch.nn.Conv2d):
+                    pixel_dtype = m.weight.dtype
+                    break
+            if pixel_dtype is not None:
+                inputs["pixel_values"] = \
+                    inputs["pixel_values"].to(pixel_dtype)
         out = model.generate(**inputs, max_new_tokens=SMOKE_MAX_NEW_TOKENS)
     print(f"[prep6] smoke generate OK -> "
           f"{proc.decode(out[0])[:80]!r}", flush=True)

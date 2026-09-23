@@ -26,13 +26,16 @@ if [ ! -f "$SIF" ]; then
   echo "MISSING CONTAINER: $SIF — run slurm/60_isaac6_pull.sbatch first" >&2
   exit 1
 fi
-if [ ! -f "$REPO/slurm/vla_prep.py" ]; then
-  echo "MISSING $REPO/slurm/vla_prep.py — git pull in $REPO first" >&2
+if [ ! -f "$REPO/slurm/vla_prep6.py" ]; then
+  echo "MISSING $REPO/slurm/vla_prep6.py — git pull in $REPO first" >&2
   exit 1
 fi
 
 CACHE=/scratch/$USER/isaac_cache6
 PYLIBS=/scratch/$USER/pylibs6
+# reset: previous attempt installed a redundant pip torch (cu13) which broke
+# bnb's cublasLt discovery — minimal --no-deps stack on container torch only.
+rm -rf "$PYLIBS"
 mkdir -p "$CACHE"/{kit_cache,kit_data,ov,glcache,computecache,omni_logs,pip} "$PYLIBS"
 
 run() {
@@ -44,6 +47,6 @@ run() {
     "$SIF" "$@"; RC=$?; echo "APPTAINER_RC=$RC"; return $RC; }
 
 echo "=== NODE $(hostname) GPU $SLURM_JOB_GPUS ==="
-run /isaac-sim/python.sh /repo/slurm/vla_prep.py; RC=$?
+run /isaac-sim/python.sh /repo/slurm/vla_prep6.py; RC=$?
 echo "PREP_EXIT_CODE=$RC"
 exit $RC

@@ -3,7 +3,7 @@
 #SBATCH --partition=public,htc
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=8G
+#SBATCH --mem=24G
 #SBATCH --time=00:10:00
 #SBATCH --output=/scratch/%u/dbg-vulkan-%j.out
 #

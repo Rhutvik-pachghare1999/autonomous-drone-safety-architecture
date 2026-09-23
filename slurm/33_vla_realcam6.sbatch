@@ -58,7 +58,7 @@ run() {
   apptainer exec --nv --fakeroot \
     --home /scratch/$USER/solhome \
     --bind "$REPO":/repo,/tmp:/tmp,$CACHE/kit_cache:/isaac-sim/kit/cache,$CACHE/kit_data:/isaac-sim/kit/data,$CACHE/ov:/root/.cache/ov,$CACHE/glcache:/root/.cache/nvidia/GLCache,$CACHE/computecache:/root/.nv/ComputeCache,$CACHE/omni_logs:/root/.nvidia-omniverse/logs,$CACHE/pip:/root/.cache/pip \
-    --bind /scratch/$USER/.hf:/scratch/$USER/.hf \
+    --bind "$PYLIBS":/scratch/$USER/pylibs6,/scratch/$USER/.hf:/scratch/$USER/.hf \
     --env OMNI_KIT_ALLOW_ROOT=1,PYTHONUNBUFFERED=1 \
     --env CF_USD=/repo/assets/crazyflie.usd \
     --env CRAZYFLIE_USD=/repo/assets/crazyflie.usd \

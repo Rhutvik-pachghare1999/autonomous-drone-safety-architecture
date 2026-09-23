@@ -1,0 +1,46 @@
+{
+  "measurement_context": "Linux USERSPACE measurement on an ASU Sol compute node; Slurm job ran unprivileged so SCHED_FIFO/mlockall were unavailable (EPERM). Process pinned to one allocated core via taskset. This is NOT an RTOS / flight-controller WCET number.",
+  "source_csv": "/scratch/rpachgha/wcet_sol_run/job_63814754/experiments/results/latency_raw.csv",
+  "machine": {
+    "hostname": "sg048",
+    "slurm_job_id": "63814754",
+    "cpu_model": "AMD EPYC 7413 24-Core Processor",
+    "kernel": "Linux 4.18.0-553.124.1.el8_10.x86_64",
+    "gcc": "gcc (GCC) 12.5.0",
+    "nproc_visible": "8",
+    "slurm_affinity_list": "12-15,33,41-43",
+    "pinned_cpu": "12",
+    "n_trials": "100000",
+    "rt_scheduling": "unavailable (unprivileged Slurm job \u2014 sched_setscheduler/mlockall EPERM expected)",
+    "date_utc": "2026-09-23T00:40:15Z"
+  },
+  "empirical": {
+    "n_trials": 100000,
+    "min_ns": 20,
+    "mean_ns": 26.81309,
+    "p50_ns": 30.0,
+    "p99_ns": 31.0,
+    "p999_ns": 31.0,
+    "p9999_ns": 90.0,
+    "wcet_ns": 4849,
+    "deadline_ns": 100000,
+    "deadline_pass": true
+  },
+  "evt": {
+    "method": "block_maxima_gumbel",
+    "block_size": 100,
+    "n_blocks": 1000,
+    "gumbel_mu_ns": -30.286853249072223,
+    "gumbel_beta_ns": 119.78859454732762,
+    "p999_bound_ns": 797.123523828866,
+    "p9999_bound_ns": 1073.0008855331766,
+    "p99999_bound_ns": 1348.8297083829266,
+    "p1e9_bound_ns": 2452.1240391173465,
+    "p1e9_pass": true
+  },
+  "jitter": {
+    "max_jitter_ns": 4970,
+    "p99_jitter_ns": 11.0,
+    "jitter_pass_50us": true
+  }
+}

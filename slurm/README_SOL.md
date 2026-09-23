@@ -52,6 +52,16 @@ apptainer pull isaac-sim-5.1.sif docker://nvcr.io/nvidia/isaac-sim:5.1.0   # nee
 # then run scripts with: apptainer exec --nv isaac-sim-5.1.sif <isaac python> ...
 ```
 
+## WCET / latency benchmark (CPU-only, no Isaac needed)
+```bash
+sbatch --export=ALL,N_TRIALS=100000 slurm/20_wcet_sol.sbatch
+# compiles src/rt/safety_filter.c on the compute node (gcc -O3 -march=native),
+# pins to one allocated core (taskset), writes wcet_sol.json + latency_raw.csv
+# under /scratch/$USER/wcet_sol_run/job_<id>/ — scp small artifacts back and
+# commit from the laptop. Userspace measurement (no SCHED_FIFO); see
+# docs/WCET_BENCHMARK.md §3.
+```
+
 ## Large A/B run
 ```bash
 sbatch --export=ALL,N_EP=1000 slurm/10_crazyflie_ab_large.sbatch

@@ -1,0 +1,116 @@
+{
+  "task": "sol-wcet-vla TASK 2 (real-camera VLA + HOCBF guard)",
+  "model": "HuggingFaceTB/SmolVLM2-2.2B-Instruct",
+  "quant": "4bit_nf4_cuda",
+  "device": "cuda",
+  "gpu": "NVIDIA A100-SXM4-80GB",
+  "camera": {
+    "kind": "isaac_rtx_render",
+    "res": [
+      224,
+      224
+    ],
+    "mount": {
+      "fwd_off_m": 0.05,
+      "tilt_deg": 20.0
+    },
+    "note": "simulated render, NOT a physical camera"
+  },
+  "vla_hz": 2.0,
+  "guard_impl": "hocbf_py",
+  "guard_params": {
+    "mass": 0.027,
+    "g": 9.81,
+    "alpha1": 2.0,
+    "alpha2": 1.0,
+    "T_max": 0.6,
+    "T_min": 0.0,
+    "conservatism": 1.08
+  },
+  "n_episodes": 6,
+  "n_vla_queries": 216,
+  "parse_source_distribution": {
+    "model_structured": 216
+  },
+  "parse_rate_model_structured": 1.0,
+  "latency_ms": {
+    "mean": 1185.2,
+    "p50": 1210.4,
+    "p95": 1254.8,
+    "max": 5811.6
+  },
+  "episodes": [
+    {
+      "ep": 0,
+      "start_z": 0.9,
+      "min_z_m": 0.9,
+      "crashed": false,
+      "n_vla_queries": 36,
+      "n_ctrl_steps": 900,
+      "guard_filtered_frac": 0.3333,
+      "guard_infeasible_steps": 0,
+      "wall_s": 50.0
+    },
+    {
+      "ep": 1,
+      "start_z": 1.05,
+      "min_z_m": 1.05,
+      "crashed": false,
+      "n_vla_queries": 36,
+      "n_ctrl_steps": 900,
+      "guard_filtered_frac": 0.3333,
+      "guard_infeasible_steps": 0,
+      "wall_s": 45.2
+    },
+    {
+      "ep": 2,
+      "start_z": 1.2,
+      "min_z_m": 1.2,
+      "crashed": false,
+      "n_vla_queries": 36,
+      "n_ctrl_steps": 900,
+      "guard_filtered_frac": 0.3333,
+      "guard_infeasible_steps": 0,
+      "wall_s": 45.2
+    },
+    {
+      "ep": 3,
+      "start_z": 1.35,
+      "min_z_m": 1.35,
+      "crashed": false,
+      "n_vla_queries": 36,
+      "n_ctrl_steps": 900,
+      "guard_filtered_frac": 0.3333,
+      "guard_infeasible_steps": 0,
+      "wall_s": 44.4
+    },
+    {
+      "ep": 4,
+      "start_z": 1.5,
+      "min_z_m": 1.5,
+      "crashed": false,
+      "n_vla_queries": 36,
+      "n_ctrl_steps": 900,
+      "guard_filtered_frac": 0.3333,
+      "guard_infeasible_steps": 0,
+      "wall_s": 45.1
+    },
+    {
+      "ep": 5,
+      "start_z": 1.65,
+      "min_z_m": 1.65,
+      "crashed": false,
+      "n_vla_queries": 36,
+      "n_ctrl_steps": 900,
+      "guard_filtered_frac": 0.3333,
+      "guard_infeasible_steps": 0,
+      "wall_s": 44.6
+    }
+  ],
+  "n_crashes": 0,
+  "guard_filtered_frac_overall": 0.3333,
+  "guard_infeasible_steps_total": 0,
+  "wall_s_total": 312.1,
+  "slurm_job": "63848433",
+  "node": "sg020"
+}

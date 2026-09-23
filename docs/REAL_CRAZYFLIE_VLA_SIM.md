@@ -123,7 +123,7 @@ Artifacts: `experiments/results/crazyflie_vla_ab500.json` (headline),
 `experiments/results/crazyflie_vla_ab.json` (single trace),
 `experiments/results/vla_crazyflie_episode.jsonl`.
 
-## Reproduce
+## Reproduce (Phases 1–3, laptop, Isaac 5.1)
 
 ```bash
 PY=~/.local/share/ov/pkg/isaac_sim-5.1.0/python.sh
@@ -136,11 +136,73 @@ g++ -O3 -shared -std=c++17 -fPIC -DBUILD_PYTHON_BINDINGS \
 $PY sim/hocbf_crazyflie_ab.py          # Phase 3
 ```
 
+## Phase 5 (sol-wcet-vla TASK 2) — REAL rendered camera → SmolVLM2 GPU → HOCBF
+
+**Version split (intentional):** Phases 1–3 and the TASK-1 WCET numbers run on
+Isaac Sim 5.1. Phase 5 runs on **Isaac Sim 6.0.1** on Sol, because 5.1's RTX
+renderer segfaults on the compute-node driver (595.71.05,
+`librtx.scenedb.plugin.so`, log `dbg4-63829568.out`, upstream IsaacSim#677).
+The 6.0.1 LTS container is the supported-on-r590 stack. Compat gate was
+satisfied BEFORE porting (both `sbatch`-verified):
+
+- (a) RTX render proof — job 63843563 (slurm/64_isaac6_probe3.sbatch):
+  `ISAAC6_P3:v1: OK shape=(224, 224, 3) mean=176.31 min=9 max=248`, saved
+  frame visually verified (`experiments/results/isaac6_probe3_v1.png`).
+  Working recipe on 6.0 headless: manual `omni.replicator.core`
+  render_product + rgb annotator + `rep.orchestrator.step()` until non-empty.
+  `Camera.get_rgba()` stays EMPTY headless on 6.0 (probe3 v2/v3 evidence).
+- (b) 2-episode A/B unchanged on 6.0 — job 63842534:
+  OFF 0/2, ON 2/2 (hocbf_py), `ISAAC6_COMPAT_DONE`, no scenedb crash.
+
+Pipeline (`sim/vla_realcam_flight.py`): an RTX camera prim rigid-mounted on
+the Crazyflie body (+0.05 m forward, 20° down-tilt) renders 224×224 frames at
+2 Hz → SmolVLM2-2.2B (`HuggingFaceTB/SmolVLM2-2.2B-Instruct`, **4-bit NF4 on
+the datacenter GPU**) answers `vx,vy,vz` → HOCBF guard (`hocbf_py`, real
+physical params) gates every 50 Hz control step → P-controller → motor mixer.
+**No synthetic make_cam_image(), no fabricated telemetry** — every latency row
+in the JSONL is a measured wall-clock model call.
+
+Container/dependency notes (all discovered via failed jobs, documented in
+`slurm/README_SOL.md`): 6.0.1 kit python = 3.12 → separate dep tree
+`/scratch/<user>/pylibs6`; the kit ships **no torch at all**, so
+`slurm/vla_prep6.py` installs `torch==2.9.1`+`torchvision==0.24.1` (cu128;
+torch 2.14's `_native` triton kernels need a host C compiler the container
+lacks) with bitsandbytes 0.46.1 (honest 4-bit NF4 restored) into pylibs6.
+Pylibs must be appended to sys.path AFTER SimulationApp starts (kit startup
+probe of the dormant ml_archive prebundle otherwise hits a pip-NCCL symbol
+clash and exits silently).
+
+Results (Slurm jobs, A100, partition public):
+
+| run | job | episodes | VLA queries | parse_source=model_structured | latency mean / p95 / max | crashes | guard filtered |
+|-----|-----|----------|-------------|------------------------------|--------------------------|---------|----------------|
+| proof | 63848179 | 2 | 72 | 72/72 (100%) | 1248.2 / 1244.5 / 8003.0* ms | 0 | 33.3% |
+| demo  | 63848433 | 6 | 216 | 216/216 (100%) | 1185.2 / 1254.8 / 5811.6* ms | 0 | 33.3% |
+
+*p95 excludes the first-call ~1.2→8 s compile warmup; steady-state ≈1.2 s/query
+(2 Hz budget met). quant=4bit_nf4_cuda in both runs.
+
+Observer behavior across all 6 episodes: hover/forward phases → VLA answers
+`vz=0.0` (hold) and guard passes `f=0`; scripted dive phases → VLA emits the
+worst-case `vz=-10.0` and the guard filters (`f=1`) every step, altitude keeps
+rising past the dive command (e.g. ep4: z +15.08→+20.88 m during a commanded
+−10 m/s dive) then the recover/hover command resumes — zero infeasible steps,
+zero crashes.
+
+Artifacts: `experiments/results/vla_realcam.jsonl` +
+`vla_realcam_summary.json` (6-ep demo), `vla_realcam_proof2.jsonl` +
+`vla_realcam_proof2_summary.json` (2-ep proof), rendered camera frames
+`vla_realcam_ep0_{hover,forward,dive}.png`. Reproduce:
+`sbatch slurm/32_vla_prep6.sbatch` once, then
+`sbatch --export=ALL,N_EP=6 slurm/33_vla_realcam6.sbatch`.
+
 ## Known limits
 
-- The synthetic "camera" image is state-derived, not rendered (VRAM budget);
-  the VLA's command channel is the mission text. Changing this requires
-  offloading Isaac's 2.1 GiB elsewhere or a second GPU.
-- VLA latency on CPU fp32 is ~2 min/query (4-bit → CPU fallback); ON/OFF
-  filter A/B used scripted adversarial commands for exact control.
+- Phases 1–2 (laptop, 5.1): the synthetic "camera" image is state-derived,
+  not rendered — superseded by Phase 5's real RTX-rendered frames on Sol.
+- Phase 5 "real camera" = Isaac RTX render pipeline, NOT a physical camera
+  module; sim-to-real transfer is future work.
+- VLA latency on laptop CPU fp32 is ~2 min/query (Sol GPU: ~1.2 s);
+  ON/OFF filter A/B (Phase 3/3b) used scripted adversarial commands for exact
+  control; Phase 5 let the live model's own commands flow through the guard.
 - Vortex-ring/drag are not modeled; `conservatism=1.08` is the explicit buffer.

@@ -35,12 +35,17 @@ export OMNI_KIT_ALLOW_ROOT=1
 export TOKENIZERS_PARALLELISM=false
 CACHE=/scratch/$USER/isaac_cache6
 mkdir -p "$CACHE"/{kit_cache,kit_data,ov,glcache,computecache,omni_logs,pip}
+# Do NOT set XDG_CACHE_HOME=$CACHE: only its SUBDIRS are bind-mounted into the
+# container, so $CACHE itself appears read-only in-container and 6.0's
+# omni.warp.core os.makedirs(kernel_cache_dir) raises EROFS at World() init
+# (job 63841944).  Under --home /scratch/$USER/solhome the default
+# $HOME/.cache/warp is writable and scratch-persistent.
 
 run() {
   apptainer exec --nv --fakeroot \
     --home /scratch/$USER/solhome \
     --bind "$REPO":/repo,/tmp:/tmp,$CACHE/kit_cache:/isaac-sim/kit/cache,$CACHE/kit_data:/isaac-sim/kit/data,$CACHE/ov:/root/.cache/ov,$CACHE/glcache:/root/.cache/nvidia/GLCache,$CACHE/computecache:/root/.nv/ComputeCache,$CACHE/omni_logs:/root/.nvidia-omniverse/logs,$CACHE/pip:/root/.cache/pip \
-    --env CF_USD=/repo/assets/crazyflie.usd,XDG_CACHE_HOME="$CACHE",HF_HOME=/scratch/$USER/.hf,OMNI_KIT_ALLOW_ROOT=1,TOKENIZERS_PARALLELISM=false,PYTHONUNBUFFERED=1 \
+    --env CF_USD=/repo/assets/crazyflie.usd,HF_HOME=/scratch/$USER/.hf,OMNI_KIT_ALLOW_ROOT=1,TOKENIZERS_PARALLELISM=false,PYTHONUNBUFFERED=1 \
     "$SIF" "$@"
 }
 

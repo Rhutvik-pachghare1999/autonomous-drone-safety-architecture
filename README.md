@@ -44,6 +44,55 @@ console output: [`docs/REAL_CRAZYFLIE_VLA_SIM.md`](docs/REAL_CRAZYFLIE_VLA_SIM.m
 > the C++ module across 2,450 cross-check cases; the real-time WCET/latency claim
 > is reported separately on the C++ implementation.
 
+## Live rendered-camera flight demo — Isaac Sim 6.0.1 (Phase 5)
+
+The perception loop is closed end-to-end: the drone's **onboard RTX-rendered
+camera** (224×224 RGB) feeds SmolVLM2-2.2B (4-bit NF4) on a Sol A100 at 2 Hz;
+every model command passes through the **HOCBF safety filter** before the 50 Hz
+velocity P-controller and X-mixer drive the real Crazyflie 2.X USD rigid body on
+GPU PhysX. 6 episodes × 36 queries = 216 live VLA decisions, zero crashes, every
+one parsed as structured `{"vx","vy","vz"}` model JSON (`model_structured`).
+
+```mermaid
+flowchart LR
+  CF["Crazyflie 2.X USD<br/>(27 g, PhysX)"] -->|"z, vz, roll, pitch @ 50 Hz"| CTRL["Velocity P-controller<br/>+ X mixer"]
+  CTRL -->|"forces + torques"| CF
+  CF -->|"RTX render product<br/>224x224 RGB"| ORCH["replicator<br/>orchestrator"]
+  ORCH -->|"camera frame"| VLA["SmolVLM2-2.2B<br/>4-bit NF4 on A100<br/>JSON schema<br/>2 Hz queries"]
+  VLA -->|"raw vx, vy, vz"| GUARD["HOCBF guard<br/>mass=0.027 kg, T_max=0.60 N<br/>min_alt=0.35 m<br/>clip + v_max"]
+  GUARD -->|"safe velocity cmd"| CTRL
+  GUARD -.->|"blocks unsafe steps (33.3%)"| LOG["vla_realcam.jsonl<br/>+ episode frames"]
+```
+
+| Metric | Result (from committed job artifacts) |
+|---|---|
+| Episodes / queries | 6 / 216 (job 63848433, node sg020) |
+| Structurally-valid VLA JSON parses | **216 / 216 (100% `model_structured`)** |
+| Mean latency per VLA query | 1185.2 ms (p50 1210, p95 1254; max 5812 ms = first-call warmup) |
+| Guard filtered steps | 33.3 % overall (all scripted-dive steps) |
+| Crashes | **0** |
+| End-of-run wall clock | 312.1 s for 6 episodes |
+
+Rendered frames from job 63848433 episode 0 (the same sensor feed the VLA saw),
+produced by `sim/vla_realcam_flight.py`:
+
+| Hover frame | Forward frame |
+|---|---|
+| ![Hover render](experiments/results/vla_realcam_ep0_hover.png) | ![Forward render](experiments/results/vla_realcam_ep0_forward.png) |
+
+**Run it (Sol):**
+```bash
+sbatch slurm/32_vla_prep6.sbatch                    # one-time deps into /scratch/$USER/pylibs6
+sbatch --export=ALL,N_EP=6 slurm/33_vla_realcam6.sbatch
+```
+Dependencies: Isaac Sim 6.0.1 LTS apptainer SIF + PyPI torch 2.9.1+cu128 pinned
+into pylibs6 (the 6.0.1 container ships no torch at all; pylibs6 must be added to
+`sys.path` *after* SimulationApp startup, not via PYTHONPATH at kit launch —
+kit-startup import triggers a ml_archive/NCCL symbol clash and the kit exits(0)
+silently). Full failure log and honest scope (rendered sim camera, not physical
+hardware; scripted dive phases, not continuous model-driven dives):
+`slurm/README_SOL.md`, `docs/REAL_CRAZYFLIE_VLA_SIM.md`.
+
 ## Architecture
 
 ```mermaid
@@ -92,6 +141,7 @@ flowchart LR
 | PPO policy + ONNXRuntime C hot-path | implemented, not validated here | `experiments/results/ppo_policy.onnx`, `src/rt/safety_filter.c` — requires ONNX build |
 | Formal FSM / Z3 invariants (P1–P7) | planned, not implemented | `ROADMAP.md` § "Formal verification roadmap" |
 | **Real Crazyflie 2.X VLA flight + HOCBF (HEADLINE)** | **validated, Isaac Sim 5.1.0 GPU PhysX (ASU Sol)** | 500-episode randomized A/B on the real 27 g Crazyflie 2.X USD: **filter OFF 0% survival (0/500) vs filter ON 100% (500/500)**, mean min-altitude 0.019 m vs 0.782 m, 88.7% of steps filtered. See `docs/REAL_CRAZYFLIE_VLA_SIM.md`, `experiments/results/crazyflie_vla_ab500.json`, `experiments/results/crazyflie_vla_ab500.png`. Simulation only; adversarial dive scripted. |
+| **Rendered-camera VLA flight loop (Phase 5)** | **validated, Isaac Sim 6.0.1 LTS (ASU Sol A100)** | Onboard RTX camera → SmolVLM2-2.2B 4-bit GPU @ 2 Hz → HOCBF → 50 Hz controller, 6-episode live demo: 216/216 structured parses, 0 crashes, guard filtered 33.3%. `sim/vla_realcam_flight.py`, `slurm/32_vla_prep6.sbatch` + `33_vla_realcam6.sbatch`, `experiments/results/vla_realcam*` (2-ep proof preserved as `vla_realcam_proof2*`). Version split intentional — 6.0.1 used because 5.1 segfaults RTX rendering on Sol's 595.71.05 driver (IsaacSim#677); see `slurm/README_SOL.md`. |
 | Isaac Sim / SITL closed-loop flight (cuboid surrogate) | **SUPERSEDED** | ~~100-episode A/B test: Filter ON 86% survival vs Filter OFF 16% survival~~ — these numbers were flown on an ad-hoc **2 kg cuboid point-mass surrogate**, not the real Crazyflie. Kept only as history; superseded by the real-vehicle headline above. Direct download, no auth required. |
 
 ---
@@ -254,6 +304,7 @@ All 39 pytest cases pass with Python 3.12 in a clean checkout after the
 | Claim | Value | Committed artifact | Notes |
 |---|---|---|---|
 | HOCBF filter WCET | 2,725 ns | `experiments/results/latency_raw.csv` (100,000 rows), `experiments/results/wcet_evt.json` | Captured under `SCHED_FIFO` prio 99, core 2, isolated core. Fresh-clone no-root run ≈ 31 ns. |
+| HOCBF filter WCET — ASU Sol compute node | WCET 4,849 ns (single OS-preemption outlier); p99/p99.9 = 31 / 31 ns; EVT Gumbel bound P=10⁻⁹ = 2,452.1 ns → PASS vs 100 µs deadline; max jitter 4,970 ns → PASS vs 50 µs SLA | `experiments/results/latency_raw_sol.csv` (100,000 rows), `wcet_sol.json`, `wcet_sol.png` | 100,000 trials on AMD EPYC 7413 (node sg048, Slurm job 63814754), core-pinned via taskset. Userspace run — no SCHED_FIFO/mlockall (EPERM in container): cluster portability cross-check, not a replacement for the `SCHED_FIFO` number of record. See `docs/WCET_BENCHMARK.md`. |
 | EVT tail bound (P=10⁻⁹) | 1,733 ns | `experiments/results/wcet_evt.json` | Gumbel block-maxima fit from committed CSV. |
 | Filter latency p99 | 31 ns | `experiments/results/wcet_evt.json` | Empirical p99 from committed CSV. |
 | Filter latency mean / p50 | 22.31 ns / 20 ns | `experiments/results/wcet_evt.json` | From committed CSV. |
@@ -266,8 +317,18 @@ All 39 pytest cases pass with Python 3.12 in a clean checkout after the
 | Battery poly-4 RMSE | 0.016 Ah (B0005), 0.030 Ah (B0006), 0.014 Ah (B0007) | `experiments/results/battery_validation.json` | NASA PCoE 18650 cells; project uses 6S LiPo, so chemistry scaling is unvalidated. |
 | Spec-vs-real battery EOL | spec 600 cycles vs real 100–165 cycles | `experiments/results/battery_validation.json` | Linear spec model overestimates usable life by ~4–6×. |
 | **Real Crazyflie 500-episode A/B (Isaac 5.1 GPU PhysX, ASU Sol)** | **Filter OFF 0% survival (0/500), mean min_z 0.019 m; Filter ON 100% (500/500), mean min_z 0.782 m, 88.7% steps filtered.** 500 paired episodes, domain-randomized (start_z, dive_vz, onset, vz0, wind, command delay). | `experiments/results/crazyflie_vla_ab500.json`, `experiments/results/crazyflie_vla_ab500.png` | Real Crazyflie 2.X USD (27 g), HOCBF re-parameterized (mass=0.027, T_max=0.60 N). Python HOCBF port verified identical to C++ (2,450-case cross-check). Simulation only; adversarial dive scripted (2.2B VLA refused dive prompts). |
+| **Real rendered-camera VLA flight (Phase 5, Isaac 6.0.1, ASU Sol A100)** | 6 episodes × 36 queries: **216/216 (100%) structured parses, 0 crashes**, guard filtered 33.3% of steps; mean query latency 1,185 ms (p95 1,254 ms). Onboard RTX 224×224 camera → SmolVLM2-2.2B 4-bit @ 2 Hz → HOCBF → 50 Hz controller. | `experiments/results/vla_realcam.jsonl`, `vla_realcam_summary.json`, `vla_realcam_ep0_{hover,forward,dive}.png` | Slurm jobs 63847283 (env) + 63848179 (2-ep proof) + 63848433 (6-ep demo). Rendered sim camera (RTX), not physical hardware; dive phases scripted. See `docs/REAL_CRAZYFLIE_VLA_SIM.md` § Phase 5. |
 | Real Crazyflie single-dive trace (illustrative) | Worst-case dive vz=−3.0 m/s: filter OFF crashes at t=1.56 s (min_z=0.016 m); filter ON survives (min_z=0.753 m). | `experiments/results/crazyflie_vla_ab.json`, `experiments/results/crazyflie_vla_ab.png` | Single-episode trace kept for the time-series plot; superseded as the headline by the 500-episode A/B above. |
 | ~~Isaac SIL A/B (100 episodes/mode)~~ — **SUPERSEDED (cuboid surrogate)** | ~~Filter ON: 86/100 survived (86%); Filter OFF: 16/100 survived (16%)~~ | `experiments/results/isaac_sil_summary.json` | Historical record only: flown on an ad-hoc 2 kg cuboid point-mass surrogate, NOT the real Crazyflie. Superseded by the `crazyflie_vla_ab` row above. The 14 filter-ON crashes there were actuator infeasibility (T_lb > T_max, 2 kg mass) — a documented physical limit, not filter failure. |
+
+**WCET distribution on ASU Sol** (100,000 trials, AMD EPYC 7413, taskset-pinned;
+left: measured latency vs 100 µs deadline; middle: CCDF tail with Gumbel EVT
+extrapolation to P=10⁻⁹; right: OS scheduler jitter vs 50 µs SLA):
+
+![WCET on ASU Sol — distribution, EVT tail, jitter](experiments/results/wcet_sol.png)
+
+Generated by `experiments/exp_wcet_sol.py` from the committed raw CSV
+(`experiments/results/latency_raw_sol.csv`) — Slurm job 63814754.
 
 ---
 
@@ -328,10 +389,15 @@ All 39 pytest cases pass with Python 3.12 in a clean checkout after the
 
 - **VLA bridge.** `src/perception/vla_bridge.py` (SmolVLM2-2.2B, NF4 4-bit) is
   validated in the Isaac Sim loop: 9/9 episodes commands parsed
-  `model_structured` (`experiments/results/vla_crazyflie_episode.jsonl`).
+  `model_structured` (`experiments/results/vla_crazyflie_episode.jsonl`), and
+  with a real RTX-rendered camera input on Sol A100 hardware: 216/216
+  `model_structured`, ~1.2 s/query at 2 Hz (Phase-5 demo, job 63848433).
   Honest limits: on this 4 GB-VRAM box the model runs fp32 on CPU at
   ~2 min/query (0.5 Hz command rate), and its camera input is state-derived
-  (VRAM budget) — see `docs/REAL_CRAZYFLIE_VLA_SIM.md`.
+  (VRAM budget); the rendered-camera path requires an A100-class GPU. The
+  Phase-5 frames come from a **simulated RTX render product, not a physical
+  camera**, and the dive phases are scripted — see
+  `docs/REAL_CRAZYFLIE_VLA_SIM.md`.
 
 - **ONNX hot-path unvalidated here.** The ONNXRuntime C API path in
   `safety_filter.c` is compiled out by default (`-DNO_ONNX`) because the

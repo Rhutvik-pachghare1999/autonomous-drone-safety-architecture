@@ -31,7 +31,7 @@ module purge
 module load apptainer/1.4.5
 
 SIF=/scratch/$USER/isaac601.dir   # sandbox with chmod-fixed /isaac-sim (built by fix_isaac_sandbox2, job 63856233)
-[ -f "$SIF" ] || { echo "SIF_MISSING: $SIF"; exit 1; }
+[ -e "$SIF" ] || { echo "SIF_MISSING: $SIF"; exit 1; }
 REPO=/scratch/$USER/autonomous-drone-safety-architecture
 cd "$REPO"
 export N_EP=${N_EP:-500}

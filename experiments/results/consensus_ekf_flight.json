@@ -1,0 +1,24 @@
+{
+  "run_swarm": {
+    "with_swarm": true,
+    "n_cycles": 320,
+    "n_degraded": 176,
+    "reached_degraded": true,
+    "p7_triggered": false,
+    "max_err_h": 0.1920000000005347,
+    "max_alpha": 0.9762856960296631,
+    "max_blend_shift": 0.09762856960296637,
+    "n_vio_updates": 176
+  },
+  "run_ego_only": {
+    "with_swarm": false,
+    "n_cycles": 320,
+    "n_degraded": 176,
+    "reached_degraded": true,
+    "p7_triggered": false,
+    "max_err_h": 0.8800000000000007,
+    "max_alpha": 0.9704455137252808,
+    "max_blend_shift": 0.0,
+    "n_vio_updates": 176
+  }
+}

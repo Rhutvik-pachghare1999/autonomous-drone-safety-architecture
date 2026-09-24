@@ -224,8 +224,18 @@ class ConsensusNode:
             self._pub.send_string(msg.to_json())
 
     def _collect_votes(self, timeout_s: float) -> List[ConsensusMessage]:
-        """Collect PROPOSE votes from peers within timeout."""
+        """Collect PROPOSE votes from peers within timeout.
+
+        Round synchronisation: each node self-paces its rounds (the receive
+        window below plus per-node jitter), so nodes can drift ≥1 round
+        apart. If a vote from a FUTURE round arrives, this node is behind:
+        fast-forward to that round so it can co-vote again instead of
+        silently discarding every message forever. Votes from PAST rounds
+        are stale and dropped. Found by experiments/exp_consensus_ekf_flight.py
+        (perma-stall after ~2 s of free-running rounds).
+        """
         votes = []
+        self._resynced = False
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline and self._sub is not None:
             try:
@@ -233,8 +243,16 @@ class ConsensusNode:
                 msg = ConsensusMessage.from_json(raw)
                 if msg.round_num == self._round:
                     votes.append(msg)
+                elif msg.round_num > self._round:
+                    # fell behind: skip ahead; caller re-proposes fresh
+                    self._round    = msg.round_num
+                    self._resynced = True
+                    votes = [msg]          # keep the future-round vote
+                # past-round votes are stale: drop silently
+            except zmq.Again:
+                continue                   # 100 ms idle tick, keep waiting
             except Exception:
-                break
+                break                      # malformed message: stop collecting
         return votes
 
     def _weighted_quorum(self, votes: List[ConsensusMessage],
@@ -275,18 +293,27 @@ class ConsensusNode:
         """
         Execute one observability-weighted voting round.
         Returns agreed state vector, or None if quorum not reached.
+
+        If a future-round message arrives mid-round (we fell behind), the
+        round is restarted ONCE under the caught-up round number (bounded
+        to two attempts so a malformed fast-forwarded stream cannot spin).
         """
-        my_msg = self._propose()
-        self._broadcast(my_msg)
+        for _attempt in range(2):
+            my_msg = self._propose()
+            self._broadcast(my_msg)
 
-        votes = self._collect_votes(ROUND_TIMEOUT_S)
-        agreed = self._weighted_quorum(votes, my_msg)
+            votes  = self._collect_votes(ROUND_TIMEOUT_S)
+            if self._resynced and _attempt == 0:
+                continue               # re-propose with the caught-up round
+            agreed = self._weighted_quorum(votes, my_msg)
 
-        if agreed is not None:
-            self._write_consensus(agreed, my_msg.trust_weight)
+            if agreed is not None:
+                self._write_consensus(agreed, my_msg.trust_weight)
 
+            self._round += 1
+            return agreed
         self._round += 1
-        return agreed
+        return None
 
     def _write_consensus(self, state: List[float], weight: float) -> None:
         """Write agreed state to /dev/shm/aisp_consensus for flight loop."""

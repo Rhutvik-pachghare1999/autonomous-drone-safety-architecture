@@ -38,7 +38,7 @@ export N_EP=${N_EP:-500}
 mkdir -p experiments/results
 
 run() {
-  apptainer exec --nv \
+  apptainer exec --nv --writable \
     --home /scratch/$USER/solhome \
     --bind /scratch/$USER/autonomous-drone-safety-architecture:/repo,/tmp:/tmp \
     --env CF_USD=/repo/assets/crazyflie.usd,XDG_CACHE_HOME=/scratch/$USER/.cache,HF_HOME=/scratch/$USER/.hf,OMNI_KIT_ALLOW_ROOT=1 \

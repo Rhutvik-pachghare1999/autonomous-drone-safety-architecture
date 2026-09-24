@@ -1,5 +1,20 @@
 # Running on ASU Sol (Slurm GPU cluster)
 
+**2026-09-23 sandbox note (supersedes the SIF paths below):** both shipped SIFs
+(`isaac-sim-5.1.sif` rebuilt 09-22 15:37, `isaac-sim-6.0.1.sif` 09-23 09:31)
+contain `/isaac-sim` as `root:nogroup 0750` → plain `apptainer exec` hits
+`stat /isaac-sim/python.sh: permission denied` (probe: dbg6, job 63853654).
+Two fixes, choose either:
+1. `apptainer exec --fakeroot ...` — userns root bypasses the perms (this is
+   what `slurm/20_ab_fakeroot.sbatch` did for the Phase-3b runs; cheap, no copy).
+2. Tar-extracted sandbox dir `/scratch/$USER/isaac601.dir` (built by
+   `slurm/fix_isaac_sandbox2.sbatch`, job 63856233; `apptainer build --sandbox`
+   does NOT work — host lacks unsquashfs). Exec it with `--writable` (RTX
+   shaderdb/kit cache need a writable `/isaac-sim`) and keep
+   `/dev /proc /sys /repo /tmp` as existing dirs inside the sandbox (mount-hook
+   targets — tar excluded them, re-created manually).
+The isolation A/B (Phase 3c) uses option 2 (`slurm/12_crazyflie_iso.sbatch`).
+
 Verified cluster facts (2026-09-22):
 - Login: `ssh sol` (sol.asu.edu). Login node = sol-login03. **Never run heavy work on the
   login node — submit Slurm jobs.**

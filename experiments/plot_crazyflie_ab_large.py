@@ -55,8 +55,9 @@ def main() -> None:
     labels = ["Filter OFF", "Filter ON (HOCBF)"]
     rates = [off["survival_rate"], on["survival_rate"]]
     lo_hi = [wilson_ci(off["survived"], n), wilson_ci(on["survived"], n)]
-    errs = [[r - l for r, (l, _) in zip(rates, lo_hi)],
-            [u - r for r, (_, u) in zip(rates, lo_hi)]]
+    # max(0, ..): Wilson bounds can land a float-epsilon outside [0, r]
+    errs = [[max(0.0, r - l) for r, (l, _) in zip(rates, lo_hi)],
+            [max(0.0, u - r) for r, (_, u) in zip(rates, lo_hi)]]
     bars = ax.bar(labels, [100 * r for r in rates],
                   color=["#c0392b", "#1e7f4f"], alpha=0.88, width=0.55)
     ax.errorbar(labels, [100 * r for r in rates],

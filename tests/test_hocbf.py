@@ -19,6 +19,10 @@ import hocbf  # noqa: E402  (built C++ module)
 def cbf():
     p = hocbf.HOCBFParams()
     p.mass   = 2.0
+    p.T_max  = 4.0 * 2.0 * 9.81   # 4x hover for a 2 kg quad — must be set
+                                  # explicitly: the module default (0.60 N)
+                                  # is the Crazyflie 2.X physical motor limit
+                                  # and would make 2 kg hover infeasible
     p.alpha1 = 2.0
     p.alpha2 = 1.0
     return hocbf.HOCBF(p)

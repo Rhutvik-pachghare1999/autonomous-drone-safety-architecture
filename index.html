@@ -144,7 +144,7 @@ li{font-size:10px;margin-bottom:2px}
   <div class="ch b">5-Layer Hierarchical Architecture · 10 Hz</div>
   <div class="cb">
     <div class="ls">
-      <div class="lyr l1"><div class="ln">1</div><div><div class="lnm">SE(3) Rigid-Body Physics Plant</div><div class="ld">RK4 · SO(3) projection · m=2kg · wind σ=0.05m/s</div></div></div>
+      <div class="lyr l1"><div class="ln">1</div><div><div class="lnm">SE(3) Rigid-Body Physics Plant</div><div class="ld">RK4 · SO(3) projection · m=27g (Crazyflie 2.X USD model) · wind σ=0.05m/s</div></div></div>
       <div class="lyr l2"><div class="ln">2</div><div><div class="lnm">15-State EKF Sensor Fusion</div><div class="ld">pos(3) vel(3) quat(4) bias(5) · GPS/IMU/Baro/VIO</div></div></div>
       <div class="lyr l3"><div class="ln">3</div><div><div class="lnm">PPO Asymmetric Actor-Critic</div><div class="ld">Actor 13-dim noisy · Critic 17-dim privileged · ONNX 22KB</div></div></div>
       <div class="lyr l4"><div class="ln">4</div><div><div class="lnm">Safety Kernel (FSM — planned)</div><div class="ld">7 states · 24 transitions · P1–P7 specified · HOCBF₂ + HOCBF₄</div></div></div>
@@ -329,17 +329,17 @@ li{font-size:10px;margin-bottom:2px}
         <div style="color:#555;font-size:14px">→</div>
         <div style="background:#E8F5E9;border:1.5px solid #2E7D32;border-radius:4px;padding:5px 8px;text-align:center;font-size:9px"><strong style="color:#1B5E20">T_safe</strong><br><span style="color:#555">→ plant</span></div>
       </div>
-      <div style="text-align:center;font-size:8.5px;color:#8C1D40;font-weight:700;margin-top:4px">WCET = 2,725 ns · T_max = 78.48 N</div>
+      <div style="text-align:center;font-size:8.5px;color:#8C1D40;font-weight:700;margin-top:4px">WCET = 2,725 ns · T_max = 0.60 N</div>
     </div>
     <div class="div"></div>
     <table class="rt">
       <tr><th>Boundary State</th><th class="nr">T_lb (N)</th><th class="nr">Margin</th><th>Result</th></tr>
-      <tr><td>Hover</td><td class="nr">17.62</td><td class="nr hi">60.86N</td><td><span class="bpass">PASS</span></td></tr>
-      <tr><td>Max descent vz=−5m/s</td><td class="nr">27.62</td><td class="nr hi">50.86N</td><td><span class="bpass">PASS</span></td></tr>
-      <tr><td>Near-ground + tilt</td><td class="nr">50.28</td><td class="nr hi">28.20N</td><td><span class="bpass">PASS</span></td></tr>
-      <tr><td><strong>Worst-case combined</strong></td><td class="nr"><strong>78.48</strong></td><td class="nr" style="color:#E65100;font-weight:700">0.00N</td><td><span class="bwarn">TIGHT</span></td></tr>
+      <tr><td>Hover</td><td class="nr">0.24</td><td class="nr hi">0.36N</td><td><span class="bpass">PASS</span></td></tr>
+      <tr><td>Max descent vz=−5m/s</td><td class="nr">0.37</td><td class="nr hi">0.23N</td><td><span class="bpass">PASS</span></td></tr>
+      <tr><td>Near-ground + tilt</td><td class="nr">0.68</td><td class="nr" style="color:#E65100;font-weight:700">−0.08N</td><td><span class="bwarn">INFEASIBLE → T_max fallback</span></td></tr>
+      <tr><td><strong>Worst-case combined</strong></td><td class="nr"><strong>1.06</strong></td><td class="nr" style="color:#E65100;font-weight:700">−0.46N</td><td><span class="bwarn">INFEASIBLE → T_max</span></td></tr>
     </table>
-    <p style="font-size:8px;color:#777;">T_max=78.48N. Control invariant set <strong>specified</strong> — feasibility analysis planned. Ref: Xiao &amp; Belta (2022) IEEE TAC.</p>
+    <p style="font-size:8px;color:#777;">T_max=0.60N (Crazyflie 2.X). Infeasible rows: no thrust satisfies the CBF constraint — least-violation fallback is T_max (more descent damping than hover). Control invariant set <strong>specified</strong> — feasibility analysis planned. Ref: Xiao &amp; Belta (2022) IEEE TAC.</p>
   </div>
 </div>
 
@@ -434,23 +434,23 @@ li{font-size:10px;margin-bottom:2px}
     <div class="mg" style="margin-bottom:5px;flex-shrink:0">
       <div class="m g"><div class="mv">100%</div><div class="ml">Survival (1000/1000)</div></div>
       <div class="m o"><div class="mv">90.7%</div><div class="ml">HOCBF Triggered</div></div>
-      <div class="m b"><div class="mv">397N</div><div class="ml">Max Correction at vz=−100m/s</div></div>
-      <div class="m p"><div class="mv">−380N</div><div class="ml">T_nom at vz=−100m/s</div></div>
+      <div class="m b"><div class="mv">5.7N</div><div class="ml">Max Correction at vz=−100m/s</div></div>
+      <div class="m p"><div class="mv">−5.1N</div><div class="ml">T_nom at vz=−100m/s</div></div>
     </div>
-    <!-- T_nom vs T_safe inline SVG — real data: M=2kg, G=9.81, T_max=78.48N -->
+    <!-- T_nom vs T_safe inline SVG — real data: Crazyflie 2.X M=0.027kg, G=9.81, T_max=0.60N -->
     <!-- x: log scale |vz| 0.1→100 m/s mapped to SVG 40→270 (log10: -1→2, range=3) -->
-    <!-- y: thrust -400→100N mapped to SVG 10→170 (range=500N, scale=160/500=0.32px/N) -->
-    <!-- T_nom = M*G + M*vz*2 = 19.62 + 4*vz_cmd. At vz=-0.1: 19.22N. At vz=-100: -380.38N -->
-    <!-- T_safe = clamp(T_nom, T_lb, T_max). T_lb≈19.62 at hover. So T_safe≈T_max=78.48 when T_nom>78.48, T_nom when 19.62<T_nom<78.48, T_lb when T_nom<T_lb -->
+    <!-- y: thrust mapped y(N) = 115 - N*25 (1N->90, 0N->115, -2N->165) -->
+    <!-- T_nom = M*G + M*vz*2 = 0.265 + 0.054*vz_cmd. At vz=-0.1: 0.259N. At vz=-100: -5.14N -->
+    <!-- T_safe = clamp(T_nom, T_lb, T_max); T_lb>0.60 (infeasible) when vz < -5.4 m/s -> T_max (least-violation fallback) -->
     <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;width:100%;height:100%;border:1px solid #ddd;border-radius:3px;background:#fff">
       <line x1="40" y1="10" x2="40" y2="170" stroke="#999" stroke-width="0.8"/>
       <line x1="40" y1="170" x2="270" y2="170" stroke="#999" stroke-width="0.8"/>
       <!-- y labels: 100N→y=10+(-100-100)*(-0.32)=10+64=74? Let me use: y=90-(N*0.32) where 0N→y=90 -->
       <!-- y(N) = 90 - N*0.32. 100N→58, 0N→90, -100N→122, -200N→154, -380N→212(clip to 170) -->
-      <text x="38" y="60" text-anchor="end" font-size="7" fill="#555">100N</text>
-      <text x="38" y="92" text-anchor="end" font-size="7" fill="#555">0</text>
-      <text x="38" y="124" text-anchor="end" font-size="7" fill="#555">−100N</text>
-      <text x="38" y="156" text-anchor="end" font-size="7" fill="#555">−200N</text>
+      <text x="38" y="92" text-anchor="end" font-size="7" fill="#555">1.0N</text>
+      <text x="38" y="117" text-anchor="end" font-size="7" fill="#555">0</text>
+      <text x="38" y="142" text-anchor="end" font-size="7" fill="#555">−1N</text>
+      <text x="38" y="167" text-anchor="end" font-size="7" fill="#555">−2N</text>
       <!-- x log labels: 0.1→x=40, 1→x=117, 10→x=193, 100→x=270 -->
       <text x="40" y="178" text-anchor="middle" font-size="7" fill="#555">0.1</text>
       <text x="117" y="178" text-anchor="middle" font-size="7" fill="#555">1</text>
@@ -459,23 +459,21 @@ li{font-size:10px;margin-bottom:2px}
       <text x="155" y="188" text-anchor="middle" font-size="7" fill="#333">|vz_cmd| (m/s) [log scale]</text>
       <text x="10" y="95" text-anchor="middle" font-size="7" fill="#333" transform="rotate(-90,10,95)">Thrust (N)</text>
       <line x1="40" y1="90" x2="270" y2="90" stroke="#eee" stroke-width="0.5"/>
-      <line x1="40" y1="122" x2="270" y2="122" stroke="#eee" stroke-width="0.5"/>
-      <line x1="40" y1="154" x2="270" y2="154" stroke="#eee" stroke-width="0.5"/>
-      <!-- Hover thrust 19.62N → y=90-19.62*0.32=83.7≈84 -->
-      <line x1="40" y1="84" x2="270" y2="84" stroke="#333" stroke-width="0.8" stroke-dasharray="3,2"/>
-      <text x="272" y="86" font-size="6" fill="#333">19.6N</text>
-      <!-- T_max=78.48N → y=90-78.48*0.32=64.9≈65 -->
-      <line x1="40" y1="65" x2="270" y2="65" stroke="red" stroke-width="0.8" stroke-dasharray="3,2"/>
-      <text x="272" y="67" font-size="6" fill="red">78.5N</text>
+      <line x1="40" y1="115" x2="270" y2="115" stroke="#eee" stroke-width="0.5"/>
+      <line x1="40" y1="140" x2="270" y2="140" stroke="#eee" stroke-width="0.5"/>
+      <!-- Hover thrust 0.26487N → y=115-0.26487*25=108.4≈108 -->
+      <line x1="40" y1="108" x2="270" y2="108" stroke="#333" stroke-width="0.8" stroke-dasharray="3,2"/>
+      <text x="272" y="110" font-size="6" fill="#333">0.26N</text>
+      <!-- T_max=0.60N → y=115-0.60*25=100 -->
+      <line x1="40" y1="100" x2="270" y2="100" stroke="red" stroke-width="0.8" stroke-dasharray="3,2"/>
+      <text x="272" y="102" font-size="6" fill="red">0.60N</text>
       <!-- HOCBF correction shading between T_nom and T_safe where T_nom < T_lb -->
-      <!-- T_nom drops below T_lb (~19.62N) when vz_cmd < ~0: always for negative vz -->
-      <!-- Shade region: from vz=~0.5 (x=97) to vz=100 (x=270), between T_nom line and T_safe=78.48 line -->
-      <polygon points="97,84 270,170 270,65 97,65" fill="#4CAF50" opacity="0.12"/>
-      <!-- T_nom line: at vz=0.1→T=19.22N→y=84, at vz=1→T=15.62N→y=85, at vz=5→T=-0.38N→y=90, at vz=10→T=-20.38N→y=97, at vz=50→T=-180.38N→y=148, at vz=100→T=-380.38N→y=212(clip170) -->
-      <polyline points="40,84 117,85 163,90 193,97 247,148 270,170" fill="none" stroke="#C62828" stroke-width="2"/>
-      <!-- T_safe line: clamped to [T_lb, T_max]. T_lb≈19.62 at hover. T_safe≈78.48 for all unsafe commands -->
-      <!-- At low vz T_nom≈T_safe, diverges around vz=0.5 -->
-      <polyline points="40,84 97,84 270,65" fill="none" stroke="#1565C0" stroke-width="2"/>
+      <!-- Shade region: from vz≈5.4 m/s (x≈173, T_lb crosses T_max) to vz=100 (x=270) -->
+      <polygon points="173,108 270,170 270,100 173,100" fill="#4CAF50" opacity="0.12"/>
+      <!-- T_nom: vz=0.1→T=0.259N→y=108.5; vz=1→0.211N→y=109.7; vz=5→-0.005N→y=115.1; vz=10→-0.275N→y=121.9; vz=50→-2.435N→y=175.9(clip170); vz=100→-5.14N→y=243(clip170) -->
+      <polyline points="40,108.5 117,109.7 170,115.1 193,121.9 247,170 270,170" fill="none" stroke="#C62828" stroke-width="2"/>
+      <!-- T_safe: clamped to [T_lb≈0.265N hover, T_max]. Infeasible (T_lb>T_max) beyond vz≈-5.4 m/s -> T_max (least-violation fallback) -->
+      <polyline points="40,108 173,108 270,100" fill="none" stroke="#1565C0" stroke-width="2"/>
       <!-- legend -->
       <line x1="45" y1="22" x2="62" y2="22" stroke="#C62828" stroke-width="2"/>
       <text x="64" y="25" font-size="6.5" fill="#333">T_nom (VLA — unsafe)</text>
@@ -484,7 +482,7 @@ li{font-size:10px;margin-bottom:2px}
       <rect x="45" y="40" width="17" height="7" fill="#4CAF50" opacity="0.3"/>
       <text x="64" y="47" font-size="6.5" fill="#333">HOCBF correction zone</text>
     </svg>
-    <div class="cap" style="flex-shrink:0">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−380N → T_safe=78.5N.</div>
+    <div class="cap" style="flex-shrink:0">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100m/s: T_nom=−5.1N → T_safe=0.60N (T_max, least-violation fallback).</div>
   </div>
 </div>
 
@@ -499,7 +497,7 @@ li{font-size:10px;margin-bottom:2px}
     <div class="mg" style="margin:4px 0;flex-shrink:0">
       <div class="m g"><div class="mv">100%</div><div class="ml">Commit Rate (100/100)</div></div>
       <div class="m g"><div class="mv">100%</div><div class="ml">Byzantine Rejection</div></div>
-      <div class="m b"><div class="mv">0.043ms</div><div class="ml">Mean Commit Latency</div></div>
+      <div class="m b"><div class="mv">0.043ms</div><div class="ml">Mean Commit Compute Time</div></div>
       <div class="m p"><div class="mv">0.997</div><div class="ml">Mean Quorum Fraction</div></div>
     </div>
     <!-- Node trust weights bar chart — real data: w=exp(-σ²/2σ²_warn), σ²_warn=5.0 -->

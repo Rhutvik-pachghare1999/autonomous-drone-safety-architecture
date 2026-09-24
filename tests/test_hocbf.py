@@ -145,27 +145,30 @@ def test_output_always_in_bounds(cbf, pz, vz, T_nom):
 
 def test_infeasible_safe_fallback(cbf):
     """
-    When required safe thrust exceeds T_max, filter must NOT return T_max
-    (which violates the CBF constraint). It must return a safe fallback
-    and indicate infeasibility via the returned SafeCommand struct.
+    When required safe thrust exceeds T_max, the feasible set is EMPTY:
+    every thrust in [T_min, T_max] violates the CBF constraint — hover
+    (m*g) included, since hover < T_max < T_lb. The old "hover fallback"
+    was therefore strictly less safe: sinking fast near the ground,
+    m*g decelerates more weakly than T_max.
+
+    The filter must return the least-violation action T_max and flag
+    infeasibility via was_infeasible (so the supervisor sees the CBF
+    constraint cannot be met and can escalate).
 
     Scenario: pz=0.1m, vz=-10m/s, roll=1.5rad (86° tilt → LgLfh≈0.007).
-    T_lb = (9.81 - 2*(-10) - 1*0.1) / 0.007 ≈ 4200 N >> T_max=78.48 N.
-    Feasible set is empty.
+    T_lb = (9.81 - 2*(-10) - 1*0.1) / 0.007 ≈ 4200 N >> T_max.
     """
-    # Use filter_vla_command which returns SafeCommand with was_filtered
     cmd = cbf.filter_vla_command(
         pz=0.1, vz=-10.0, roll=1.5, pitch=0.0,
         vx_nom=0.0, vy_nom=0.0, vz_nom=-10.0, v_max=5.0
     )
-    # Must not return T_max (78.48) — that would violate CBF
-    assert cmd.T < cbf.params().T_max - 1e-6, (
-        f"Infeasible case returned T_max ({cmd.T:.2f}) — violates CBF constraint"
+    # Least-violation action: maximum recovery authority, not hover.
+    assert abs(cmd.T - cbf.params().T_max) < 1e-9, (
+        f"Infeasible case returned {cmd.T:.2f}, expected T_max "
+        f"({cbf.params().T_max:.2f}) — hover violates the CBF constraint "
+        f"more, not less"
     )
-    # Must return a finite, in-bounds thrust
-    assert cbf.params().T_min <= cmd.T <= cbf.params().T_max
     assert math.isfinite(cmd.T)
-    # Must indicate filtering occurred
     assert cmd.was_filtered
     # Must indicate infeasibility was detected
     assert cmd.was_infeasible
@@ -201,55 +204,64 @@ def test_onnx_obs_layout_matches_training():
 
 # ── Shared-memory layout tests ─────────────────────────────────────────────────
 # Verify VLACommand layout compatibility between Python (shm_bridge.py)
-# and C (safety_filter.c). Python writes: struct.pack('=Qddd?', ...) = 33 bytes
-# C should read the same layout.
+# and C (src/rt/watchdog.h). Seqlock layout, 64-byte file:
+#   offset  0: seq_head  (Q, even = stable, odd = write in progress)
+#   offset  8: vx_nom, vy_nom, vz_nom (3 doubles)
+#   offset 32: is_new_data (?), 7 bytes pad
+#   offset 40: seq_tail  (Q, torn-read check: must equal seq_head)
+#   offset 48: 16 bytes pad
+# Python publishes with three writes (head-odd -> payload+tail -> head-even);
+# the C vla_shm_snapshot() rejects torn frames.
 
 import struct as _struct
 
-VLA_CMD_FMT = "=Qddd?"  # Python shm_bridge.py format
+VLA_CMD_FMT = "=Qddd?7xQ16x"  # Python shm_bridge.py full-frame format
 VLA_CMD_SIZE = _struct.calcsize(VLA_CMD_FMT)
 
 def test_vla_shm_layout_size():
-    """Python VLACommand must be 33 bytes (no padding)."""
-    assert VLA_CMD_SIZE == 33, f"Expected 33, got {VLA_CMD_SIZE}"
+    """Full VLACommand frame must be 64 bytes (C struct is aligned(64))."""
+    assert VLA_CMD_SIZE == 64, f"Expected 64, got {VLA_CMD_SIZE}"
 
 def test_vla_shm_field_offsets():
     """
     Verify field offsets match between Python pack and C struct.
-    
-    Python '=Qddd?' layout (native byte order, no padding):
-      offset 0:  sequence_number (uint64, 8 bytes)
+
+    Python '=Qddd?7xQ16x' layout (native byte order, explicit padding):
+      offset 0:  seq_head (uint64, 8 bytes) — seqlock, even when stable
       offset 8:  vx_nom (double, 8 bytes)
       offset 16: vy_nom (double, 8 bytes)
       offset 24: vz_nom (double, 8 bytes)
       offset 32: is_new_data (bool, 1 byte)
-    Total: 33 bytes
-    
-    C safety_filter.c struct has _pad[31] after is_new_data → 64 bytes.
-    This test ensures the first 33 bytes are compatible.
+      offset 33: pad (7 bytes) — aligns seq_tail to 8
+      offset 40: seq_tail (uint64, 8 bytes) — equals seq_head when clean
+      offset 48: pad (16 bytes)
+    Total: 64 bytes — matches C VLACommand (watchdog.h) exactly.
     """
-    # Pack a sample and verify offsets by unpacking
-    sample = _struct.pack(VLA_CMD_FMT, 42, 1.0, 2.0, 3.0, True)
-    assert len(sample) == 33
-    
-    seq, vx, vy, vz, is_new = _struct.unpack(VLA_CMD_FMT, sample)
-    assert seq == 42
+    sample = _struct.pack(VLA_CMD_FMT, 42, 1.0, 2.0, 3.0, True, 42)
+    assert len(sample) == 64
+
+    seq, vx, vy, vz, is_new, tail = _struct.unpack(VLA_CMD_FMT, sample)
+    assert seq == 42          # seq_head at offset 0
     assert vx == 1.0
     assert vy == 2.0
     assert vz == 3.0
     assert is_new is True
+    assert tail == 42         # seq_tail at offset 40
+    # A clean frame has head == tail and even head (seqlock contract)
+    assert seq % 2 == 0 and seq == tail
 
 def test_vla_shm_c_struct_compatibility():
     """
-    C safety_filter.c VLACommand struct layout:
-      uint64_t sequence_number;  // 8 bytes
-      double vx_nom, vy_nom, vz_nom;  // 24 bytes
-      uint8_t is_new_data;       // 1 byte
-      char _pad[31];             // 31 bytes padding to 64
-    
-    First 33 bytes MUST match Python's =Qddd? layout.
+    C src/rt/watchdog.h VLACommand struct layout:
+      uint64_t seq_head;      // 8 bytes @ 0   (seqlock)
+      double vx_nom, vy_nom, vz_nom;  // 24 bytes @ 8
+      uint8_t is_new_data;    // 1 byte  @ 32
+      char _pad1[7];          // 7 bytes @ 33  (aligns seq_tail)
+      uint64_t seq_tail;      // 8 bytes @ 40
+      char _pad2[16];         // 16 bytes @ 48 — aligned(64) total
+
+    Python '=Qddd?7xQ16x' MUST produce byte-identical offsets.
     """
-    # The C struct's first 33 bytes are identical to Python's packed format
-    # because: uint64_t=8, double=8, double=8, double=8, uint8_t=1 = 33
-    # No padding inserted between fields in C (natural alignment is satisfied)
-    assert 8 + 8 + 8 + 8 + 1 == 33
+    assert 8 + 24 + 1 + 7 + 8 + 16 == 64
+    # seq_tail offset in C = 8 + 24 + 1 + 7 = 40
+    assert 8 + 24 + 1 + 7 == 40

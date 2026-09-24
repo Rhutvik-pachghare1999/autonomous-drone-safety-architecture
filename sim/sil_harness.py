@@ -144,21 +144,15 @@ class SILHarness:
         print(f"  Running NaN injection scenario ({n_cycles} cycles)...")
         for i in range(n_cycles):
             if i == 100:
-                # Inject NaN
-                import struct
-                nan_bytes = struct.pack('=Qddd?', i, 0.0, 0.0, float('nan'), True)
-                self.publisher.shm.seek(0)
-                self.publisher.shm.write(nan_bytes)
+                # Inject NaN via the same seqlock write path as normal
+                # publishes (raw struct.pack would desync the wire layout)
+                self.publisher.publish(0.0, 0.0, float('nan'))
             elif i == 200:
                 # Inject Inf
-                inf_bytes = struct.pack('=Qddd?', i, 0.0, 0.0, float('inf'), True)
-                self.publisher.shm.seek(0)
-                self.publisher.shm.write(inf_bytes)
+                self.publisher.publish(0.0, 0.0, float('inf'))
             elif i == 300:
                 # Inject negative Inf
-                ninf_bytes = struct.pack('=Qddd?', i, 0.0, 0.0, float('-inf'), True)
-                self.publisher.shm.seek(0)
-                self.publisher.shm.write(ninf_bytes)
+                self.publisher.publish(0.0, 0.0, float('-inf'))
             else:
                 self.publisher.publish(0.0, 0.0, 0.0)
             time.sleep(0.001)

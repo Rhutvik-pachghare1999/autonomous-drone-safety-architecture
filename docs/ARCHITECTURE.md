@@ -23,7 +23,7 @@ flowchart LR
     RL["PPO / RL policy<br/>(optional ONNX hot path)"]
   end
 
-  subgraph SafetyKernel["Hard real-time safety kernel (SCHED_FIFO)"]
+  subgraph SafetyKernel["Safety kernel (SCHED_FIFO, bounded-latency)"]
     WD["Stale-data watchdog<br/>STARTUP → FRESH → STALE"]
     HOCBF["HOCBF safety filter (C++/C99)<br/>mass = 0.027 kg, T_max = 0.60 N<br/>project command onto safe set"]
   end

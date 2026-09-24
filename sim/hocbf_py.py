@@ -13,7 +13,8 @@ used for any timing claim.
 
 Ported exactly from hocbf.cpp:
   HOCBFParams defaults, filter_thrust (incl. non-finite fail-safe, LgLfh floor
-  0.05, conservatism 1.08 on positive T_lb, infeasibility -> hover fallback),
+  0.05, conservatism 1.08 on positive T_lb, infeasibility -> T_max
+  least-violation fallback),
   and filter_vla_command (T_nom = m*g + m*vz_nom*2.0, horizontal v_max clip,
   was_filtered / was_infeasible flags).
 """
@@ -78,9 +79,12 @@ class HOCBF:
         T_lb_raw = rhs / LgLfh_safe
         T_lb = T_lb_raw * p.conservatism if T_lb_raw > 0.0 else T_lb_raw
 
-        # Infeasibility: T_lb > T_max -> hover fallback (never emit T_max)
+        # Infeasibility: T_lb > T_max means no thrust satisfies the CBF
+        # constraint (hover included). Least-violation action = maximum
+        # thrust (decelerates a sinking descent harder than hover).
+        # Matches src/control/hocbf.cpp and src/rt/safety_filter.c exactly.
         if T_lb > p.T_max:
-            return _clamp(p.mass * p.g, p.T_min, p.T_max)
+            return p.T_max
 
         # Analytical QP projection onto feasible set
         return _clamp(T_nom, max(p.T_min, T_lb), p.T_max)

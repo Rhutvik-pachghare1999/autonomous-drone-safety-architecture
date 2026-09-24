@@ -6,7 +6,9 @@
 
 **[View Research Poster](https://rhutvik-pachghare1999.github.io/autonomous-drone-safety-architecture/)**
 
-Research prototype: a hard real-time safety kernel that wraps an AI-driven
+Research prototype: a bounded-latency safety kernel (SCHED_FIFO userspace on
+Linux, measured 2.7 µs WCET over 10⁵ cycles — a soft-real-time budget enforced
+by O(1) arithmetic, not a formal deadline guarantee) that wraps an AI-driven
 quadrotor flight stack. The goal is to intercept every high-level command,
 project it through a physical safety filter, and clamp the actuator command
 before it reaches the motors.
@@ -122,7 +124,7 @@ flowchart LR
     RL["PPO / RL policy<br/>(optional ONNX hot path)"]
   end
 
-  subgraph SafetyKernel["Hard real-time safety kernel (SCHED_FIFO)"]
+  subgraph SafetyKernel["Safety kernel (SCHED_FIFO, bounded-latency)"]
     WD["Stale-data watchdog<br/>STARTUP → FRESH → STALE"]
     HOCBF["HOCBF safety filter (C++/C99)<br/>mass = 0.027 kg, T_max = 0.60 N<br/>project command onto safe set"]
   end
@@ -152,7 +154,7 @@ flowchart LR
 |---|---|---|
 | C99 + pybind11 HOCBF altitude safety filter | implemented, tested | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_hocbf.py`, `tests/test_input_validation.py` |
 | NaN/Inf input validation / fail-safe | implemented, tested | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_input_validation.py` |
-| Actuator infeasibility handling (T_lb > T_max → hover fallback) | implemented, tested | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_hocbf.py::test_infeasible_safe_fallback` |
+| Actuator infeasibility handling (T_lb > T_max → T_max least-violation fallback; hover violates the constraint MORE) | implemented, tested (deterministic + property-based + NaN-parity) | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_hocbf.py::test_infeasible_safe_fallback`, `tests/test_hocbf_properties.py` |
 | POSIX `/dev/shm` zero-copy command IPC | implemented | `src/utils/shm_bridge.py`, `src/rt/safety_filter.c` |
 | EKF covariance gating / mode ladder (P7) | partially implemented | `src/estimation/ekf_gating.py` computes threshold; RTL FSM action is planned |
 | Stale VLA watchdog (STARTUP/FRESH/STALE state machine) | implemented, tested | `src/rt/safety_filter.c`, `tests/test_hocbf.py` watchdog tests |
@@ -182,7 +184,7 @@ Hard-RT core (SCHED_FIFO prio 99, isolated)
        ├── HOCBF filter .............. O(1) arithmetic, WCET 2,725 ns
        ├── jitter watchdog ........... per-cycle deviation from expected
        ├── stale-VLA watchdog ........ STARTUP/FRESH/STALE state machine, hover fallback
-       └── infeasibility handling .... T_lb > T_max → hover thrust fallback
+       └── infeasibility handling .... T_lb > T_max → T_max least-violation fallback + was_infeasible flag
 
 State estimation:
   └── ekf_gating.py .................. 15-state EKF mode ladder (NOMINAL / DEGRADED / COLLAPSED)
@@ -200,7 +202,7 @@ require external runtime dependencies (Isaac Sim, ONNX runtime library, GPU,
 downloaded VLA weights) or are planned; see the status column in "What is
 implemented" and `docs/ARCHITECTURE.md`.
 
-**Isaac Sim GPU Physics Status:** Isaac Sim 5.1.0 runs GPU PhysX on RTX 3050 Ti (4GB VRAM, Warp 1.8.2/CUDA 12.8). Current result: real Crazyflie 2.X (27 g) flown by SmolVLM2-2.2B and guarded by HOCBF — see `docs/REAL_CRAZYFLIE_VLA_SIM.md`. *(SUPERSEDED history: an earlier 100-episode A/B on a 2 kg cuboid surrogate reported 86%/16% survival ON/OFF with 294 infeasibility events — those numbers describe the cuboid, not the real vehicle, and are not current evidence.)* Direct download from NVIDIA, no Omniverse Launcher/auth required.
+**Isaac Sim GPU Physics Status:** Isaac Sim 5.1.0 runs GPU PhysX on RTX 3050 Ti (4GB VRAM, Warp 1.8.2/CUDA 12.8). Current result: the manufacturer-accurate Crazyflie 2.X USD model (27 g, simulated rigid body — not hardware) flown by SmolVLM2-2.2B and guarded by HOCBF — see `docs/REAL_CRAZYFLIE_VLA_SIM.md`. *(SUPERSEDED history: an earlier 100-episode A/B on a 2 kg cuboid surrogate reported 86%/16% survival ON/OFF with 294 infeasibility events — those numbers describe the cuboid, not the real vehicle, and are not current evidence.)* Direct download from NVIDIA, no Omniverse Launcher/auth required.
 
 ---
 

@@ -61,5 +61,8 @@ jobs:
       - name: Consensus unit test
         run: PYTHONPATH=. python services/consensus_node.py --test
 
+      - name: End-to-end consensus + EKF flight integration (real ZMQ + SHM, ~15s)
+        run: PYTHONPATH=. python experiments/exp_consensus_ekf_flight.py
+
       - name: SE(3) plant smoke test
         run: PYTHONPATH=. python -c "from sim.domain_rand import test_rigid_body_plant; test_rigid_body_plant()"

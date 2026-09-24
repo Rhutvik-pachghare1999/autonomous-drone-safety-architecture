@@ -66,9 +66,10 @@ public:
      * Analytical solution (1-variable, 1-constraint QP):
      *   T* = clamp(T_nom, T_lb, T_max)
      *
-     * If the feasible set is empty (T_lb > T_max), returns hover thrust
-     * (m*g clamped to actuator limits) as a safe fallback instead of
-     * returning T_max which would violate the CBF constraint.
+     * If the feasible set is empty (T_lb > T_max), no thrust satisfies the
+     * CBF constraint — every candidate violates it, including hover.
+     * Returns T_max (maximum recovery authority = least violation), which
+     * is strictly safer than hover when sinking fast near the ground.
      *
      * @param pz    Altitude (m), must be >= 0
      * @param vz    Vertical velocity (m/s), positive = up
@@ -119,12 +120,15 @@ public:
         const double T_lb_raw = rhs / LgLfh_safe;
         const double T_lb = (T_lb_raw > 0.0) ? T_lb_raw * p_.conservatism : T_lb_raw;
 
-        // Check for infeasibility: required safe thrust exceeds actuator max.
-        // If T_lb > T_max, the feasible set [max(T_min, T_lb), T_max] is empty.
-        // Returning T_max would violate the CBF constraint. Instead, fall back
-        // to hover thrust (m*g) which is the safest physically achievable action.
+        // Check for infeasibility: T_lb > T_max means NO thrust in
+        // [T_min, T_max] satisfies the CBF constraint — every candidate
+        // violates it, including hover (m*g < T_max < T_lb). The
+        // least-violation action is maximum thrust: sinking fast near the
+        // ground, T_max decelerates harder than hover. The old hover
+        // fallback was strictly less safe here. Matches
+        // src/rt/safety_filter.c and sim/hocbf_py.py exactly.
         if (T_lb > p_.T_max) {
-            return std::clamp(p_.mass * p_.g, p_.T_min, p_.T_max);
+            return p_.T_max;
         }
 
         // Analytical QP solution: project T_nom onto feasible set

@@ -48,9 +48,12 @@ def test_output_within_actuator_bounds(pz, vz, roll, pitch, T_nom):
 @settings(max_examples=2000)
 def test_cbf_constraint_or_infeasible_fallback(pz, vz, roll, pitch, T_nom):
     """
-    P2: the output either satisfies the pure CBF constraint
-        LgLfh*T - g + a1*vz + a2*pz >= 0, OR equals the infeasible-case hover
-        fallback (m*g clamped). It is NEVER an unsafe pass-through of T_nom.
+    P2: feasible region — output satisfies (conservatism-inflated) lower
+    bound. Infeasible region — NO output can satisfy the CBF constraint
+    (hover included), so the filter returns T_max, the least-violation
+    action: it maximizes LgLfh*T - g + a1*vz + a2*pz over the actuator
+    range. Any T < T_max (e.g. hover) violates the constraint strictly
+    MORE. It is NEVER an unsafe pass-through of T_nom.
     """
     c = _cbf()
     p = c.params()
@@ -63,11 +66,16 @@ def test_cbf_constraint_or_infeasible_fallback(pz, vz, roll, pitch, T_nom):
     LgLfh = max(math.cos(roll) * math.cos(pitch) / p.mass, 0.05)
     T_lb_raw = (p.g - p.alpha1 * vz - p.alpha2 * pz) / LgLfh
     T_lb = T_lb_raw * CONSERVATISM if T_lb_raw > 0.0 else T_lb_raw
-    cbf_lhs = LgLfh * T - p.g + p.alpha1 * vz + p.alpha2 * pz
-    hover = min(max(p.mass * p.g, p.T_min), p.T_max)
 
-    if T_lb > p.T_max:  # infeasible region: documented hover fallback
-        assert abs(T - hover) < 1e-3, f"infeasible case must return hover, got {T}"
+    if T_lb > p.T_max:  # infeasible region: least-violation = max thrust
+        assert abs(T - p.T_max) < 1e-6, (
+            f"infeasible case must return T_max (least violation), got {T}; "
+            f"hover violates the CBF constraint strictly more"
+        )
+        # Sanity: T_max indeed dominates hover in constraint satisfaction
+        lhs_tmax = LgLfh * p.T_max - p.g + p.alpha1 * vz + p.alpha2 * pz
+        lhs_hover = LgLfh * min(p.mass * p.g, p.T_max) - p.g + p.alpha1 * vz + p.alpha2 * pz
+        assert lhs_tmax >= lhs_hover
     else:
         # feasible: output must satisfy the (conservatism-inflated) lower bound
         assert T >= min(T_lb, p.T_max) - 1e-3, \

@@ -263,7 +263,20 @@ def main() -> None:
 
     out = "experiments/results/consensus_ekf_flight.json"
     with open(out, "w") as f:
-        json.dump({"run_swarm": a, "run_ego_only": b}, f, indent=2)
+        json.dump({
+            "run_swarm": a,
+            "run_ego_only": b,
+            # VIO ground-truth source scope note (reviewer-facing honesty):
+            # y_true comes from /dev/shm/aisp_gt_state written by the SAME
+            # point-mass plant the controller tracks (air-gap: EKF never reads
+            # its own state). This is NOT a VIOC pipeline output — horizontal
+            # velocity bounds therefore do NOT represent real VIO+EKF coupling.
+            "vio_source": (
+                "synthetic plant ground truth via /dev/shm/aisp_gt_state "
+                "(NOT a vision pipeline; offline mode would use a zero "
+                "vector — see ekf_gating.py inject_vio_factor docstring)"
+            ),
+        }, f, indent=2)
     print(f"\nResults saved: {out}")
 
 

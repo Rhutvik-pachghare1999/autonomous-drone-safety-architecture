@@ -103,14 +103,14 @@ static inline double hocbf_filter(double pz, double vz, double roll,
     if (T_lb > 0.0) T_lb *= CONSERVATISM;  /* reality-gap buffer matches hocbf.cpp */
     double lo   = T_lb > T_MIN ? T_lb : T_MIN;
 
-    /* Infeasibility check: if required safe thrust exceeds T_MAX, the
-     * feasible set is empty. Returning T_MAX would violate the CBF
-     * constraint. Fall back to hover thrust (m*g) as the safest
-     * physically achievable action. */
-    if (lo > T_MAX) {
-        double hover = GRAVITY * MASS;
-        return hover > T_MAX ? T_MAX : hover;
-    }
+    /* Infeasibility: T_lb > T_MAX means NO thrust in [T_MIN, T_MAX]
+     * satisfies the CBF constraint — every candidate violates it,
+     * including hover (m·g < T_MAX < T_lb when T_MAX >= m·g, which holds
+     * for the Crazyflie). The least-violation action is maximum thrust:
+     * sinking fast near ground, T_MAX decelerates harder than hover.
+     * The old hover fallback was strictly less safe here. Matches
+     * src/control/hocbf.cpp and sim/hocbf_py.py exactly. */
+    if (lo > T_MAX) return T_MAX;
 
     if (T_nom < lo)   return lo;
     if (T_nom > T_MAX) return T_MAX;
@@ -369,14 +369,20 @@ int main(int argc, char* argv[]) {
         }
         lat_jitter[i] = jitter;
 
-        /* 1. Read VLA command (zero-copy mmap) */
-        double vx = shm->vx_nom;
-        double vy = shm->vy_nom;
-        double vz_nom = shm->vz_nom;
+        /* 1. Read VLA command via torn-free seqlock snapshot.
+         * A torn frame (writer mid-copy) is treated as no-new-data: the
+         * watchdog sees is_new_data=0 and the hover fallback applies,
+         * never a mixed old/new velocity vector. */
+        VLACommand cmd_snap = {0};
+        bool shm_clean = vla_shm_snapshot(shm, &cmd_snap);
+        if (!shm_clean) memset(&cmd_snap, 0, sizeof(cmd_snap));
+        double vx = cmd_snap.vx_nom;
+        double vy = cmd_snap.vy_nom;
+        double vz_nom = cmd_snap.vz_nom;
         uint64_t now = ns_now();
 
         /* VLA watchdog: check freshness and update state */
-        bool vla_fresh = vla_watchdog_check(shm, now);
+        bool vla_fresh = vla_watchdog_check(&cmd_snap, now);
 
         double T_nom;
 
@@ -573,12 +579,15 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < n_cycles; i++) {
         uint64_t t_ns = ns_now();
 
-        /* Read VLA command */
-        double vla_vz_nom = shm->vz_nom;
+        /* Read VLA command via torn-free seqlock snapshot */
+        VLACommand cmd_snap = {0};
+        bool shm_clean = vla_shm_snapshot(shm, &cmd_snap);
+        if (!shm_clean) memset(&cmd_snap, 0, sizeof(cmd_snap));
+        double vla_vz_nom = cmd_snap.vz_nom;
         uint64_t now = t_ns;
 
         /* VLA watchdog: check freshness and update state */
-        bool vla_fresh = vla_watchdog_check(shm, now);
+        bool vla_fresh = vla_watchdog_check(&cmd_snap, now);
         VLAState vla_state = watchdog_state();
 
         /* Compute T_nom from VLA command (hover + proportional to vz_nom) */

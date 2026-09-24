@@ -235,6 +235,10 @@ class ConsensusNode:
         (perma-stall after ~2 s of free-running rounds).
         """
         votes = []
+        seen_nodes = set()   # one vote per node_id per round — a resynced
+                             # peer may re-broadcast its proposal for the
+                             # round we are still in; a duplicate must NOT
+                             # count as quorum weight twice
         self._resynced = False
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline and self._sub is not None:
@@ -242,12 +246,15 @@ class ConsensusNode:
                 raw = self._sub.recv_string()
                 msg = ConsensusMessage.from_json(raw)
                 if msg.round_num == self._round:
-                    votes.append(msg)
+                    if msg.node_id not in seen_nodes:
+                        seen_nodes.add(msg.node_id)
+                        votes.append(msg)
                 elif msg.round_num > self._round:
                     # fell behind: skip ahead; caller re-proposes fresh
                     self._round    = msg.round_num
                     self._resynced = True
                     votes = [msg]          # keep the future-round vote
+                    seen_nodes = {msg.node_id}
                 # past-round votes are stale: drop silently
             except zmq.Again:
                 continue                   # 100 ms idle tick, keep waiting

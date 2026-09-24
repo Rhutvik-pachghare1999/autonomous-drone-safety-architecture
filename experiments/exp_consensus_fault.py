@@ -2,14 +2,24 @@
 Observability-Weighted Voting Consensus Under Packet Loss and Asymmetric Latency
 ================================================================================
 Tests the observability-weighted voting consensus protocol under:
-  - 20% random packet loss (simulated at the message layer)
-  - Asymmetric latency: 0–50ms per link, randomly assigned
+  - 20% random packet loss (simulated at the message layer — votes dropped)
+  - Asymmetric latency 0–50 ms, injected as **message timestamp offsets only**
+
+    ⚠ HONEST SCOPE: the latency is written onto `msg.timestamp`; it does NOT
+    delay delivery of the vote. There is no real or simulated transport delay
+    (no packet scheduling, no reordering, no hold-and-release). The quorum
+    logic never reads timestamps, so the latency field has no causal effect in
+    this experiment. What IS genuinely tested: the weighted-quorum commit and
+    GPS-denied rejection logic under packet loss. Reported commit 'latency'
+    numbers measure local quorum *computation* time, not end-to-end network
+    delay. Real network-delay testing is future work (ROADMAP §Formal/
+    Networking: ns-3/emulation harness).
   - 5-node swarm: 3 GPS-active, 1 GPS-degraded, 1 GPS-denied (low observability)
   - 100 consensus rounds
 
 Metrics reported:
   - Commit rate (% of rounds reaching weighted quorum)
-  - Mean commit latency (ms)
+  - Mean commit compute time (ms) — in-process quorum evaluation, NOT network RTT
   - GPS-denied rejection rate (% of rounds where GPS-denied node's state
     was NOT adopted as the agreed state)
   - Weighted quorum fraction per round
@@ -67,14 +77,21 @@ def make_vote(node_id: int, round_num: int, rng: np.random.Generator) -> Consens
 
 def simulate_network(votes: list[ConsensusMessage],
                      rng: np.random.Generator) -> list[ConsensusMessage]:
-    """Apply packet loss and asymmetric latency to a vote set."""
+    """Apply packet loss and asymmetric latency to a vote set.
+
+    NOTE: 'latency' here only stamps the message timestamp — the vote is
+    delivered immediately and the quorum logic never reads the timestamp.
+    This exercises loss tolerance, not delay tolerance.
+    """
     delivered = []
     for v in votes:
         if rng.random() < PACKET_LOSS_RATE:
             continue   # packet dropped
-        # Asymmetric latency: simulate by adding noise to timestamp
-        latency_ms = rng.uniform(0, LATENCY_MAX_MS)
-        v.timestamp += latency_ms / 1000.0
+        # Asymmetric latency: timestamp offset ONLY (no delivery delay).
+        # The quorum logic ignores timestamps → this field is decorative in
+        # this experiment; see module docstring for the honest scope.
+        ts_offset_ms = rng.uniform(0, LATENCY_MAX_MS)
+        v.timestamp += ts_offset_ms / 1000.0
         delivered.append(v)
     return delivered
 
@@ -151,12 +168,13 @@ def run() -> dict:
     p99_lat       = float(np.percentile(latencies_ms, 99)) if latencies_ms else 0.0
 
     print('\n── Results ──────────────────────────────────────────────────')
-    print(f'  Commit rate           : {commit_rate*100:.1f}%  ({commits}/{N_ROUNDS})')
-    print(f'  GPS-denied rejection  : {gps_denied_rej_rate*100:.1f}%  ({gps_denied_rejected}/{N_ROUNDS})')
-    print(f'  Mean commit latency   : {mean_lat:.3f} ms')
-    print(f'  P99 commit latency    : {p99_lat:.3f} ms')
-    print(f'  Mean quorum fraction  : {np.mean(quorum_fracs):.3f}')
-    print(f'  Min quorum fraction   : {np.min(quorum_fracs):.3f}')
+    print(f'  Commit rate            : {commit_rate*100:.1f}%  ({commits}/{N_ROUNDS})')
+    print(f'  GPS-denied rejection   : {gps_denied_rej_rate*100:.1f}%  ({gps_denied_rejected}/{N_ROUNDS})')
+    print(f'  Mean commit compute    : {mean_lat:.3f} ms  (local quorum eval, NOT network RTT)')
+    print(f'  P99 commit compute     : {p99_lat:.3f} ms  (local quorum eval, NOT network RTT)')
+    print(f'  Mean quorum fraction   : {np.mean(quorum_fracs):.3f}')
+    print(f'  Min quorum fraction    : {np.min(quorum_fracs):.3f}')
+    print('  NOTE: latency is a message-timestamp offset only; it does not delay delivery')
 
     # Node trust weights
     print('\n── Node trust weights ───────────────────────────────────────')
@@ -172,11 +190,17 @@ def run() -> dict:
             'n_nodes': N_NODES, 'n_rounds': N_ROUNDS,
             'packet_loss_rate': PACKET_LOSS_RATE,
             'max_latency_ms': LATENCY_MAX_MS,
+            'latency_model': 'timestamp_offset_only',
+            'latency_caveat': (
+                'Injected latency is written onto msg.timestamp only; votes '
+                'are delivered immediately and the quorum logic never reads '
+                'the timestamp. Reported commit times measure in-process '
+                'quorum computation, NOT simulated or real network delay.'),
         },
         'commit_rate':          commit_rate,
         'gps_denied_rejection_rate': gps_denied_rej_rate,
-        'mean_commit_latency_ms': mean_lat,
-        'p99_commit_latency_ms':  p99_lat,
+        'mean_commit_compute_time_ms': mean_lat,   # local compute, not RTT
+        'p99_commit_compute_time_ms':  p99_lat,    # local compute, not RTT
         'mean_quorum_fraction':   float(np.mean(quorum_fracs)),
     }
     path = f'{RESULTS_DIR}/consensus_fault.json'
@@ -193,8 +217,8 @@ def _plot(round_results: list, quorum_fracs: list) -> None:
 
         fig, axes = plt.subplots(1, 3, figsize=(14, 4))
         fig.suptitle(
-            f'Observability-Weighted Voting Under {PACKET_LOSS_RATE*100:.0f}% Packet Loss + '
-            f'Asymmetric Latency (0–{LATENCY_MAX_MS}ms)\n'
+            f'Observability-Weighted Voting Under {PACKET_LOSS_RATE*100:.0f}% Packet Loss '
+            f'(latency 0–{LATENCY_MAX_MS}ms = timestamp-offset only, NOT transport delay)\n'
             f'{N_NODES}-node swarm: 3 GPS-active, 1 GPS-degraded, 1 GPS-denied',
             fontsize=10
         )

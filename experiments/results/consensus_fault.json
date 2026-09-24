@@ -3,11 +3,13 @@
     "n_nodes": 5,
     "n_rounds": 100,
     "packet_loss_rate": 0.2,
-    "max_latency_ms": 50.0
+    "max_latency_ms": 50.0,
+    "latency_model": "timestamp_offset_only",
+    "latency_caveat": "Injected latency is written onto msg.timestamp only; votes are delivered immediately and the quorum logic never reads the timestamp. Reported commit times measure in-process quorum computation, NOT simulated or real network delay."
   },
   "commit_rate": 1.0,
-  "byzantine_rejection_rate": 1.0,
-  "mean_commit_latency_ms": 0.043285590945743024,
-  "p99_commit_latency_ms": 0.13373961468460044,
+  "gps_denied_rejection_rate": 1.0,
+  "mean_commit_compute_time_ms": 0.028129357961006463,
+  "p99_commit_compute_time_ms": 0.0399972510058437,
   "mean_quorum_fraction": 0.9974137011619894
 }

@@ -154,7 +154,17 @@ but never writes back, preventing the filter from confirming its own drift.
 
 **Consensus fault test:** `experiments/exp_consensus_fault.py` simulates 5
 nodes (3 GPS-active, 1 GPS-degraded, 1 Byzantine GPS-denied) with 20% packet
-loss and 0–50 ms latency. Result: 100% commit rate, 100% Byzantine rejection.
+loss. The 0–50 ms "latency" is a **message-timestamp offset only** — votes are
+delivered immediately and the quorum logic never reads the timestamp, so the
+test covers consensus logic under loss, not transport delay (see the JSON
+`latency_caveat`). Result: 100% commit rate, 100% Byzantine rejection.
+
+**Wiring audit (2026-09-23):** consensus→EKF shared-memory contract
+(`/dev/shm/aisp_consensus`, `"=dddf"` = px, py, pz, trust = 28 B) is now
+identical on writer (`consensus_node._write_consensus`) and reader
+(`ekf_gating.read_consensus_shm`, verified by round-trip test), and the EKF
+gating returns the VIO-updated covariance (`GatingResult.covariance_out`) for
+carry-forward to the next cycle.
 
 ---
 
@@ -164,7 +174,15 @@ loss and 0–50 ms latency. Result: 100% commit rate, 100% Byzantine rejection.
 |---|---|---|---|
 | Safety properties P1–P7 | `ROADMAP.md`, `README.md` | planned | Specified; no FSM or Z3 implementation exists. |
 | P6 NaN/Inf input guard | `src/control/hocbf.cpp`, `src/rt/safety_filter.c` | implemented-tested | 17 pytest cases in `tests/test_input_validation.py`. |
-| P7 covariance threshold | `src/estimation/ekf_gating.py` | partial | Threshold computed; RTL FSM action not implemented. |
+| P7 covariance threshold | `src/estimation/ekf_gating.py` | partial | Threshold computed + mode ladder exercised in smoke test; VIO-updated covariance is now returned via `GatingResult.covariance_out`. RTL FSM action still not implemented. |
+
+**Vehicle-parameter consistency (2026-09-23):** HOCBF defaults are now the
+Crazyflie 2.X everywhere — `mass=0.027 kg, T_max=0.60 N` in
+`src/control/hocbf.cpp`, `src/rt/safety_filter.c`, and `sim/hocbf_py.py`
+(previously the C/C++ safety code defaulted to a generic 2 kg quadrotor while
+the flight demo flew a 27 g Crazyflie). WCET numbers are unaffected (the
+filter is O(1) arithmetic, timing is parameter-independent). Properties
+P1–P7 otherwise remain **specified, not formally proven** — no FSM/Z3 harness.
 
 ---
 

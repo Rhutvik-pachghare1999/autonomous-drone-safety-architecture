@@ -42,12 +42,12 @@ namespace control {
  * LgLfh = cos(roll)*cos(pitch)/m  (thrust-to-vertical-accel coupling)
  */
 struct HOCBFParams {
-    double mass          = 2.0;   // kg
-    double g             = 9.81;  // m/s²
-    double alpha1        = 2.0;   // class-K gain on Lfh (velocity term)
-    double alpha2        = 1.0;   // class-K gain on h   (position term)
-    double T_max         = 4.0 * 2.0 * 9.81;  // 4× hover thrust (N)
-    double T_min         = 0.0;   // thrust cannot be negative
+    double mass          = 0.027;  // kg — Crazyflie 2.X (sim/crazyflie_env.py MASS)
+    double g             = 9.81;   // m/s²
+    double alpha1        = 2.0;    // class-K gain on Lfh (velocity term)
+    double alpha2        = 1.0;    // class-K gain on h   (position term)
+    double T_max         = 0.60;   // N, 4 × ~0.15 N per motor (Crazyflie 2.X)
+    double T_min         = 0.0;    // thrust cannot be negative
     // Reality-gap conservatism: scales T_lb up to account for aerodynamic
     // drag, motor latency, and inertia not modelled in the point-mass CBF.
     // 1.08 = ~8% buffer (drag ≈4%, motor latency ≈3%, inertia ≈1%).

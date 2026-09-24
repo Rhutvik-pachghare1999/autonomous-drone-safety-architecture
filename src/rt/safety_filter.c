@@ -37,11 +37,16 @@
 #define SHM_SIZE  64
 
 /* ── HOCBF parameters ────────────────────────────────────────────────────── */
-#define MASS    2.0
-#define GRAVITY 9.81
+/* Single source of truth: Crazyflie 2.X (matches sim/crazyflie_env.py MASS /
+ * T_MAX and sim/hocbf_py.py defaults). ALL evidence artifacts (safety A/B,
+ * WCET, SIL replay) must use these vehicle parameters — never a generic
+ * quadrotor mass. WCET numbers are mass-independent (O(1) arithmetic, no
+ * SI-dependent timing), so this retune does not perturb the latency claim. */
+#define MASS    0.027           /* kg — Crazyflie 2.X */
+#define GRAVITY 9.81            /* m/s^2 */
 #define ALPHA1  2.0
 #define ALPHA2  1.0
-#define T_MAX   (4.0 * MASS * GRAVITY)
+#define T_MAX   0.60            /* N, 4 × ~0.15 N per motor */
 #define T_MIN   0.0
 #define CONSERVATISM  1.08  /* reality-gap buffer (matches hocbf.cpp) */
 

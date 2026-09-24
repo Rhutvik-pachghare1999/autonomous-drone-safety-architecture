@@ -84,6 +84,13 @@ class GatingResult:
     safe_state:            np.ndarray   # 15-element state vector (zeroed horiz if DEGRADED)
     consensus_pos:         np.ndarray | None = None  # [px, py, pz] from swarm consensus
     consensus_trust:       float = 0.0  # trust weight of the consensus agreed state
+    covariance_out:        np.ndarray | None = None
+    """15×15 covariance AFTER any VIO update this cycle.
+
+    The caller MUST carry this forward as next cycle's P — the improved
+    estimate is otherwise dropped and the filter would keep integrating
+    with yesterday's (stale) uncertainty. Unchanged (aliased) when no
+    update ran this cycle."""
 
 
 # ── Formal property P7 ────────────────────────────────────────────────────────
@@ -209,7 +216,8 @@ import os as _os
 _GT_SHM_SIZE      = _struct.calcsize(_GT_SHM_FMT)
 
 _CONSENSUS_SHM  = "/dev/shm/aisp_consensus"
-_CONSENSUS_FMT  = "=ddddf"   # px, py, pz (double) + trust (float)
+_CONSENSUS_FMT  = "=dddf"    # px, py, pz (double) + trust (float) = 28 bytes
+                             # (writer: services/consensus_node._write_consensus)
 _CONSENSUS_SIZE = _struct.calcsize(_CONSENSUS_FMT)
 
 
@@ -278,11 +286,13 @@ class CovarianceGating:
             gps_active : True if GPS measurement was received this cycle
 
         Returns:
-            GatingResult with mode, health scalar, P7 flag, and safe state.
+            GatingResult with mode, health scalar, P7 flag, safe state, and
+            the carry-forward covariance (covariance_out).
         """
         sigma_sq   = self._health_scalar(P)
         vio_used   = False
         x_safe     = x.copy()
+        P_out      = P                  # carried forward; updated only by VIO
         cons_pos   = None
         cons_trust = 0.0
 
@@ -295,7 +305,7 @@ class CovarianceGating:
             # read_gt_velocity() enforces the air-gap: ground-truth comes from
             # the simulator SHM, not from the EKF estimate being updated.
             gt_vel = read_gt_velocity()
-            x_safe, P = inject_vio_factor(x_safe, P, self._rng, gt_velocity=gt_vel)
+            x_safe, P_out = inject_vio_factor(x_safe, P, self._rng, gt_velocity=gt_vel)
             vio_used   = True
             x_safe[IDX_VX] = 0.0
             x_safe[IDX_VY] = 0.0
@@ -323,6 +333,7 @@ class CovarianceGating:
             safe_state     = x_safe,
             consensus_pos  = cons_pos,
             consensus_trust= cons_trust,
+            covariance_out = P_out,
         )
 
 
@@ -355,6 +366,15 @@ def test_covariance_gating() -> None:
 
         result = gating.evaluate(x, P, gps_active)
         modes_seen.append(result.mode)
+
+        # Carry forward the improved covariance — the VIO update's refined
+        # covariance_mat must be next cycle's P (previously this was computed
+        # and dropped inside evaluate(), so every cycle grew stale P).
+        assert result.covariance_out is not None
+        if result.vio_injected:
+            # VIO update must have actually changed P (Joseph form)
+            assert result.covariance_out is not P
+        P = result.covariance_out
 
         if result.p7_triggered and p7_cycle is None:
             p7_cycle = cycle

@@ -291,7 +291,12 @@ class ConsensusNode:
     def _write_consensus(self, state: List[float], weight: float) -> None:
         """Write agreed state to /dev/shm/aisp_consensus for flight loop."""
         try:
-            fmt  = "=ddddf"   # px, py, pz (double) + weight (float)
+            # fmt "=dddf": px, py, pz (double) + weight (float) = 28 bytes.
+            # Must equal _CONSENSUS_FMT in src/estimation/ekf_gating.py (the
+            # reader). Do NOT write a 4th double — the previous "=ddddf"
+            # (36-byte) format with only 4 values packed crashed this writer
+            # while the reader crashed unpacking 5 values into 4 names.
+            fmt  = "=dddf"   # px, py, pz (double) + weight (float)
             size = struct.calcsize(fmt)
             fd   = os.open(SHM_CONSENSUS, os.O_CREAT | os.O_RDWR, 0o666)
             os.ftruncate(fd, size)

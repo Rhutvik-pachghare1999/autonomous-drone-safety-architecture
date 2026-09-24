@@ -332,7 +332,7 @@ All 39 pytest cases pass with Python 3.12 in a clean checkout after the
 | Worst corrected command | T_nom = −380.4 N → T_safe = 16.9 N, correction = 397.25 N | `experiments/results/hallucination_1000.json` | **Previous README value "78.5 N" was the actuator ceiling (T_max), not the HOCBF-corrected thrust.** The filter returns the safe lower bound 16.9 N. |
 | EKF rank GPS denied | 6 → 4 | `experiments/results/observability_gramian.json` | IMU+Baro only loses horizontal position. |
 | VIO restores rank | 4 → 6 | `experiments/results/observability_gramian.json` | With OpenVINS-derived noise model. |
-| Consensus commit rate | 100% (100 / 100 rounds) | `experiments/results/consensus_fault.json` | 20% packet loss + 50 ms max latency. |
+| Consensus commit rate | 100% (100 / 100 rounds) | `experiments/results/consensus_fault.json` | 20% packet loss. The 0–50 ms "latency" is a **message-timestamp offset only** — votes are delivered immediately and the quorum logic never reads the timestamp; commit-time metrics measure local compute, not network delay. Tests consensus logic, not transport delay. |
 | GPS-denied rejection | 100% (100 / 100) | `experiments/results/consensus_fault.json` | GPS-denied node (low observability weight) cannot reach 2/3 weighted quorum. |
 | Battery poly-4 RMSE | 0.016 Ah (B0005), 0.030 Ah (B0006), 0.014 Ah (B0007) | `experiments/results/battery_validation.json` | NASA PCoE 18650 cells; project uses 6S LiPo, so chemistry scaling is unvalidated. |
 | Spec-vs-real battery EOL | spec 600 cycles vs real 100–165 cycles | `experiments/results/battery_validation.json` | Linear spec model overestimates usable life by ~4–6×. |

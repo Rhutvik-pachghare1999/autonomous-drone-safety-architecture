@@ -23,12 +23,15 @@ from dataclasses import dataclass
 
 @dataclass
 class HOCBFParams:
-    mass: float = 2.0          # kg   (hocbf.cpp:45)
-    g: float = 9.81            # m/s² (hocbf.cpp:46)
-    alpha1: float = 2.0        # class-K gain on Lfh (hocbf.cpp:47)
-    alpha2: float = 1.0        # class-K gain on h   (hocbf.cpp:48)
-    T_max: float = 4.0 * 2.0 * 9.81   # (hocbf.cpp:49) — overridden per-vehicle
-    T_min: float = 0.0         # (hocbf.cpp:50)
+    # Defaults = Crazyflie 2.X vehicle, matching src/control/hocbf.cpp and
+    # src/rt/safety_filter.c. All studies must use these vehicle params —
+    # never a generic-quadrotor mass — so safety evidence is vehicle-consistent.
+    mass: float = 0.027        # kg   (Crazyflie 2.X; sim/crazyflie_env.py MASS)
+    g: float = 9.81            # m/s²
+    alpha1: float = 2.0        # class-K gain on Lfh (velocity term)
+    alpha2: float = 1.0        # class-K gain on h   (position term)
+    T_max: float = 0.60        # N, 4 × ~0.15 N per motor (Crazyflie 2.X)
+    T_min: float = 0.0
     conservatism: float = 1.08 # reality-gap factor (hocbf.cpp:54)
 
 

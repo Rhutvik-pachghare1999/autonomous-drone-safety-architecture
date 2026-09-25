@@ -9,7 +9,7 @@
   },
   "commit_rate": 1.0,
   "gps_denied_rejection_rate": 1.0,
-  "mean_commit_compute_time_ms": 0.028129357961006463,
-  "p99_commit_compute_time_ms": 0.0399972510058437,
+  "mean_commit_compute_time_ms": 0.02920144470408559,
+  "p99_commit_compute_time_ms": 0.04666123306378771,
   "mean_quorum_fraction": 0.9974137011619894
 }

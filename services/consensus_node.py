@@ -3,19 +3,25 @@
 # GPS-denied nodes get w≈0 and cannot sway the quorum.
 # Reads from /dev/shm/aisp_ekf_state, writes agreed state to /dev/shm/aisp_consensus.
 #
-# This is NOT Byzantine fault tolerance (no signatures, no 3f+1, no view change).
+# This is NOT Byzantine fault tolerance (no 3f+1, no view change, no PBFT).
 # It is a weighted voting protocol where weight derives from estimation quality.
+# Message authentication is HMAC-SHA256 with a cluster shared key — this gives
+# AUTHENTICATED MEMBERSHIP (only key holders can vote) under an honest-but-
+# possibly-broken transport. It does not defend against a key holder turning
+# malicious; that is a documented scope limit.
 #
 # Rhutvik Prashant Pachghare — ASU Robotics & Autonomous Systems
 
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import math
 import mmap
 import os
 import struct
+import sys
 import threading
 import time
 from dataclasses import dataclass, field, asdict
@@ -97,7 +103,7 @@ class ConsensusMessage:
     node_id:      int
     round_num:    int
     phase:        str          # Phase enum name
-    state_hash:   str          # SHA-256 of proposed state vector
+    state_hash:   str          # SHA-256 integrity hash of exact state vector
     state_vector: List[float]  # [px, py, pz] proposed agreed state
     trust_weight: float        # w_i from EKF covariance
     var_px:       float
@@ -105,6 +111,22 @@ class ConsensusMessage:
     var_psi:      float
     gps_active:   bool
     timestamp:    float = field(default_factory=time.time)
+    auth_tag:     str = ""     # HMAC-SHA256 (truncated) over all other fields
+
+    def _signed_payload(self) -> bytes:
+        """Canonical byte representation of every field EXCEPT auth_tag."""
+        d = asdict(self)
+        d.pop("auth_tag", None)
+        return json.dumps(d, sort_keys=True, separators=(",", ":")).encode()
+
+    def sign(self, key: bytes) -> None:
+        self.auth_tag = hmac.new(key, self._signed_payload(),
+                                 hashlib.sha256).hexdigest()[:32]
+
+    def verify(self, key: bytes) -> bool:
+        expected = hmac.new(key, self._signed_payload(),
+                            hashlib.sha256).hexdigest()[:32]
+        return hmac.compare_digest(expected, self.auth_tag)
 
     def to_json(self) -> str:
         return json.dumps(asdict(self))
@@ -112,39 +134,109 @@ class ConsensusMessage:
     @staticmethod
     def from_json(s: str) -> "ConsensusMessage":
         d = json.loads(s)
+        d.setdefault("auth_tag", "")
         return ConsensusMessage(**d)
 
 
 def _state_hash(state: List[float]) -> str:
-    """Hash state vector with tolerance-based quantization.
-
-    Two states within STATE_TOL of each other will hash to the same value.
-    This prevents floating-point noise from fracturing the quorum.
-    """
-    # Quantize to 1 cm grid for position, 1 cm/s for velocity if present
-    quantized = []
-    for i, v in enumerate(state):
-        if i < 3:  # position components
-            quantized.append(round(v / STATE_TOL) * STATE_TOL)
-        else:
-            quantized.append(v)  # other components exact for now
-    payload = struct.pack(f"={len(quantized)}d", *quantized)
+    """Integrity hash of the EXACT state vector (detects corruption in
+    transit/storage). NOTE: this is not used for quorum grouping — grouping
+    is distance-based (see _weighted_quorum), because any quantization grid
+    has boundary cases where arbitrarily close states hash differently."""
+    payload = struct.pack(f"={len(state)}d", *state)
     return hashlib.sha256(payload).hexdigest()[:16]
 
 
-# Tolerance for state hash grouping (1 cm = 0.01 m)
+# Max Euclidean distance (m) between two position proposals for them to count
+# as "the same state" in quorum grouping. 1 cm matches the previous
+# quantization-cell size but, unlike a grid, has no boundary fractures:
+# any two states within STATE_TOL of a common member join the same group
+# (single-linkage; documented behavior for 4–8 node swarms).
 STATE_TOL = 0.01
+
+
+class EKFReadError(Exception):
+    """EKF shared-memory snapshot unavailable, torn, or invalid.
+
+    Fail-closed contract: callers must NOT substitute fabricated state.
+    Synthetic fallback exists ONLY for explicit demo/test mode
+    (EKFSharedMemory(allow_synthetic=True))."""
+
+
+def weighted_quorum(votes: List["ConsensusMessage"],
+                    my_msg: "ConsensusMessage") -> tuple[Optional[List[float]], float]:
+    """
+    Check if a weighted quorum agrees on a state.
+
+    Returns (agreed state vector, quorum_weight) if quorum reached,
+    else (None, 0.0).
+
+    Grouping is DISTANCE-BASED (single-linkage, STATE_TOL metres), not
+    hash-based: a quantization grid fractures states that sit on opposite
+    sides of a cell boundary no matter how close they are. The agreed
+    state is the trust-weighted mean of the winning group.
+
+    Quorum rule:
+        sum(w_i for voters in group G) >= QUORUM_THRESHOLD * sum(w_i all)
+
+    The returned quorum_weight is the fraction of total weight supporting
+    the winning group (not the proposing node's individual weight).
+    This is what the EKF should use as the blending coefficient alpha.
+    """
+    all_votes = votes + [my_msg]
+    total_weight = sum(v.trust_weight for v in all_votes)
+
+    if total_weight < 1e-9:
+        return None, 0.0  # all nodes GPS-denied — no consensus possible
+
+    # Distance-based single-linkage grouping: each vote joins the first
+    # group whose running centroid is within STATE_TOL, else starts one.
+    # groups: [centroid, sum_weight, weighted_state_sum, count]
+    groups: List[list] = []
+    for v in all_votes:
+        placed = False
+        for g in groups:
+            if math.dist(g[0], v.state_vector) <= STATE_TOL:
+                n = g[3]
+                for k in range(3):
+                    g[0][k] = (g[0][k] * n + v.state_vector[k]) / (n + 1)
+                g[1] += v.trust_weight
+                for k in range(3):
+                    g[2][k] += v.trust_weight * v.state_vector[k]
+                g[3] = n + 1
+                placed = True
+                break
+        if not placed:
+            groups.append([
+                list(v.state_vector),
+                v.trust_weight,
+                [v.trust_weight * x for x in v.state_vector],
+                1,
+            ])
+
+    best = max(groups, key=lambda g: g[1])
+    if best[1] >= QUORUM_THRESHOLD * total_weight:
+        agreed = [s / best[1] for s in best[2]]  # trust-weighted mean
+        quorum_weight = best[1] / total_weight   # fraction of total weight
+        return agreed, quorum_weight
+    return None, 0.0
 
 
 class EKFSharedMemory:
     """
-    Reads EKF state from /dev/shm/aisp_ekf_state.
-    Falls back to synthetic data if the file does not exist
-    (allows standalone testing without a running EKF).
+    Reads EKF state from /dev/shm/aisp_ekf_state (seqlock-validated).
+
+    Fail-closed by default: read() raises EKFReadError if no valid snapshot
+    is available. allow_synthetic=True enables the old demo behavior
+    (fabricated plausible state) — NEVER use that in a runtime swarm:
+    a dead estimator would silently become fake data and get proposed
+    into consensus.
     """
 
-    def __init__(self, path: str = SHM_EKF_PATH):
+    def __init__(self, path: str = SHM_EKF_PATH,
+                 allow_synthetic: bool = False):
         self._path = path
+        self._allow_synthetic = allow_synthetic
         self._shm: Optional[mmap.mmap] = None
         self._rng = np.random.default_rng(int(time.time() * 1e6) % (2**32))
         self._open()
@@ -162,16 +254,24 @@ class EKFSharedMemory:
     def read(self) -> EKFSnapshot:
         """Read EKF snapshot with seqlock validation.
 
-        Returns synthetic fallback if:
+        Uses mmap SLICE access (self._shm[a:b]) rather than seek()/read():
+        slice access does not touch the mmap's shared file position, so a
+        writer thread and a reader thread sharing this object cannot
+        misalign each other mid-transaction (found by the e2e flight test:
+        50 Hz writer + worker-thread reader on one mmap → every read
+        misaligned → every validity check failed).
+
+        Raises EKFReadError if:
         - SHM not available
         - Torn read detected (odd seq_head, seq_head != seq_tail, seq changed during read)
         - Data appears uninitialized (variances <= _EKF_MIN_VALID_VAR)
+        …unless allow_synthetic was set at construction (demo/test only).
         """
+        n = struct.calcsize(_EKF_SHM_FMT)
         if self._shm is not None:
             for _ in range(2):  # max 2 attempts
                 try:
-                    self._shm.seek(0)
-                    raw = self._shm.read(struct.calcsize(_EKF_SHM_FMT))
+                    raw = bytes(self._shm[0:n])
                     (seq_head, px, py, pz, vpx, vpy, vpsi, gps, seq_tail
                      ) = struct.unpack(_EKF_SHM_FMT, raw)
                     # Seqlock validation
@@ -179,18 +279,22 @@ class EKFSharedMemory:
                         continue  # writer mid-write
                     if seq_head != seq_tail:
                         continue  # torn: head/tail mismatch
-                    # Re-read seq_head to check stability (compiler barrier)
-                    self._shm.seek(0)
-                    seq_check = struct.unpack("=Q", self._shm.read(8))[0]
+                    # Re-read seq_head to check stability
+                    seq_check = struct.unpack("=Q", bytes(self._shm[0:8]))[0]
                     if seq_check != seq_head:
                         continue  # seq changed during read
                     # Data validity: variances must be > threshold (not zeroed)
                     if vpx <= _EKF_MIN_VALID_VAR or vpy <= _EKF_MIN_VALID_VAR or vpsi <= _EKF_MIN_VALID_VAR:
                         continue  # uninitialized/zeroed segment
                     return EKFSnapshot(px, py, pz, vpx, vpy, vpsi, bool(gps))
-                except Exception:
+                except (struct.error, ValueError, OSError):
                     pass
-        # Synthetic fallback: simulate GPS dropout after 10 s
+        if not self._allow_synthetic:
+            raise EKFReadError(
+                f"no valid EKF snapshot at {self._path} "
+                f"(fail-closed; synthetic fallback disabled)")
+        # Synthetic fallback: EXPLICIT demo/test mode only.
+        # Simulates GPS dropout after 15 s of a 30 s cycle.
         t = time.time() % 30.0
         gps = t < 15.0
         var = 0.1 if gps else min(0.1 + (t - 15.0) * 0.5, 30.0)
@@ -202,25 +306,27 @@ class EKFSharedMemory:
         )
 
     def write_synthetic(self, snap: EKFSnapshot) -> None:
-        """Write a synthetic EKF snapshot with seqlock (3 writes)."""
+        """Write an EKF snapshot through the seqlock protocol (slice access,
+        position-independent — see read() for why this matters).
+
+        Used by experiments/tests playing the role of the EKF writer
+        (e.g. exp_consensus_ekf_flight.py). The seqlock contract is the
+        same one the real EKF writer must use."""
         if self._shm is None:
             return
         import time as _time
         seq = int(_time.time() * 1e6) & 0xFFFFFFFFFFFFFFFE  # even
         # Write 1: odd seq_head (write in progress)
-        self._shm.seek(0)
-        self._shm.write(struct.pack("=Q", seq + 1))
+        self._shm[0:8] = struct.pack("=Q", seq + 1)
         # Write 2: payload + even seq_tail
         data = struct.pack(_EKF_SHM_FMT, seq + 2,  # seq_head
                            snap.px, snap.py, snap.pz,
                            snap.var_px, snap.var_py, snap.var_psi,
                            int(snap.gps_active),
                            seq + 2)  # seq_tail
-        self._shm.seek(0)
-        self._shm.write(data)
+        self._shm[0:len(data)] = data
         # Write 3: even seq_head (write complete)
-        self._shm.seek(0)
-        self._shm.write(struct.pack("=Q", seq + 2))
+        self._shm[0:8] = struct.pack("=Q", seq + 2)
 
 
 class ConsensusNode:
@@ -241,14 +347,34 @@ class ConsensusNode:
     """
 
     def __init__(self, node_id: int, n_nodes: int,
-                 zmq_base_port: int = 5550):
+                 zmq_base_port: int = 5550,
+                 auth_key: Optional[bytes] = None,
+                 allow_synthetic_ekf: bool = False):
         self.node_id   = node_id
         self.n_nodes   = n_nodes
-        self._ekf      = EKFSharedMemory()
+        self._ekf      = EKFSharedMemory(allow_synthetic=allow_synthetic_ekf)
         self._round    = 0
         self._votes: Dict[int, ConsensusMessage] = {}
         self._lock     = threading.Lock()
         self._running  = False
+        # Observability counters (read by tests/experiments)
+        self._ekf_read_failures   = 0   # rounds with no valid own estimate
+        self._auth_failures       = 0   # unauthenticated/forged messages dropped
+        self._shm_write_failures  = 0   # consensus SHM handoff failures
+
+        # ── Authenticated membership ──────────────────────────────────────
+        # Key resolution: explicit arg > $AISP_CONSENSUS_KEY > OPEN mode.
+        # OPEN mode runs without authentication and prints a loud warning —
+        # acceptable for local experiments, NEVER for a real deployment:
+        # without a key, any process that can reach the ZMQ port can vote.
+        if auth_key is None:
+            env_key = os.environ.get("AISP_CONSENSUS_KEY", "")
+            auth_key = env_key.encode() if env_key else None
+        self._auth_key = auth_key
+        if self._auth_key is None:
+            print(f"[Node {node_id}] WARNING: no consensus auth key — OPEN mode; "
+                  f"anyone on the ZMQ ports can vote. Set AISP_CONSENSUS_KEY.",
+                  file=sys.stderr)
 
         if ZMQ_AVAILABLE:
             ctx = zmq.Context.instance()
@@ -266,7 +392,10 @@ class ConsensusNode:
     # ── Core consensus round ──────────────────────────────────────────────────
 
     def _propose(self) -> ConsensusMessage:
-        """Build this node's proposal from its current EKF state."""
+        """Build this node's proposal from its current EKF state.
+
+        Fail-closed: if the EKF snapshot is unavailable/invalid, raises
+        EKFReadError — this node must NOT fabricate a state and propose it."""
         snap = self._ekf.read()
         state = [snap.px, snap.py, snap.pz]
         return ConsensusMessage(
@@ -283,6 +412,8 @@ class ConsensusNode:
         )
 
     def _broadcast(self, msg: ConsensusMessage) -> None:
+        if self._auth_key is not None and not msg.auth_tag:
+            msg.sign(self._auth_key)
         if self._pub is not None:
             self._pub.send_string(msg.to_json())
 
@@ -297,22 +428,30 @@ class ConsensusNode:
         are stale and dropped. Found by experiments/exp_consensus_ekf_flight.py
         (perma-stall after ~2 s of free-running rounds).
 
+        Authentication (when a key is configured):
+        - HMAC-SHA256 tag verified BEFORE any field is trusted. This covers
+          node_id, so the dedupe below is by AUTHENTICATED identity — an
+          unkeyed peer cannot impersonate node 3 or double its weight.
+
         Peer validation:
         - trust_weight clamped to [0, 1], NaN/Inf rejected
-        - state_hash verified against state_vector
+        - state_hash verified against state_vector (corruption check)
         - state_vector must be finite, correct length
         """
         votes = []
-        seen_nodes = set()   # one vote per node_id per round — a resynced
-                             # peer may re-broadcast its proposal for the
-                             # round we are still in; a duplicate must NOT
-                             # count as quorum weight twice
+        seen_nodes = set()   # one vote per authenticated node_id per round
         self._resynced = False
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline and self._sub is not None:
             try:
                 raw = self._sub.recv_string()
                 msg = ConsensusMessage.from_json(raw)
+
+                # ── Authentication FIRST ─────────────────────────────────
+                if self._auth_key is not None:
+                    if not msg.verify(self._auth_key):
+                        self._auth_failures += 1
+                        continue  # forged/unkeyed message: drop
 
                 # ── Peer trust validation ─────────────────────────────────
                 # Clamp trust to [0, 1]; reject NaN/Inf
@@ -321,7 +460,7 @@ class ConsensusNode:
                 if msg.trust_weight > 1.0:
                     msg.trust_weight = 1.0
 
-                # Verify state_hash matches state_vector (detect tampering/corruption)
+                # Verify state_hash matches state_vector (detect corruption)
                 expected_hash = _state_hash(msg.state_vector)
                 if msg.state_hash != expected_hash:
                     continue
@@ -352,53 +491,39 @@ class ConsensusNode:
 
     def _weighted_quorum(self, votes: List[ConsensusMessage],
                           my_msg: ConsensusMessage) -> tuple[Optional[List[float]], float]:
-        """
-        Check if a weighted quorum agrees on a state hash.
-
-        Returns (agreed state vector, quorum_weight) if quorum reached,
-        else (None, 0.0).
-
-        Quorum rule:
-            sum(w_i for voters of hash H) >= QUORUM_THRESHOLD * sum(w_i for all)
-
-        The returned quorum_weight is the fraction of total weight supporting
-        the winning hash (not the proposing node's individual weight).
-        This is what the EKF should use as the blending coefficient alpha.
-        """
-        all_votes = votes + [my_msg]
-        total_weight = sum(v.trust_weight for v in all_votes)
-
-        if total_weight < 1e-9:
-            return None, 0.0  # all nodes GPS-denied — no consensus possible
-
-        # Group by state hash
-        hash_weights: Dict[str, float] = {}
-        hash_states:  Dict[str, List[float]] = {}
-        for v in all_votes:
-            hash_weights[v.state_hash] = (
-                hash_weights.get(v.state_hash, 0.0) + v.trust_weight
-            )
-            hash_states[v.state_hash] = v.state_vector
-
-        # Find the hash with the highest weighted support
-        best_hash = max(hash_weights, key=lambda h: hash_weights[h])
-        best_weight = hash_weights[best_hash]
-        if best_weight >= QUORUM_THRESHOLD * total_weight:
-            quorum_weight = best_weight / total_weight  # fraction of total weight
-            return hash_states[best_hash], quorum_weight
-        return None, 0.0
+        """Instance wrapper around the module-level weighted_quorum (single
+        source of truth — experiments import the same function)."""
+        return weighted_quorum(votes, my_msg)
 
     def run_round(self) -> Optional[List[float]]:
         """
         Execute one observability-weighted voting round.
-        Returns agreed state vector, or None if quorum not reached.
+        Returns agreed state vector, or None if quorum not reached OR this
+        node had no valid own estimate (fail-closed: no valid EKF state →
+        no proposal; we never vote fabricated data).
 
         If a future-round message arrives mid-round (we fell behind), the
         round is restarted ONCE under the caught-up round number (bounded
         to two attempts so a malformed fast-forwarded stream cannot spin).
         """
         for _attempt in range(2):
-            my_msg = self._propose()
+            try:
+                my_msg = self._propose()
+            except EKFReadError as e:
+                self._ekf_read_failures += 1
+                if self._ekf_read_failures <= 5 or self._ekf_read_failures % 100 == 0:
+                    print(f"[Node {self.node_id}] round {self._round}: "
+                          f"no proposal — {e}", file=sys.stderr)
+                self._round += 1
+                # Sit-out must PRESERVE ROUND CADENCE (~ROUND_TIMEOUT_S), not
+                # return instantly: callers budget n_rounds ≈ wall_time /
+                # ROUND_TIMEOUT_S, so instant failures would burn the entire
+                # round budget in milliseconds and the node would go silent
+                # for the rest of the run (found by exp_consensus_ekf_flight:
+                # all workers exhausted their rounds before the first EKF
+                # write landed → consensus never committed once).
+                time.sleep(ROUND_TIMEOUT_S)
+                return None  # fail-closed: sit this round out
             self._broadcast(my_msg)
 
             votes  = self._collect_votes(ROUND_TIMEOUT_S)
@@ -415,7 +540,11 @@ class ConsensusNode:
         return None
 
     def _write_consensus(self, state: List[float], weight: float) -> None:
-        """Write agreed state to /dev/shm/aisp_consensus with seqlock."""
+        """Write agreed state to /dev/shm/aisp_consensus with seqlock.
+
+        Failure is OBSERVABLE: counted and logged (rate-limited). A safety-
+        relevant handoff must never fail silently — the EKF side would keep
+        blending toward a stale value with no signal anything is wrong."""
         try:
             # fmt =QdddfQ: seq_head, px, py, pz (double), trust (float), seq_tail = 48 bytes
             # Seqlock 3-write protocol: odd head -> payload+even tail -> even head
@@ -426,18 +555,17 @@ class ConsensusNode:
             os.ftruncate(fd, _CONSENSUS_SIZE)
             shm = mmap.mmap(fd, _CONSENSUS_SIZE, mmap.MAP_SHARED, mmap.PROT_WRITE)
             os.close(fd)
-            shm.seek(0)
-            shm.write(struct.pack("=Q", seq + 1))
-            # Write 2: payload + even seq_tail
+            # slice access: position-independent (see EKFSharedMemory.read)
+            shm[0:8] = struct.pack("=Q", seq + 1)
             data = struct.pack(_CONSENSUS_FMT, seq + 2, state[0], state[1], state[2], weight, seq + 2)
-            shm.seek(0)
-            shm.write(data)
-            # Write 3: even seq_head (write complete)
-            shm.seek(0)
-            shm.write(struct.pack("=Q", seq + 2))
+            shm[0:len(data)] = data
+            shm[0:8] = struct.pack("=Q", seq + 2)
             shm.close()
-        except OSError:
-            pass
+        except OSError as e:
+            self._shm_write_failures += 1
+            if self._shm_write_failures <= 5 or self._shm_write_failures % 100 == 0:
+                print(f"[Node {self.node_id}] CONSENSUS SHM WRITE FAILED "
+                      f"(#{self._shm_write_failures}): {e}", file=sys.stderr)
 
     def run(self, n_rounds: int = 0) -> None:
         """Run consensus loop. n_rounds=0 means run forever."""
@@ -446,14 +574,18 @@ class ConsensusNode:
         while self._running and (n_rounds == 0 or count < n_rounds):
             agreed = self.run_round()
             if agreed:
-                snap = self._ekf.read()
+                try:
+                    snap = self._ekf.read()
+                    w, gps = snap.trust_weight, snap.gps_active
+                except EKFReadError:
+                    w, gps = float("nan"), False
                 print(f"[Node {self.node_id}] Round {self._round-1:4d} "
                       f"COMMIT  state=[{agreed[0]:.2f},{agreed[1]:.2f},{agreed[2]:.2f}] "
-                      f"w={snap.trust_weight:.3f} "
-                      f"gps={'Y' if snap.gps_active else 'N'}")
+                      f"w={w:.3f} "
+                      f"gps={'Y' if gps else 'N'}")
             else:
                 print(f"[Node {self.node_id}] Round {self._round-1:4d} "
-                      f"NO QUORUM (single-node or all GPS-denied)")
+                      f"NO QUORUM (single-node, all GPS-denied, or no valid EKF state)")
             count += 1
 
     def stop(self) -> None:
@@ -531,10 +663,14 @@ if __name__ == "__main__":
     p.add_argument("--node-id", type=int, default=0)
     p.add_argument("--n-nodes", type=int, default=1)
     p.add_argument("--rounds",  type=int, default=5)
+    p.add_argument("--demo-synthetic", action="store_true",
+                   help="Allow fabricated EKF state when no estimator is "
+                        "running (DEMO ONLY — never in a real swarm)")
     args = p.parse_args()
 
     if args.test:
         test_weighted_quorum_gps_denied_cannot_sway()
     else:
-        node = ConsensusNode(args.node_id, args.n_nodes)
+        node = ConsensusNode(args.node_id, args.n_nodes,
+                             allow_synthetic_ekf=args.demo_synthetic)
         node.run(n_rounds=args.rounds)

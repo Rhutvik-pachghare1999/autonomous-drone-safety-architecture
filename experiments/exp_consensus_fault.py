@@ -42,7 +42,8 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.consensus_node import (
-    ConsensusMessage, EKFSnapshot, _state_hash, Phase, QUORUM_THRESHOLD
+    ConsensusMessage, EKFSnapshot, _state_hash, Phase, QUORUM_THRESHOLD,
+    weighted_quorum,
 )
 
 # ── Network simulation ────────────────────────────────────────────────────────
@@ -94,27 +95,6 @@ def simulate_network(votes: list[ConsensusMessage],
         v.timestamp += ts_offset_ms / 1000.0
         delivered.append(v)
     return delivered
-
-
-def weighted_quorum(votes: list[ConsensusMessage],
-                    my_msg: ConsensusMessage) -> tuple[list | None, float]:
-    """Returns (agreed_state, quorum_fraction) or (None, fraction)."""
-    all_votes = votes + [my_msg]
-    total_w = sum(v.trust_weight for v in all_votes)
-    if total_w < 1e-9:
-        return None, 0.0
-
-    hash_w: dict[str, float] = {}
-    hash_s: dict[str, list]  = {}
-    for v in all_votes:
-        hash_w[v.state_hash] = hash_w.get(v.state_hash, 0.0) + v.trust_weight
-        hash_s[v.state_hash] = v.state_vector
-
-    best = max(hash_w, key=lambda h: hash_w[h])
-    frac = hash_w[best] / total_w
-    if frac >= QUORUM_THRESHOLD:
-        return hash_s[best], frac
-    return None, frac
 
 
 def run() -> dict:

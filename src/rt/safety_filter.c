@@ -1,6 +1,7 @@
 /*
- * Hard-RT safety filter: mmap read → ONNX policy → HOCBF clamp → UDP to SITL
- * WCET measured: 2725 ns (SCHED_FIFO prio 99, CPU core 2, 100k trials)
+ * Bounded-latency safety filter: mmap read → ONNX policy → HOCBF clamp → UDP to SITL
+ * HOCBF kernel WCET measured: 2725 ns (SCHED_FIFO prio 99, pinned CPU, 100k trials)
+ * End-of-cycle deadline (100 µs at 1 kHz) enforced: any miss fails the run.
  *
  * Build (no ONNX):  gcc -O3 -march=native -DNO_ONNX -o build/safety_filter src/rt/safety_filter.c src/rt/watchdog.c -lm -lrt
  * Build (with ONNX): gcc -O3 -march=native -I build/onnxruntime_include -o build/safety_filter_onnx src/rt/safety_filter.c src/rt/watchdog.c -lm -lrt <onnxruntime.so>
@@ -71,10 +72,8 @@
 #define OBS_IDX_WZ   12
 
 /* ── Jitter watchdog ─────────────────────────────────────────────────────── */
-/* Inter-cycle jitter = |actual_interval - expected_interval|.
- * At 10 Hz the expected interval is 100ms = 100,000,000 ns.
- * In benchmark mode (back-to-back trials) the expected interval is 0 —
- * we measure the deviation from the mean cycle time instead.
+/* Inter-cycle jitter = |actual_cycle_start - ideal_periodic_start|, where the
+ * ideal start is driven by TIMER_ABSTIME at the 1 kHz period (1,000,000 ns).
  * Alert threshold: 50 μs = 50,000 ns (matches LATENCY_BUDGET.md SLA). */
 #define JITTER_WARN_NS  50000ULL   /* 50 μs */
 
@@ -242,8 +241,11 @@ static int sitl_init(SITLBridge* b, const char* host, int port) {
     return 0;
 }
 
-/* Fire-and-forget UDP send — O(1), non-blocking, never stalls RT loop */
-static inline void sitl_send(SITLBridge* b, double T_safe,
+/* Fire-and-forget UDP send — O(1), non-blocking, never stalls RT loop.
+ * Returns 0 on success, -1 on failure (EAGAIN on full buffer counts as a
+ * drop, not a stall). Caller counts failures — delivery is not guaranteed
+ * by UDP, but SILENT failure is not acceptable for a safety handoff. */
+static inline int sitl_send(SITLBridge* b, double T_safe,
                                float roll_cmd, float pitch_cmd, float yaw_rate) {
     SITLPacket pkt = {
         .seq       = ++b->seq,
@@ -252,8 +254,9 @@ static inline void sitl_send(SITLBridge* b, double T_safe,
         .pitch_cmd = pitch_cmd,
         .yaw_rate  = yaw_rate,
     };
-    sendto(b->sock, &pkt, SITL_PKT_SIZE, MSG_DONTWAIT,
-           (struct sockaddr*)&b->addr, sizeof(b->addr));
+    ssize_t n = sendto(b->sock, &pkt, SITL_PKT_SIZE, MSG_DONTWAIT,
+                       (struct sockaddr*)&b->addr, sizeof(b->addr));
+    return (n == SITL_PKT_SIZE) ? 0 : -1;
 }
 
 static void sitl_close(SITLBridge* b) { close(b->sock); }
@@ -295,7 +298,12 @@ static int rt_setup(int cpu_core) {
         return -1;
     }
 
-    /* 4. Pin to isolated CPU core */
+    /* 4. Pin to one CPU core. NOTE: sched_setaffinity is AFFINITY, not
+     * ISOLATION. It keeps this process on cpu_core but does NOT keep other
+     * processes/IRQs/kernel threads off it. True isolation requires boot-time
+     * isolcpus=/nohz_full=/rcu_nocbs= (or cset shield). We verify affinity
+     * took effect; we cannot verify isolation from userspace, so the report
+     * says "pinned", never "isolated". */
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(cpu_core, &cpuset);
@@ -325,7 +333,12 @@ int main(int argc, char* argv[]) {
     int   cpu_core  = (argc > 2) ? atoi(argv[2]) : 2;
     const char* onnx_path = (argc > 3) ? argv[3]
                           : "experiments/results/ppo_policy.onnx";
-    int   sitl_mode = (argc > 4 && strcmp(argv[4], "--sitl") == 0);
+    int   sitl_mode = 0;
+    int   require_onnx = 0;
+    for (int a = 4; a < argc; a++) {
+        if (strcmp(argv[a], "--sitl") == 0) sitl_mode = 1;
+        if (strcmp(argv[a], "--require-onnx") == 0) require_onnx = 1;
+    }
 
     /* RT setup with fail-closed semantics */
     if (rt_setup(cpu_core) != 0) {
@@ -337,7 +350,7 @@ int main(int argc, char* argv[]) {
     /* Open shared memory */
     int fd = open(SHM_PATH, O_CREAT | O_RDWR, 0666);
     if (fd == -1) { perror("open shm"); exit(1); }
-    ftruncate(fd, SHM_SIZE);
+    if (ftruncate(fd, SHM_SIZE) == -1) { perror("ftruncate"); exit(1); }
     VLACommand* shm = (VLACommand*)mmap(NULL, SHM_SIZE,
                         PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     close(fd);
@@ -353,13 +366,23 @@ int main(int argc, char* argv[]) {
     }
 
 #ifndef NO_ONNX
-    /* Load ONNX policy */
+    /* Load ONNX policy. Failure handling is EXPLICIT:
+     *  - --require-onnx: fail closed (refuse to run in unintended config)
+     *  - default: continue in DEGRADED VLA-only mode, loudly marked in the
+     *    report so benchmark numbers can never be mistaken for ONNX-path
+     *    measurements. */
     OnnxPolicy pol = {0};
     int onnx_ok = (onnx_init(&pol, onnx_path) == 0);
-    if (onnx_ok)
+    if (onnx_ok) {
         printf("ONNX policy loaded: %s\n", onnx_path);
-    else
-        printf("ONNX load failed — using VLA-only mode\n");
+    } else if (require_onnx) {
+        fprintf(stderr, "FATAL: ONNX load failed (%s) and --require-onnx set\n",
+                onnx_path);
+        exit(EXIT_FAILURE);
+    } else {
+        fprintf(stderr, "WARNING: ONNX load failed (%s) — DEGRADED VLA-only mode; "
+                "latency numbers below are NOT the ONNX control path\n", onnx_path);
+    }
 
     /* Warm up ONNX (fill instruction cache, JIT compile) */
     if (onnx_ok) {
@@ -386,15 +409,20 @@ int main(int argc, char* argv[]) {
     }
 
     /* ── Periodic deadline-driven benchmark at 1 kHz ───────────────────────
-     * This is a hard real-time control loop with a 1 ms period (100 µs deadline).
-     * Each cycle must complete within DEADLINE_NS. We use clock_nanosleep with
-     * TIMER_ABSTIME for precise periodic wakeups. Deadline misses are counted
-     * and reported — this is what proves "all conditions" deadline adherence.
+     * One cycle = wake → SHM snapshot → watchdog → policy inference (once)
+     * → HOCBF → SITL output → state update → END. The latency and the
+     * deadline check are measured at the END of that full cycle, not at
+     * HOCBF completion. Deadline misses are counted and cause a non-zero
+     * exit. This provides timing evidence for the tested conditions on this
+     * machine — it does NOT by itself prove worst-case timing under all
+     * supported conditions (that needs RT-kernel/isolated-core deployment
+     * evidence plus stress-loaded measurement).
      * ────────────────────────────────────────────────────────────────────── */
     double pz = 2.0, vz = 0.0;
     const uint64_t period_ns = 1000000;   /* 1 ms period */
     const uint64_t deadline_ns = 100000;  /* 100 µs deadline (10% of period) */
     uint64_t next_cycle = ns_now() + period_ns;  /* first cycle at t+1ms */
+    uint64_t sitl_send_failures = 0;
 
     for (int i = 0; i < n_trials; i++) {
         uint64_t cycle_start = ns_now();
@@ -424,9 +452,14 @@ int main(int argc, char* argv[]) {
         bool vla_fresh = vla_watchdog_check(&cmd_snap, now);
 
         double T_nom;
+        float roll_cmd = 0.0f, pitch_cmd = 0.0f, yaw_rate = 0.0f;
 
 #ifndef NO_ONNX
-        /* 2. RL policy forward pass (if ONNX loaded) */
+        /* 2. RL policy forward pass — EXACTLY ONCE per cycle. The single
+         * inference feeds both the thrust channel (HOCBF input) and the
+         * attitude channels (SITL output). A second inference after the
+         * HOCBF would (a) double hot-path cost and (b) invalidate the
+         * end-to-end deadline measurement. */
         if (onnx_ok) {
             float obs[13] = {0};
             obs[OBS_IDX_PZ] = (float)pz;
@@ -434,7 +467,10 @@ int main(int argc, char* argv[]) {
             obs[OBS_IDX_QW] = 1.0f;
             float action[4] = {0};
             onnx_infer(&pol, obs, 13, action, 4);
-            T_nom = action_to_thrust(action[0]);
+            T_nom     = action_to_thrust(action[0]);
+            roll_cmd  = action[1] * 0.3f;
+            pitch_cmd = action[2] * 0.3f;
+            yaw_rate  = action[3] * 1.0f;
             (void)vla_fresh; (void)vz_nom; (void)vx; (void)vy;
         } else {
             if (vla_fresh && watchdog_state() == VLA_STATE_FRESH) {
@@ -459,33 +495,16 @@ int main(int argc, char* argv[]) {
         uint64_t t_hocbf_end = ns_now();
 
         lat_hocbf[i] = t_hocbf_end - t_hocbf;
-        lat_total[i]  = t_hocbf_end - cycle_start;
 
-        /* 4. Deadline check — hard requirement for hard-RT claim */
-        uint64_t cycle_elapsed = t_hocbf_end - cycle_start;
-        if (cycle_elapsed > deadline_ns) {
-            deadline_misses++;
-            if (deadline_misses <= 5)
-                fprintf(stderr, "DEADLINE MISS cycle %d: %lu ns > %lu ns deadline\n",
-                        i, (unsigned long)cycle_elapsed, (unsigned long)deadline_ns);
-        }
-
-        /* 5. Send to Isaac Sim SITL (non-blocking UDP, never stalls RT loop) */
+        /* 4. Send to Isaac Sim SITL (non-blocking UDP, never stalls RT loop).
+         * Send failures are counted — a safety command that never left the
+         * machine must be visible in the report. */
         if (sitl_mode) {
-            float roll_cmd  = 0.0f, pitch_cmd = 0.0f, yaw_rate = 0.0f;
-#ifndef NO_ONNX
-            if (onnx_ok) {
-                float obs[13] = {0};
-                obs[OBS_IDX_PZ] = (float)pz;
-                obs[OBS_IDX_QW] = 1.0f;
-                float action[4] = {0};
-                onnx_infer(&pol, obs, 13, action, 4);
-                roll_cmd  = action[1] * 0.3f;
-                pitch_cmd = action[2] * 0.3f;
-                yaw_rate  = action[3] * 1.0f;
+            if (sitl_send(&sitl, T_safe, roll_cmd, pitch_cmd, yaw_rate) != 0) {
+                sitl_send_failures++;
+                if (sitl_send_failures <= 5)
+                    fprintf(stderr, "SITL SEND FAIL cycle %d (errno=%d)\n", i, errno);
             }
-#endif
-            sitl_send(&sitl, T_safe, roll_cmd, pitch_cmd, yaw_rate);
         }
 
         /* Simulate state update (1 ms step) */
@@ -493,6 +512,20 @@ int main(int argc, char* argv[]) {
         pz += vz * 0.001;
         if (pz < 0.0) pz = 0.0;
         (void)vx; (void)vy;
+
+        /* 5. END-OF-CYCLE boundary: latency and deadline are measured here,
+         * after ALL cycle work (SHM read, inference, HOCBF, UDP send, state
+         * update). Measuring at HOCBF completion would exclude real work and
+         * overstate deadline adherence. */
+        uint64_t t_cycle_end = ns_now();
+        lat_total[i] = t_cycle_end - cycle_start;
+        uint64_t cycle_elapsed = lat_total[i];
+        if (cycle_elapsed > deadline_ns) {
+            deadline_misses++;
+            if (deadline_misses <= 5)
+                fprintf(stderr, "DEADLINE MISS cycle %d: %lu ns > %lu ns deadline\n",
+                        i, (unsigned long)cycle_elapsed, (unsigned long)deadline_ns);
+        }
 
         /* 6. Sleep until next cycle start (TIMER_ABSTIME for drift-free periodicity) */
         next_cycle += period_ns;
@@ -530,9 +563,12 @@ int main(int argc, char* argv[]) {
     printf("\nAISP Safety Filter + RL Policy — Latency Report\n");
     printf("=================================================\n");
     printf("Trials    : %d\n", n_trials);
-    printf("CPU core  : %d\n", cpu_core);
+    printf("CPU core  : %d (affinity-pinned; NOT necessarily isolated — true isolation\n"
+           "            requires isolcpus/nohz_full boot config, unverifiable from here)\n",
+           cpu_core);
 #ifndef NO_ONNX
-    printf("ONNX      : %s\n", onnx_ok ? "loaded" : "not loaded");
+    printf("ONNX      : %s\n", onnx_ok ? "loaded"
+                               : "NOT LOADED — DEGRADED VLA-only numbers");
 #else
     printf("ONNX      : disabled (NO_ONNX)\n");
 #endif
@@ -540,10 +576,18 @@ int main(int argc, char* argv[]) {
     printf("P99       : %lu ns\n", (unsigned long)hocbf_p99);
     printf("WCET      : %lu ns\n", (unsigned long)hocbf_wcet);
     printf("< 100us   : %s\n", hocbf_wcet < 100000 ? "PASS" : "FAIL");
-printf("\n--- Full RT loop (mmap + ONNX + HOCBF) ---\n");
+    printf("\n--- Full RT cycle (SHM read + policy + HOCBF + SITL send + state update) ---\n");
     printf("P99       : %lu ns\n", (unsigned long)total_p99);
     printf("WCET      : %lu ns\n", (unsigned long)total_wcet);
-    printf("< 2ms     : %s\n", total_wcet < 2000000 ? "PASS" : "FAIL");
+    printf("< 100us deadline: %s\n", total_wcet < 100000 ? "PASS" : "FAIL");
+    printf("\n--- Deadline adherence (hard criterion) ---\n");
+    printf("Deadline  : %lu ns\n", (unsigned long)deadline_ns);
+    printf("Misses    : %lu / %d\n", (unsigned long)deadline_misses, n_trials);
+    printf("Result    : %s\n", deadline_misses == 0 ? "PASS (0 misses)" : "FAIL");
+    if (sitl_mode)
+        printf("SITL send failures: %lu / %d %s\n",
+               (unsigned long)sitl_send_failures, n_trials,
+               sitl_send_failures == 0 ? "" : " <-- UDP drops observed");
 
     /* Jitter watchdog report (already sorted above) */
     uint64_t jitter_p99 = sorted_j[n_trials * 99 / 100];
@@ -575,7 +619,21 @@ free(lat_hocbf); free(lat_total); free(lat_jitter);
 #ifndef NO_ONNX
     if (onnx_ok) onnx_free(&pol);
 #endif
-    return (hocbf_wcet < 100000) ? 0 : 1;
+    /* Exit criteria — ALL must hold for a successful RT validation run:
+     *  1. HOCBF kernel WCET < 100 µs
+     *  2. ZERO deadline misses at the end-of-cycle boundary (100 µs)
+     *  3. Zero SITL send failures (when SITL enabled)
+     * A run that missed deadlines but kept HOCBF under 100 µs previously
+     * exited 0 — that hid exactly the failures the benchmark exists to catch. */
+    int ok = (hocbf_wcet < 100000)
+          && (deadline_misses == 0)
+          && (sitl_send_failures == 0);
+    if (!ok)
+        fprintf(stderr, "RT VALIDATION FAILED (hocbf_wcet=%lu ns, deadline_misses=%lu, "
+                "sitl_send_failures=%lu)\n",
+                (unsigned long)hocbf_wcet, (unsigned long)deadline_misses,
+                (unsigned long)sitl_send_failures);
+    return ok ? 0 : 1;
 }
 #endif /* !SIL_REPLAY */
 

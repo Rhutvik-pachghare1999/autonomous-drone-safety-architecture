@@ -276,10 +276,18 @@ class CovarianceGating:
     def __init__(self,
                  sigma_warn_sq: float     = SIGMA_WARN_SQ,
                  sigma_critical_sq: float = SIGMA_CRITICAL_SQ,
-                 seed: int = 0):
+                 seed: int = 0,
+                 ekf_shm_path: "str | None" = None):
         self.sigma_warn_sq     = sigma_warn_sq
         self.sigma_critical_sq = sigma_critical_sq
         self._rng = np.random.default_rng(seed)
+        # Optional: publish this vehicle's estimate for the swarm consensus
+        # (the production writer for /dev/shm/aisp_ekf_state — previously the
+        # file had no writer anywhere in the repo).
+        self._ekf_writer = None
+        if ekf_shm_path is not None:
+            from src.estimation.ekf_shm_writer import EKFShmWriter
+            self._ekf_writer = EKFShmWriter(ekf_shm_path)
 
     def _health_scalar(self, P: np.ndarray) -> float:
         """
@@ -343,6 +351,20 @@ class CovarianceGating:
             mode = SafeMode.DEGRADED
         else:
             mode = SafeMode.COLLAPSED
+
+        # Publish this vehicle's estimate for the swarm (failures counted,
+        # never raised into the control loop — see EKFShmWriter). var_psi is
+        # the same linearised yaw variance the health scalar uses, so the
+        # swarm's trust in this node equals its own self-assessed health.
+        if self._ekf_writer is not None:
+            self._ekf_writer.write(
+                px=float(x_safe[IDX_PX]), py=float(x_safe[IDX_PY]),
+                pz=float(x_safe[IDX_PZ]),
+                var_px=float(P_out[IDX_PX, IDX_PX]),
+                var_py=float(P_out[IDX_PY, IDX_PY]),
+                var_psi=float(4.0 * P_out[IDX_QZ, IDX_QZ]),
+                gps_active=gps_active,
+            )
 
         return GatingResult(
             mode           = mode,

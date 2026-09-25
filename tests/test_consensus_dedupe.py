@@ -23,8 +23,10 @@ BASE_PORT = 18650
 
 def test_resync_rebroadcast_counts_once():
     """Two broadcasts of the same (node_id, round) proposal -> one vote."""
-    a = ConsensusNode(0, 2, zmq_base_port=BASE_PORT)
-    b = ConsensusNode(1, 2, zmq_base_port=BASE_PORT)
+    # allow_synthetic_ekf: these are wire-protocol tests, not estimator tests;
+    # the proposal content is irrelevant, only dedupe behavior matters.
+    a = ConsensusNode(0, 2, zmq_base_port=BASE_PORT, allow_synthetic_ekf=True)
+    b = ConsensusNode(1, 2, zmq_base_port=BASE_PORT, allow_synthetic_ekf=True)
     try:
         time.sleep(0.6)  # let SUB connect + subscription propagate
         for _ in range(2):  # the resynced-peer duplicate
@@ -43,9 +45,9 @@ def test_resync_rebroadcast_counts_once():
 
 def test_same_round_from_both_peers_kept():
     """Distinct node_ids in the same round must BOTH be kept."""
-    a = ConsensusNode(0, 3, zmq_base_port=BASE_PORT + 10)
-    b = ConsensusNode(1, 3, zmq_base_port=BASE_PORT + 10)
-    c = ConsensusNode(2, 3, zmq_base_port=BASE_PORT + 10)
+    a = ConsensusNode(0, 3, zmq_base_port=BASE_PORT + 10, allow_synthetic_ekf=True)
+    b = ConsensusNode(1, 3, zmq_base_port=BASE_PORT + 10, allow_synthetic_ekf=True)
+    c = ConsensusNode(2, 3, zmq_base_port=BASE_PORT + 10, allow_synthetic_ekf=True)
     try:
         time.sleep(0.6)
         b._broadcast(b._propose())

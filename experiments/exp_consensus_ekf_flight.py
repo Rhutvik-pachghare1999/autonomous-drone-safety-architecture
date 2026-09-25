@@ -113,14 +113,22 @@ def run_scenario(with_swarm: bool, seed: int = 42) -> dict:
     _cleanup_shm(n_nodes)
 
     rng    = np.random.default_rng(seed)
-    gating = CovarianceGating(seed=seed)
+    # The ego publishes its estimate through the PRODUCTION writer
+    # (CovarianceGating → EKFShmWriter) — the same component a real vehicle
+    # runs. Peers are simulated remote vehicles and use write_synthetic.
+    gating = CovarianceGating(seed=seed,
+                              ekf_shm_path="/dev/shm/aisp_ekf_state_n0")
 
     # Real consensus node objects (real ZMQ sockets); each reads its own
     # per-node EKF snapshot SHM so peers can see different states.
+    # auth_key: the e2e runs in AUTHENTICATED mode (HMAC) — the same mode a
+    # real deployment must use. EKF reads are fail-closed: a node with no
+    # valid estimate sits the round out instead of proposing fake state.
     port_base = 5550 + (0 if with_swarm else 100)
     nodes = []
     for i in range(n_nodes):
-        nd = ConsensusNode(node_id=i, n_nodes=n_nodes, zmq_base_port=port_base)
+        nd = ConsensusNode(node_id=i, n_nodes=n_nodes, zmq_base_port=port_base,
+                           auth_key=b"aisp-e2e-flight-test-key")
         nd._ekf = EKFSharedMemory(path=f"/dev/shm/aisp_ekf_state_n{i}")
         nodes.append(nd)
 
@@ -157,14 +165,9 @@ def run_scenario(with_swarm: bool, seed: int = 42) -> dict:
         _write_gt(true_vx, 0.0)
 
         # ── Per-node EKF snapshots (their view of the world) ──
-        # Node 0 = ego: dead-reckoning estimate + its honestly-grown covariance
-        nodes[0]._ekf.write_synthetic(EKFSnapshot(
-            px=float(x[IDX_PX]), py=float(x[IDX_PY]), pz=HOVER_Z,
-            var_px=float(P[IDX_PX, IDX_PX]), var_py=float(P[IDX_PY, IDX_PY]),
-            var_psi=float(P[IDX_QZ, IDX_QZ]), gps_active=gps_active,
-        ))
-        # Peers: GPS-active, share the same true reading (deterministic
-        # identical state -> the weighted quorum has one hash to commit to)
+        # Node 0 = ego: published by CovarianceGating's production writer
+        # inside evaluate() below (blended safe state + carried covariance).
+        # Peers: GPS-active simulated remote estimators sharing the truth.
         if with_swarm:
             for i in range(1, n_nodes):
                 nodes[i]._ekf.write_synthetic(EKFSnapshot(

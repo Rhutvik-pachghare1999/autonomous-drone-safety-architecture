@@ -7,7 +7,7 @@
     "p7_triggered": false,
     "max_err_h": 0.19200000000000017,
     "max_alpha": 1.0,
-    "max_blend_shift": 0.09125848412513732,
+    "max_blend_shift": 0.09167819595336935,
     "n_vio_updates": 176
   },
   "run_ego_only": {

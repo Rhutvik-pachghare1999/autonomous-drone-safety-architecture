@@ -35,7 +35,7 @@ jobs:
         run: ruff check . --select E,F,W --ignore E501 --statistics
         continue-on-error: true
 
-      - name: Unit tests (HOCBF + input validation)
+      - name: Unit tests (HOCBF + HOCBF4 + input validation + consensus)
         run: PYTHONPATH=. pytest tests/ -v
 
       - name: Watchdog C test (real src/rt/watchdog.c)

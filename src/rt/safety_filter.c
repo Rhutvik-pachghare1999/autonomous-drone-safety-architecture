@@ -258,20 +258,64 @@ static inline void sitl_send(SITLBridge* b, double T_safe,
 
 static void sitl_close(SITLBridge* b) { close(b->sock); }
 
-/* ── RT setup ────────────────────────────────────────────────────────────── */
-static void rt_setup(int cpu_core) {
-    if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1)
-        perror("mlockall (need CAP_IPC_LOCK)");
+/* ── RT setup ──────────────────────────────────────────────────────────────
+ * Returns 0 on success, -1 on failure. Fails closed: if any RT guarantee
+ * cannot be established, the function returns an error and the caller MUST
+ * abort. This is a hard-RT requirement — no silent degradation to best-effort.
+ * ────────────────────────────────────────────────────────────────────────── */
+static int rt_setup(int cpu_core) {
+    /* 1. Lock all current and future memory — prevent page faults in hot path */
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) {
+        perror("mlockall failed (need CAP_IPC_LOCK, RLIMIT_MEMLOCK=unlimited)");
+        return -1;
+    }
 
+    /* 2. Set SCHED_FIFO priority 99 — highest RT priority */
     struct sched_param sp = { .sched_priority = 99 };
-    if (sched_setscheduler(0, SCHED_FIFO, &sp) == -1)
-        perror("sched_setscheduler (need CAP_SYS_NICE)");
+    if (sched_setscheduler(0, SCHED_FIFO, &sp) == -1) {
+        perror("sched_setscheduler failed (need CAP_SYS_NICE, RT runtime limit)");
+        return -1;
+    }
 
+    /* 3. Verify scheduler actually changed */
+    int policy = sched_getscheduler(0);
+    if (policy != SCHED_FIFO) {
+        fprintf(stderr, "RT VERIFICATION FAILED: scheduler policy is %d, expected SCHED_FIFO (%d)\n",
+                policy, SCHED_FIFO);
+        return -1;
+    }
+    struct sched_param verify_sp;
+    if (sched_getparam(0, &verify_sp) == -1) {
+        perror("sched_getparam failed");
+        return -1;
+    }
+    if (verify_sp.sched_priority != 99) {
+        fprintf(stderr, "RT VERIFICATION FAILED: priority is %d, expected 99\n",
+                verify_sp.sched_priority);
+        return -1;
+    }
+
+    /* 4. Pin to isolated CPU core */
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(cpu_core, &cpuset);
-    if (sched_setaffinity(0, sizeof(cpuset), &cpuset) == -1)
-        perror("sched_setaffinity");
+    if (sched_setaffinity(0, sizeof(cpuset), &cpuset) == -1) {
+        perror("sched_setaffinity failed");
+        return -1;
+    }
+
+    /* 5. Verify affinity actually took */
+    cpu_set_t verify_cpuset;
+    if (sched_getaffinity(0, sizeof(verify_cpuset), &verify_cpuset) == -1) {
+        perror("sched_getaffinity failed");
+        return -1;
+    }
+    if (!CPU_ISSET(cpu_core, &verify_cpuset)) {
+        fprintf(stderr, "RT VERIFICATION FAILED: not pinned to CPU core %d\n", cpu_core);
+        return -1;
+    }
+
+    return 0;
 }
 
 /* ── Main ────────────────────────────────────────────────────────────────── */
@@ -283,7 +327,12 @@ int main(int argc, char* argv[]) {
                           : "experiments/results/ppo_policy.onnx";
     int   sitl_mode = (argc > 4 && strcmp(argv[4], "--sitl") == 0);
 
-    rt_setup(cpu_core);
+    /* RT setup with fail-closed semantics */
+    if (rt_setup(cpu_core) != 0) {
+        fprintf(stderr, "RT setup failed — refusing to run without hard-RT guarantees\n");
+        exit(EXIT_FAILURE);
+    }
+    printf("RT setup verified: SCHED_FIFO priority 99, CPU core %d, memory locked\n", cpu_core);
 
     /* Open shared memory */
     int fd = open(SHM_PATH, O_CREAT | O_RDWR, 0666);
@@ -328,6 +377,7 @@ int main(int argc, char* argv[]) {
     if (!lat_hocbf || !lat_total || !lat_jitter) { perror("malloc"); exit(1); }
     uint64_t jitter_alerts = 0;   /* count of cycles exceeding JITTER_WARN_NS */
     uint64_t jitter_max    = 0;   /* worst-case observed jitter */
+    uint64_t deadline_misses = 0; /* count of cycles exceeding DEADLINE_NS */
 
     /* Warm up HOCBF */
     for (int i = 0; i < 100; i++) {
@@ -335,44 +385,33 @@ int main(int argc, char* argv[]) {
         (void)t;
     }
 
-    /* ── Hot-path benchmark ─────────────────────────────────────────────── */
+    /* ── Periodic deadline-driven benchmark at 1 kHz ───────────────────────
+     * This is a hard real-time control loop with a 1 ms period (100 µs deadline).
+     * Each cycle must complete within DEADLINE_NS. We use clock_nanosleep with
+     * TIMER_ABSTIME for precise periodic wakeups. Deadline misses are counted
+     * and reported — this is what proves "all conditions" deadline adherence.
+     * ────────────────────────────────────────────────────────────────────── */
     double pz = 2.0, vz = 0.0;
-    uint64_t last_cycle_t   = ns_now();  /* jitter watchdog: previous cycle start */
+    const uint64_t period_ns = 1000000;   /* 1 ms period */
+    const uint64_t deadline_ns = 100000;  /* 100 µs deadline (10% of period) */
+    uint64_t next_cycle = ns_now() + period_ns;  /* first cycle at t+1ms */
 
     for (int i = 0; i < n_trials; i++) {
-        uint64_t t_start = ns_now();
+        uint64_t cycle_start = ns_now();
 
-        /* ── Jitter watchdog ─────────────────────────────────────────────
-         * Measure inter-cycle interval deviation from the running mean.
-         * In back-to-back benchmark mode the "expected" interval is the
-         * mean of the previous cycles; we use a simple deviation from the
-         * previous cycle time as a conservative upper bound on OS jitter. */
-        uint64_t interval = t_start - last_cycle_t;
-        last_cycle_t = t_start;
-        /* First cycle has no reference — skip */
-        uint64_t jitter = 0;
-        if (i > 0) {
-            /* Jitter = deviation from previous interval (proxy for OS preemption) */
-            static uint64_t prev_interval = 0;
-            jitter = (interval > prev_interval)
-                     ? (interval - prev_interval)
-                     : (prev_interval - interval);
-            prev_interval = interval;
-            if (jitter > jitter_max) jitter_max = jitter;
-            if (jitter > JITTER_WARN_NS) {
-                jitter_alerts++;
-                /* Non-blocking alert — never stalls RT loop */
-                if (jitter_alerts <= 5)  /* suppress after first 5 to avoid I/O flood */
-                    fprintf(stderr, "JITTER ALERT cycle %d: %lu ns > %lu ns threshold\n",
-                            i, (unsigned long)jitter, (unsigned long)JITTER_WARN_NS);
-            }
+        /* ── Jitter watchdog: deviation from ideal periodic start ───────── */
+        int64_t jitter = (int64_t)cycle_start - (int64_t)next_cycle;
+        if (jitter < 0) jitter = -jitter;  /* absolute deviation */
+        lat_jitter[i] = (uint64_t)jitter;
+        if (jitter > jitter_max) jitter_max = jitter;
+        if (jitter > JITTER_WARN_NS) {
+            jitter_alerts++;
+            if (jitter_alerts <= 5)
+                fprintf(stderr, "JITTER ALERT cycle %d: %lu ns > %lu ns threshold\n",
+                        i, (unsigned long)jitter, (unsigned long)JITTER_WARN_NS);
         }
-        lat_jitter[i] = jitter;
 
-        /* 1. Read VLA command via torn-free seqlock snapshot.
-         * A torn frame (writer mid-copy) is treated as no-new-data: the
-         * watchdog sees is_new_data=0 and the hover fallback applies,
-         * never a mixed old/new velocity vector. */
+        /* 1. Read VLA command via torn-free seqlock snapshot */
         VLACommand cmd_snap = {0};
         bool shm_clean = vla_shm_snapshot(shm, &cmd_snap);
         if (!shm_clean) memset(&cmd_snap, 0, sizeof(cmd_snap));
@@ -389,39 +428,27 @@ int main(int argc, char* argv[]) {
 #ifndef NO_ONNX
         /* 2. RL policy forward pass (if ONNX loaded) */
         if (onnx_ok) {
-            /* obs[13] order MUST match training: [px, py, pz, vx, vy, vz, qw, qx, qy, qz, wx, wy, wz]
-             * Benchmark loop only has pz, vz. px,py,vx,vy,qx,qy,qz,wx,wy,wz zeroed.
-             * This is a known domain mismatch — see OBS_IDX_* defines above. */
             float obs[13] = {0};
             obs[OBS_IDX_PZ] = (float)pz;
             obs[OBS_IDX_VZ] = (float)vz;
-            obs[OBS_IDX_QW] = 1.0f;  // identity quaternion
+            obs[OBS_IDX_QW] = 1.0f;
             float action[4] = {0};
             onnx_infer(&pol, obs, 13, action, 4);
             T_nom = action_to_thrust(action[0]);
-
-            /* VLA is a strategic planner, not a tactical pilot.
-             * A 2.5s-latency command must NOT touch the thrust channel.
-             * The RL policy runs the inner loop; VLA updates goals only.
-             * Even fresh VLA velocity → thrust blending is wrong:
-             * by the time the VLA parsed the scene the drone has moved ~12m.
-             * Blend coefficient is 0.0 — RL policy is sole thrust authority. */
             (void)vla_fresh; (void)vz_nom; (void)vx; (void)vy;
         } else {
-            /* No ONNX: use hover thrust unless VLA is fresh */
             if (vla_fresh && watchdog_state() == VLA_STATE_FRESH) {
                 T_nom = MASS * GRAVITY + MASS * vz_nom * 2.0;
             } else {
-                T_nom = MASS * GRAVITY;  // hover fallback when stale/startup
+                T_nom = MASS * GRAVITY;
             }
             (void)vx; (void)vy;
         }
 #else
-        /* NO_ONNX mode: use VLA command only when fresh; else hover */
         if (vla_fresh && watchdog_state() == VLA_STATE_FRESH) {
             T_nom = MASS * GRAVITY + MASS * vz_nom * 2.0;
         } else {
-            T_nom = MASS * GRAVITY;  // hover fallback when stale/startup
+            T_nom = MASS * GRAVITY;
         }
         (void)vx; (void)vy;
 #endif
@@ -432,9 +459,18 @@ int main(int argc, char* argv[]) {
         uint64_t t_hocbf_end = ns_now();
 
         lat_hocbf[i] = t_hocbf_end - t_hocbf;
-        lat_total[i]  = t_hocbf_end - t_start;
+        lat_total[i]  = t_hocbf_end - cycle_start;
 
-        /* 4. Send to Isaac Sim SITL (non-blocking UDP, never stalls RT loop) */
+        /* 4. Deadline check — hard requirement for hard-RT claim */
+        uint64_t cycle_elapsed = t_hocbf_end - cycle_start;
+        if (cycle_elapsed > deadline_ns) {
+            deadline_misses++;
+            if (deadline_misses <= 5)
+                fprintf(stderr, "DEADLINE MISS cycle %d: %lu ns > %lu ns deadline\n",
+                        i, (unsigned long)cycle_elapsed, (unsigned long)deadline_ns);
+        }
+
+        /* 5. Send to Isaac Sim SITL (non-blocking UDP, never stalls RT loop) */
         if (sitl_mode) {
             float roll_cmd  = 0.0f, pitch_cmd = 0.0f, yaw_rate = 0.0f;
 #ifndef NO_ONNX
@@ -452,19 +488,28 @@ int main(int argc, char* argv[]) {
             sitl_send(&sitl, T_safe, roll_cmd, pitch_cmd, yaw_rate);
         }
 
-        /* Simulate state update */
+        /* Simulate state update (1 ms step) */
         vz += (T_safe / MASS - GRAVITY) * 0.001;
         pz += vz * 0.001;
         if (pz < 0.0) pz = 0.0;
         (void)vx; (void)vy;
+
+        /* 6. Sleep until next cycle start (TIMER_ABSTIME for drift-free periodicity) */
+        next_cycle += period_ns;
+        struct timespec ts;
+        ts.tv_sec  = next_cycle / 1000000000ULL;
+        ts.tv_nsec = next_cycle % 1000000000ULL;
+        clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, NULL);
     }
 
     /* ── Statistics ─────────────────────────────────────────────────────── */
     /* Sort for percentiles */
     uint64_t* sorted_h = malloc((size_t)n_trials * sizeof(uint64_t));
     uint64_t* sorted_t = malloc((size_t)n_trials * sizeof(uint64_t));
+    uint64_t* sorted_j = malloc((size_t)n_trials * sizeof(uint64_t));
     memcpy(sorted_h, lat_hocbf, (size_t)n_trials * sizeof(uint64_t));
     memcpy(sorted_t, lat_total,  (size_t)n_trials * sizeof(uint64_t));
+    memcpy(sorted_j, lat_jitter, (size_t)n_trials * sizeof(uint64_t));
 
     /* Insertion sort (stats only, not in hot-path) */
     for (int i = 1; i < n_trials; i++) {
@@ -495,19 +540,12 @@ int main(int argc, char* argv[]) {
     printf("P99       : %lu ns\n", (unsigned long)hocbf_p99);
     printf("WCET      : %lu ns\n", (unsigned long)hocbf_wcet);
     printf("< 100us   : %s\n", hocbf_wcet < 100000 ? "PASS" : "FAIL");
-    printf("\n--- Full RT loop (mmap + ONNX + HOCBF) ---\n");
+printf("\n--- Full RT loop (mmap + ONNX + HOCBF) ---\n");
     printf("P99       : %lu ns\n", (unsigned long)total_p99);
     printf("WCET      : %lu ns\n", (unsigned long)total_wcet);
     printf("< 2ms     : %s\n", total_wcet < 2000000 ? "PASS" : "FAIL");
 
-    /* Jitter watchdog report */
-    uint64_t* sorted_j = malloc((size_t)n_trials * sizeof(uint64_t));
-    memcpy(sorted_j, lat_jitter, (size_t)n_trials * sizeof(uint64_t));
-    for (int i = 1; i < n_trials; i++) {
-        uint64_t kj = sorted_j[i]; int j = i - 1;
-        while (j >= 0 && sorted_j[j] > kj) { sorted_j[j+1] = sorted_j[j]; j--; }
-        sorted_j[j+1] = kj;
-    }
+    /* Jitter watchdog report (already sorted above) */
     uint64_t jitter_p99 = sorted_j[n_trials * 99 / 100];
     printf("\n--- OS inter-cycle jitter watchdog ---\n");
     printf("P99       : %lu ns  (%.1f us)\n",

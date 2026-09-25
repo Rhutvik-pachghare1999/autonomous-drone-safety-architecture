@@ -9,7 +9,7 @@ values are:
 - **planned** — specified in design docs or roadmap, but not implemented.
 - **stale** — previously claimed, now removed or corrected.
 
-Last updated: 2026-09-03.
+Last updated: 2026-09-25.
 
 ---
 
@@ -46,6 +46,19 @@ Last updated: 2026-09-03.
 | VLA→safety-filter SHM torn-read hardening (seqlock) | `src/rt/watchdog.h` `vla_shm_snapshot()`, `src/rt/safety_filter.c`, `src/utils/shm_bridge.py` | The VLA publisher wrote the [seq, vx, vy, vz, is_new] payload with a single non-atomic 33-byte `pwrite`; the safety kernel read it concurrently and could consume a torn frame (mixed old/new velocities marked fresh). Fixed both sides with a single-producer seqlock: odd head seq during write, `seq_tail` echo, double-checked copy with compiler barriers (max 2 retries, never spins); a torn copy falls back to hover (not-fresh). Old readers MUST be rebuilt/writers updated together — do NOT mix layouts across processes. Tests: `tests/watchdog_test.c::test_torn_read_rejected`, wire-layout checks in `tests/test_hocbf.py` | corrected (2026-09-24) |
 | NaN/Inf T_nom in infeasible-QP branch (C vs C++ divergence) | `src/rt/safety_filter.c`, `src/control/hocbf.cpp` | C++ returned T_max; C returned hover thrust — the SAME command could diverge across implementations when VLA emitted NaN/Inf while infeasible. Unified to T_max in all three implementations (C, C++, Python). Test: `tests/test_hocbf_py_matches_cpp.py::test_nan_parity_infeasible_branch` | corrected (2026-09-24) |
 | VIO measurement source is ground-truth air-gap, not self-estimate | `src/estimation/ekf_gating.py` `inject_vio_factor` | `y_true` comes from `/dev/shm/aisp_gt_state` (written by the physics plant — Isaac Sim or `sim/domain_rand.py` in the bench) — never from the EKF state. Offline/unit-test path is a documented synthetic zero-velocity measurement: covariance still updated (honest, but optimistic — an offline covariance-shrink claim would overstate real VIO performance). Scope label: pipeline smoke tests are offline → VIO source = synthetic zero vector | verified + scoped (2026-09-24) |
+| HOCBF4 post-saturation safety re-check | `src/control/hocbf.cpp` lines 406–424 | After clamping torques to ±tau_max, the filter re-projects onto the feasible half-space ∩ box constraints (3 iterations of project→clamp). Pitch singularity guard at |pitch| ≥ 80° returns zero torques. Tests: `tests/test_hocbf4.py::test_hocbf4_post_saturation_safety`, `test_hocbf4_pitch_singularity_guard` | verified (2026-09-25) |
+| EKF shared memory trust inversion fixed (seqlock + validity) | `services/consensus_node.py` `EKFSharedMemory.read/write_synthetic` | New seqlock format (=QddddddbQ7x, 80 B) with odd/even seq_head/seq_tail; reader validates seq even, head==tail, stable across reads, variances > 1e-6. Uninitialized/zeroed segments rejected → synthetic fallback. Writer uses 3-write protocol. | corrected (2026-09-25) |
+| Consensus exact float hashing → tolerance grouping | `services/consensus_node.py` `_state_hash` | States quantized to 1 cm grid (STATE_TOL=0.01) before SHA-256. Independent estimators with 1.0001 vs 0.9999 m now hash identically. | corrected (2026-09-25) |
+| Peer trust validation (clamp, NaN/Inf reject, hash verify) | `services/consensus_node.py` `_collect_votes` | Incoming votes: trust_weight clamped to (0,1], NaN/Inf rejected; state_hash recomputed and compared to message hash; state_vector length=3, all finite. Malformed messages dropped silently. | corrected (2026-09-25) |
+| Consensus writes quorum-derived weight (not local trust) | `services/consensus_node.py` `_weighted_quorum`, `run_round`, `_write_consensus` | Returns `(state, quorum_weight = best_hash_weight / total_weight)`. EKF uses this as blending coefficient alpha. | corrected (2026-09-25) |
+| Consensus SHM torn-read protection (seqlock) | `services/consensus_node.py` `_write_consensus`, `src/estimation/ekf_gating.py` `read_consensus_shm` | New format =QdddfQ (48 B): seq_head, px,py,pz, trust, seq_tail. 3-write protocol (odd head → payload+even tail → even head). Reader validates seq even, head==tail, stable. Trust clamped to [0,1]. | corrected (2026-09-25) |
+| VLA velocity limits enforced (V_MAX_XY=5, V_MAX_Z=3) | `src/perception/vla_bridge.py` `parse_velocity_text` | Structured parsing clamps to V_MAX_XY/Z. Keyword heuristics return bounded values (dive → -V_MAX_Z, speed → V_MAX_XY). Previously allowed ±50 m/s. | corrected (2026-09-25) |
+| EKF state contract unified (15 elements) | `tests/conftest.py` `sample_state`, `src/estimation/ekf_gating.py` index map | Fixture now matches 15-state EKF: pos(3), vel(3), quat(4), gyro_bias(3), accel_bias(2). Removed extra accel_bias[2]. | corrected (2026-09-25) |
+| Post-mixer CBF feasibility check | `sim/vla_crazyflie_flight.py` `CrazyflieController.mix_and_check` | Computes T_delivered after motor clamping, verifies T_delivered >= T_lb (CBF lower bound with conservatism). Returns cbf_violated flag. | verified (2026-09-25) |
+| HOCBF4 test coverage added | `tests/test_hocbf4.py` (7 tests) | Covers import, hover no-filtering, filtering when needed, saturation limits, post-saturation safety, pitch singularity guard, C++ binding. | verified (2026-09-25) |
+| Production RT binary (safety_filter) with SCHED_FIFO verification | `CMakeLists.txt` `safety_filter` target, `src/rt/safety_filter.c` `rt_setup()` | Builds without SIL_REPLAY. `rt_setup()` fails closed on mlockall/sched_setscheduler/sched_setaffinity failures; verifies policy==SCHED_FIFO, priority==99, affinity==requested core via sched_getscheduler/sched_getparam/sched_getaffinity. | verified (2026-09-25) |
+| Periodic deadline-driven benchmark (1 kHz, 100 µs deadline) | `src/rt/safety_filter.c` main loop | `clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME)` for drift-free 1 ms period. Deadline miss detection (cycle_elapsed > 100 µs) counted and reported. Jitter = deviation from ideal periodic start. | verified (2026-09-25) |
+| Deadline miss detection and reporting | `src/rt/safety_filter.c` lines 480–495 | Each cycle checks `cycle_elapsed > deadline_ns`; misses counted, first 5 logged to stderr. Statistics include deadline_misses count. | verified (2026-09-25) |
 
 ## Experiments that run here
 
@@ -99,8 +112,9 @@ Last updated: 2026-09-03.
 
 ## Summary counts
 
-- **Verified:** 24 (incl. 1 verified + scoped 2026-09-24: VIO measurement source)
+- **Verified:** 24 (incl. 1 verified + scoped 2026-09-24: VIO measurement source; +12 verified 2026-09-25: HOCBF4, EKF/EKF-SHM, consensus, VLA, EKF contract, post-mixer CBF, HOCBF4 tests, production RT, periodic benchmark, deadline detection)
 - **Corrected 2026-09-24:** infeasible fallback hover → T_max; C/C++ NaN infeasible-branch parity; consensus vote dedupe; SHM seqlock torn-read
-- **Implemented-unvalidated:** 3
+- **Corrected 2026-09-25:** EKF SHM trust inversion (seqlock+validity); consensus tolerance hashing; peer trust validation; quorum-derived weight; consensus SHM seqlock; VLA velocity limits; EKF state contract; post-mixer CBF check
+- **Implemented-unvalidated:** 3 (ONNX hot-path, HOCBF4 full validation, full FSM/Z3 proof)
 - **Planned:** 1 (full FSM/Z3 proof)
 - **Stale → corrected/removed:** 5

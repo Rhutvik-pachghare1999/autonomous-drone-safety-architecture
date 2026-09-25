@@ -408,6 +408,48 @@ public:
         ty = std::clamp(ty, -p_.tau_max, p_.tau_max);
         const double tz = std::clamp(tau_nom[2], -p_.tau_max, p_.tau_max);
 
+        // CRITICAL: Re-validate safety constraint after saturation.
+        // Clamping can push torques back outside the feasible half-space,
+        // invalidating the HOCBF4 guarantee. If saturated torques violate
+        // the constraint, we fall back to the boundary projection that
+        // respects limits — this is the "least-violation" correction.
+        const double ctrl_post = gx * tx + gy * ty;
+        if (ctrl_post < rhs) {
+            // Need to project within the saturated bounds.
+            // The feasible set in (tx, ty) is the intersection of:
+            //   gx*tx + gy*ty >= rhs  (half-space)
+            //   tx in [-tau_max, tau_max], ty in [-tau_max, tau_max]  (box)
+            // We find the minimum-norm correction from (tx, ty) to this set.
+            // Since the box is convex and the half-space is convex, we can
+            // solve this by projecting onto the half-space, then clamping.
+            // Iterate once: project -> clamp -> project -> clamp (converges).
+            double tx_iter = tx, ty_iter = ty;
+            for (int iter = 0; iter < 3; ++iter) {
+                double ctrl_iter = gx * tx_iter + gy * ty_iter;
+                if (ctrl_iter >= rhs) break;
+                double deficit = rhs - ctrl_iter;
+                double g_sq = gx * gx + gy * gy;
+                if (g_sq > 1e-10) {
+                    tx_iter += gx * deficit / g_sq;
+                    ty_iter += gy * deficit / g_sq;
+                }
+                tx_iter = std::clamp(tx_iter, -p_.tau_max, p_.tau_max);
+                ty_iter = std::clamp(ty_iter, -p_.tau_max, p_.tau_max);
+            }
+            tx = tx_iter;
+            ty = ty_iter;
+            filtered = true;
+        }
+
+        // Guard against pitch singularity: cos(θ) near zero makes tan(θ)/cos²(θ)
+        // blow up. If |pitch| >= 80°, the ZYX Euler parameterization is
+        // unreliable — return hover torques and flag filtered.
+        if (std::abs(pitch) >= 80.0 * M_PI / 180.0) {
+            tx = 0.0;
+            ty = 0.0;
+            filtered = true;
+        }
+
         return {tx, ty, tz, filtered};
     }
 

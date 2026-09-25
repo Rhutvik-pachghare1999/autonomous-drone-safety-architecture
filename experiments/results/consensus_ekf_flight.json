@@ -5,9 +5,9 @@
     "n_degraded": 176,
     "reached_degraded": true,
     "p7_triggered": false,
-    "max_err_h": 0.19214692004868572,
-    "max_alpha": 0.9762856960296631,
-    "max_blend_shift": 0.0976285696029664,
+    "max_err_h": 0.19200000000000017,
+    "max_alpha": 1.0,
+    "max_blend_shift": 0.09125848412513732,
     "n_vio_updates": 176
   },
   "run_ego_only": {
@@ -17,7 +17,7 @@
     "reached_degraded": true,
     "p7_triggered": false,
     "max_err_h": 0.8800000000000007,
-    "max_alpha": 0.9704455137252808,
+    "max_alpha": 1.0,
     "max_blend_shift": 0.0,
     "n_vio_updates": 176
   },

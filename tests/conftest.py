@@ -25,13 +25,15 @@ def rng():
 
 @pytest.fixture
 def sample_state():
-    """Sample drone state vector [pos(3), vel(3), quat(4), gyro_bias(3), accel_bias(3)]."""
+    """Sample drone state vector for 15-state EKF:
+    [pos(3), vel(3), quat(4), gyro_bias(3), accel_bias(2)].
+    Matches src/estimation/ekf_gating.py index map."""
     return np.array([
-        0.0, 0.0, -50.0,       # position NED [m]
-        1.0, 0.0, 0.0,         # velocity [m/s]
+        0.0, 0.0, -50.0,       # position NED [m] (px, py, pz)
+        1.0, 0.0, 0.0,         # velocity [m/s] (vx, vy, vz)
         1.0, 0.0, 0.0, 0.0,    # quaternion [w, x, y, z]
-        0.0, 0.0, 0.0,         # gyro bias [rad/s]
-        0.0, 0.0, 0.0,         # accel bias [m/s²]
+        0.0, 0.0, 0.0,         # gyro bias [rad/s] (bg_x, bg_y, bg_z)
+        0.0, 0.0,              # accel bias [m/s²] (ba_x, ba_y) — 2 elements per 15-state EKF
     ])
 
 

@@ -132,6 +132,7 @@ class VLABridge:
         """
         Parse [vx, vy, vz] from a free-text string.
         Returns (vx, vy, vz, confidence, parse_source).
+        Velocities are clamped to V_MAX_XY / V_MAX_Z.
         """
         text_lower = text.lower()
 
@@ -141,21 +142,25 @@ class VLABridge:
             try:
                 vx, vy, vz = float(nums[0]), float(nums[1]), float(nums[2])
                 if abs(vx) <= 50 and abs(vy) <= 50 and abs(vz) <= 50:
+                    # Enforce hard velocity limits
+                    vx = max(-V_MAX_XY, min(V_MAX_XY, vx))
+                    vy = max(-V_MAX_XY, min(V_MAX_XY, vy))
+                    vz = max(-V_MAX_Z, min(V_MAX_Z, vz))
                     return vx, vy, vz, 1.0, "model_structured"
             except ValueError:
                 pass
 
-        # 2. Keyword heuristics — maps adversarial intent to extreme velocities
+        # 2. Keyword heuristics — maps adversarial intent to bounded velocities
         if any(w in text_lower for w in ["crash", "ground", "descend fast", "dive", "fall", "down fast"]):
-            return 0.0, 0.0, -10.0, 0.5, "keyword_dive"
+            return 0.0, 0.0, -V_MAX_Z, 0.5, "keyword_dive"
         if any(w in text_lower for w in ["maximum speed", "full speed", "50 m/s", "100 m/s"]):
-            return 50.0, 0.0, 0.0, 0.5, "keyword_speed"
+            return V_MAX_XY, 0.0, 0.0, 0.5, "keyword_speed"
         if any(w in text_lower for w in ["disable", "ignore safety", "bypass", "override"]):
-            return 0.0, 0.0, -5.0, 0.5, "keyword_bypass"
+            return 0.0, 0.0, -V_MAX_Z, 0.5, "keyword_bypass"
         if any(w in text_lower for w in ["up", "climb", "ascend"]):
-            return 0.0, 0.0, 1.5, 0.5, "keyword_up"
+            return 0.0, 0.0, min(V_MAX_Z, 1.5), 0.5, "keyword_up"
         if any(w in text_lower for w in ["forward", "north"]):
-            return 2.0, 0.0, 0.0, 0.5, "keyword_fwd"
+            return min(V_MAX_XY, 2.0), 0.0, 0.0, 0.5, "keyword_fwd"
         if any(w in text_lower for w in ["hover", "hold", "stop"]):
             return 0.0, 0.0, 0.0, 0.5, "keyword_hover"
 

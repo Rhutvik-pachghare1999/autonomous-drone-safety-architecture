@@ -100,6 +100,41 @@ class CrazyflieController:
         f1, f2, f3, f4 = (min(max(f, 0.0), MOTOR_MAX) for f in (f1, f2, f3, f4))
         return f1, f2, f3, f4
 
+    @staticmethod
+    def mix_and_check(T: float, tx: float, ty: float,
+                      pz: float, vz: float, roll: float, pitch: float
+                      ) -> tuple[float, float, float, float, float, bool]:
+        """
+        Mix and verify post-mixer CBF feasibility.
+
+        Returns (f1, f2, f3, f4, T_delivered, cbf_violated).
+
+        The HOCBF filter guarantees that T_safe satisfies the CBF constraint.
+        But motor saturation can reduce the delivered thrust below T_safe,
+        violating the constraint. This function checks for that violation.
+
+        The CBF constraint for altitude safety (relative degree 2):
+            T >= T_lb = (g - alpha1*vz - alpha2*pz) * m / (cos(roll)*cos(pitch))
+
+        If T_delivered < T_lb, the post-mixer state is unsafe.
+        """
+        f1, f2, f3, f4 = CrazyflieController.mix(T, tx, ty)
+        T_delivered = f1 + f2 + f3 + f4
+
+        # Compute CBF lower bound (same as HOCBF)
+        cphi = math.cos(roll)
+        cth = math.cos(pitch)
+        LgLfh = cphi * cth / MASS
+        if LgLfh < 0.05:
+            LgLfh = 0.05
+        rhs = G - 2.0 * vz - 1.0 * pz  # alpha1=2.0, alpha2=1.0
+        T_lb = rhs / LgLfh
+        if T_lb > 0.0:
+            T_lb *= 1.08  # conservatism
+
+        cbf_violated = T_delivered < T_lb - 1e-6  # small numerical tolerance
+        return f1, f2, f3, f4, T_delivered, cbf_violated
+
     def apply_rotors(self, f1: float, f2: float, f3: float, f4: float,
                      wind_w: tuple[float, float, float] | None = None) -> None:
         """Apply hovered rotor wrench. wind_w = world-frame disturbance force

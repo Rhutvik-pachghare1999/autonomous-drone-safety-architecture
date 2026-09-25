@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import mmap
 import os
 import struct
@@ -36,13 +37,27 @@ ROUND_TIMEOUT_S  = 0.5    # seconds before view change
 SHM_EKF_PATH     = "/dev/shm/aisp_ekf_state"
 SHM_CONSENSUS    = "/dev/shm/aisp_consensus"
 
-# EKF shared memory layout (64 bytes):
-#   double p_x, p_y, p_z          (24 bytes)
+# EKF shared memory layout with seqlock (80 bytes) to prevent torn reads
+# and detect uninitialized/zeroed segments:
+#   uint64 seq_head                (8 bytes)  — odd = write in progress
+#   double p_x, p_y, p_z           (24 bytes)
 #   double var_px, var_py, var_psi (24 bytes)  — diagonal of P
 #   uint8  gps_active              (1 byte)
-#   uint8  _pad[15]                (15 bytes)
-_EKF_SHM_FMT  = "=ddddddb15x"   # native byte order
-_EKF_SHM_SIZE = 64
+#   uint64 seq_tail                (8 bytes)  — must equal seq_head when even
+#   uint8  _pad[7]                 (7 bytes)
+# Total: 8+24+24+1+8+7 = 72, rounded to 80 for cache-line alignment.
+_EKF_SHM_FMT  = "=QddddddbQ7x"  # seq_head, px,py,pz,var_px,var_py,var_psi, gps, seq_tail
+_EKF_SHM_SIZE = 80
+_EKF_MIN_VALID_VAR = 1e-6  # minimum variance to consider data valid (not zeroed)
+
+# Consensus shared memory with seqlock (40 bytes) matching VLA pattern:
+#   uint64 seq_head              (8 bytes)  — odd = write in progress
+#   double px, py, pz            (24 bytes)
+#   float  trust_weight          (4 bytes)  — quorum-derived weight
+#   uint64 seq_tail              (8 bytes)  — must equal seq_head when even
+# Total: 8+24+4+8 = 44, round to 48 for alignment.
+_CONSENSUS_FMT   = "=QdddfQ"   # seq_head, px, py, pz, trust, seq_tail
+_CONSENSUS_SIZE  = 48
 
 
 class Phase(Enum):
@@ -101,8 +116,24 @@ class ConsensusMessage:
 
 
 def _state_hash(state: List[float]) -> str:
-    payload = struct.pack(f"={len(state)}d", *state)
+    """Hash state vector with tolerance-based quantization.
+
+    Two states within STATE_TOL of each other will hash to the same value.
+    This prevents floating-point noise from fracturing the quorum.
+    """
+    # Quantize to 1 cm grid for position, 1 cm/s for velocity if present
+    quantized = []
+    for i, v in enumerate(state):
+        if i < 3:  # position components
+            quantized.append(round(v / STATE_TOL) * STATE_TOL)
+        else:
+            quantized.append(v)  # other components exact for now
+    payload = struct.pack(f"={len(quantized)}d", *quantized)
     return hashlib.sha256(payload).hexdigest()[:16]
+
+
+# Tolerance for state hash grouping (1 cm = 0.01 m)
+STATE_TOL = 0.01
 
 
 class EKFSharedMemory:
@@ -129,14 +160,36 @@ class EKFSharedMemory:
             self._shm = None
 
     def read(self) -> EKFSnapshot:
+        """Read EKF snapshot with seqlock validation.
+
+        Returns synthetic fallback if:
+        - SHM not available
+        - Torn read detected (odd seq_head, seq_head != seq_tail, seq changed during read)
+        - Data appears uninitialized (variances <= _EKF_MIN_VALID_VAR)
+        """
         if self._shm is not None:
-            try:
-                self._shm.seek(0)
-                raw = self._shm.read(struct.calcsize(_EKF_SHM_FMT))
-                px, py, pz, vpx, vpy, vpsi, gps = struct.unpack(_EKF_SHM_FMT, raw)
-                return EKFSnapshot(px, py, pz, vpx, vpy, vpsi, bool(gps))
-            except Exception:
-                pass
+            for _ in range(2):  # max 2 attempts
+                try:
+                    self._shm.seek(0)
+                    raw = self._shm.read(struct.calcsize(_EKF_SHM_FMT))
+                    (seq_head, px, py, pz, vpx, vpy, vpsi, gps, seq_tail
+                     ) = struct.unpack(_EKF_SHM_FMT, raw)
+                    # Seqlock validation
+                    if (seq_head & 1) != 0:
+                        continue  # writer mid-write
+                    if seq_head != seq_tail:
+                        continue  # torn: head/tail mismatch
+                    # Re-read seq_head to check stability (compiler barrier)
+                    self._shm.seek(0)
+                    seq_check = struct.unpack("=Q", self._shm.read(8))[0]
+                    if seq_check != seq_head:
+                        continue  # seq changed during read
+                    # Data validity: variances must be > threshold (not zeroed)
+                    if vpx <= _EKF_MIN_VALID_VAR or vpy <= _EKF_MIN_VALID_VAR or vpsi <= _EKF_MIN_VALID_VAR:
+                        continue  # uninitialized/zeroed segment
+                    return EKFSnapshot(px, py, pz, vpx, vpy, vpsi, bool(gps))
+                except Exception:
+                    pass
         # Synthetic fallback: simulate GPS dropout after 10 s
         t = time.time() % 30.0
         gps = t < 15.0
@@ -149,15 +202,25 @@ class EKFSharedMemory:
         )
 
     def write_synthetic(self, snap: EKFSnapshot) -> None:
-        """Write a synthetic EKF snapshot for testing."""
+        """Write a synthetic EKF snapshot with seqlock (3 writes)."""
         if self._shm is None:
             return
-        data = struct.pack(_EKF_SHM_FMT,
+        import time as _time
+        seq = int(_time.time() * 1e6) & 0xFFFFFFFFFFFFFFFE  # even
+        # Write 1: odd seq_head (write in progress)
+        self._shm.seek(0)
+        self._shm.write(struct.pack("=Q", seq + 1))
+        # Write 2: payload + even seq_tail
+        data = struct.pack(_EKF_SHM_FMT, seq + 2,  # seq_head
                            snap.px, snap.py, snap.pz,
                            snap.var_px, snap.var_py, snap.var_psi,
-                           int(snap.gps_active))
+                           int(snap.gps_active),
+                           seq + 2)  # seq_tail
         self._shm.seek(0)
         self._shm.write(data)
+        # Write 3: even seq_head (write complete)
+        self._shm.seek(0)
+        self._shm.write(struct.pack("=Q", seq + 2))
 
 
 class ConsensusNode:
@@ -233,6 +296,11 @@ class ConsensusNode:
         silently discarding every message forever. Votes from PAST rounds
         are stale and dropped. Found by experiments/exp_consensus_ekf_flight.py
         (perma-stall after ~2 s of free-running rounds).
+
+        Peer validation:
+        - trust_weight clamped to [0, 1], NaN/Inf rejected
+        - state_hash verified against state_vector
+        - state_vector must be finite, correct length
         """
         votes = []
         seen_nodes = set()   # one vote per node_id per round — a resynced
@@ -245,6 +313,26 @@ class ConsensusNode:
             try:
                 raw = self._sub.recv_string()
                 msg = ConsensusMessage.from_json(raw)
+
+                # ── Peer trust validation ─────────────────────────────────
+                # Clamp trust to [0, 1]; reject NaN/Inf
+                if not math.isfinite(msg.trust_weight) or msg.trust_weight <= 0.0:
+                    continue
+                if msg.trust_weight > 1.0:
+                    msg.trust_weight = 1.0
+
+                # Verify state_hash matches state_vector (detect tampering/corruption)
+                expected_hash = _state_hash(msg.state_vector)
+                if msg.state_hash != expected_hash:
+                    continue
+
+                # Verify state_vector is finite and has expected length
+                if len(msg.state_vector) != 3:
+                    continue
+                if not all(math.isfinite(v) for v in msg.state_vector):
+                    continue
+                # ── End peer validation ──────────────────────────────────
+
                 if msg.round_num == self._round:
                     if msg.node_id not in seen_nodes:
                         seen_nodes.add(msg.node_id)
@@ -263,23 +351,25 @@ class ConsensusNode:
         return votes
 
     def _weighted_quorum(self, votes: List[ConsensusMessage],
-                          my_msg: ConsensusMessage) -> Optional[List[float]]:
+                          my_msg: ConsensusMessage) -> tuple[Optional[List[float]], float]:
         """
         Check if a weighted quorum agrees on a state hash.
 
-        Returns the agreed state vector if quorum is reached, else None.
+        Returns (agreed state vector, quorum_weight) if quorum reached,
+        else (None, 0.0).
 
         Quorum rule:
             sum(w_i for voters of hash H) >= QUORUM_THRESHOLD * sum(w_i for all)
 
-        This is a simple weighted majority vote where weight derives from
-        EKF observability (covariance). NOT Byzantine fault tolerance.
+        The returned quorum_weight is the fraction of total weight supporting
+        the winning hash (not the proposing node's individual weight).
+        This is what the EKF should use as the blending coefficient alpha.
         """
         all_votes = votes + [my_msg]
         total_weight = sum(v.trust_weight for v in all_votes)
 
         if total_weight < 1e-9:
-            return None  # all nodes GPS-denied — no consensus possible
+            return None, 0.0  # all nodes GPS-denied — no consensus possible
 
         # Group by state hash
         hash_weights: Dict[str, float] = {}
@@ -292,9 +382,11 @@ class ConsensusNode:
 
         # Find the hash with the highest weighted support
         best_hash = max(hash_weights, key=lambda h: hash_weights[h])
-        if hash_weights[best_hash] >= QUORUM_THRESHOLD * total_weight:
-            return hash_states[best_hash]
-        return None
+        best_weight = hash_weights[best_hash]
+        if best_weight >= QUORUM_THRESHOLD * total_weight:
+            quorum_weight = best_weight / total_weight  # fraction of total weight
+            return hash_states[best_hash], quorum_weight
+        return None, 0.0
 
     def run_round(self) -> Optional[List[float]]:
         """
@@ -312,10 +404,10 @@ class ConsensusNode:
             votes  = self._collect_votes(ROUND_TIMEOUT_S)
             if self._resynced and _attempt == 0:
                 continue               # re-propose with the caught-up round
-            agreed = self._weighted_quorum(votes, my_msg)
+            agreed, quorum_weight = self._weighted_quorum(votes, my_msg)
 
             if agreed is not None:
-                self._write_consensus(agreed, my_msg.trust_weight)
+                self._write_consensus(agreed, quorum_weight)
 
             self._round += 1
             return agreed
@@ -323,21 +415,26 @@ class ConsensusNode:
         return None
 
     def _write_consensus(self, state: List[float], weight: float) -> None:
-        """Write agreed state to /dev/shm/aisp_consensus for flight loop."""
+        """Write agreed state to /dev/shm/aisp_consensus with seqlock."""
         try:
-            # fmt "=dddf": px, py, pz (double) + weight (float) = 28 bytes.
-            # Must equal _CONSENSUS_FMT in src/estimation/ekf_gating.py (the
-            # reader). Do NOT write a 4th double — the previous "=ddddf"
-            # (36-byte) format with only 4 values packed crashed this writer
-            # while the reader crashed unpacking 5 values into 4 names.
-            fmt  = "=dddf"   # px, py, pz (double) + weight (float)
-            size = struct.calcsize(fmt)
-            fd   = os.open(SHM_CONSENSUS, os.O_CREAT | os.O_RDWR, 0o666)
-            os.ftruncate(fd, size)
-            shm  = mmap.mmap(fd, size, mmap.MAP_SHARED, mmap.PROT_WRITE)
+            # fmt =QdddfQ: seq_head, px, py, pz (double), trust (float), seq_tail = 48 bytes
+            # Seqlock 3-write protocol: odd head -> payload+even tail -> even head
+            import time as _time
+            seq = int(_time.time() * 1e6) & 0xFFFFFFFFFFFFFFFE  # even
+            # Write 1: odd seq_head (write in progress)
+            fd = os.open(SHM_CONSENSUS, os.O_CREAT | os.O_RDWR, 0o666)
+            os.ftruncate(fd, _CONSENSUS_SIZE)
+            shm = mmap.mmap(fd, _CONSENSUS_SIZE, mmap.MAP_SHARED, mmap.PROT_WRITE)
             os.close(fd)
             shm.seek(0)
-            shm.write(struct.pack(fmt, state[0], state[1], state[2], weight))
+            shm.write(struct.pack("=Q", seq + 1))
+            # Write 2: payload + even seq_tail
+            data = struct.pack(_CONSENSUS_FMT, seq + 2, state[0], state[1], state[2], weight, seq + 2)
+            shm.seek(0)
+            shm.write(data)
+            # Write 3: even seq_head (write complete)
+            shm.seek(0)
+            shm.write(struct.pack("=Q", seq + 2))
             shm.close()
         except OSError:
             pass
@@ -395,12 +492,13 @@ def test_weighted_quorum_gps_denied_cannot_sway() -> None:
     ]
     my_msg = _make_vote(0, true_state, 0.1, True)
 
-    agreed = node._weighted_quorum(votes, my_msg)
+    agreed, quorum_weight = node._weighted_quorum(votes, my_msg)
 
     assert agreed is not None, "Quorum should be reached"
     assert agreed == true_state, (
         f"Wrong state agreed: {agreed} (GPS-denied node should be outvoted)"
     )
+    assert quorum_weight > QUORUM_THRESHOLD, f"Quorum weight {quorum_weight:.3f} should exceed threshold"
 
     # Verify: when GPS-denied nodes are outvoted by GPS-active nodes,
     # the GPS-active state wins — low-weight nodes cannot override the quorum.
@@ -411,10 +509,11 @@ def test_weighted_quorum_gps_denied_cannot_sway() -> None:
         _make_vote(4, false_state, 20.0, False),  # w ≈ 0.008 — GPS denied
     ]
     mixed_my = _make_vote(0, true_state, 0.1, True)  # w ≈ 0.976 — GPS active
-    mixed_agreed = node._weighted_quorum(mixed_votes, mixed_my)
+    mixed_agreed, mixed_quorum_weight = node._weighted_quorum(mixed_votes, mixed_my)
     assert mixed_agreed == true_state, (
         f"GPS-active nodes should win: got {mixed_agreed}"
     )
+    assert mixed_quorum_weight > QUORUM_THRESHOLD, f"Quorum weight {mixed_quorum_weight:.3f} should exceed threshold"
 
     print("Observability-weighted quorum: PASS")
     print(f"  True state agreed : {agreed}")

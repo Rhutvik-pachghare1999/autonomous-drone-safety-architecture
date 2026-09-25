@@ -37,3 +37,12 @@ target_include_directories(sil_runner PRIVATE src/rt)
 target_link_libraries(sil_runner m rt)
 # Note: actual SIL integration is tested via Python harness (sim/sil_harness.py)
 # which creates the shared memory. CTest only verifies the binary builds.
+
+# Production RT safety filter — periodic 1 kHz deadline-driven loop with
+# SCHED_FIFO, mlockall, CPU affinity, and deadline miss detection.
+# Requires CAP_SYS_NICE and CAP_IPC_LOCK to run.
+add_executable(safety_filter src/rt/safety_filter.c src/rt/watchdog.c)
+target_compile_definitions(safety_filter PRIVATE NO_ONNX)
+target_include_directories(safety_filter PRIVATE src/rt)
+target_link_libraries(safety_filter m rt)
+# Note: NO_ONNX — ONNX optional at runtime via --sitl flag

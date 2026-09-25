@@ -216,16 +216,16 @@ import os as _os
 _GT_SHM_SIZE      = _struct.calcsize(_GT_SHM_FMT)
 
 _CONSENSUS_SHM  = "/dev/shm/aisp_consensus"
-_CONSENSUS_FMT  = "=dddf"    # px, py, pz (double) + trust (float) = 28 bytes
-                             # (writer: services/consensus_node._write_consensus)
+_CONSENSUS_FMT  = "=QdddfQ"    # seq_head, px, py, pz (double), trust (float), seq_tail = 48 bytes
+                              # (writer: services/consensus_node._write_consensus)
 _CONSENSUS_SIZE = _struct.calcsize(_CONSENSUS_FMT)
 
 
 def read_consensus_shm() -> tuple[np.ndarray, float] | tuple[None, float]:
     """
-    Read the latest swarm-agreed position from shared memory.
+    Read the latest swarm-agreed position from shared memory with seqlock validation.
 
-    Returns (pos_xyz, trust_weight) or (None, 0.0) if unavailable.
+    Returns (pos_xyz, trust_weight) or (None, 0.0) if unavailable/torn.
     The trust_weight is the aggregate weighted quorum fraction from the
     last committed consensus round (services/consensus_node.py).
     """
@@ -233,12 +233,31 @@ def read_consensus_shm() -> tuple[np.ndarray, float] | tuple[None, float]:
         fd = _os.open(_CONSENSUS_SHM, _os.O_RDONLY)
         shm = _mmap.mmap(fd, _CONSENSUS_SIZE, _mmap.MAP_SHARED, _mmap.PROT_READ)
         _os.close(fd)
-        shm.seek(0)
-        px, py, pz, trust = _struct.unpack(_CONSENSUS_FMT, shm.read(_CONSENSUS_SIZE))
+        for _ in range(2):  # max 2 attempts
+            try:
+                shm.seek(0)
+                raw = shm.read(_CONSENSUS_SIZE)
+                seq_head, px, py, pz, trust, seq_tail = _struct.unpack(_CONSENSUS_FMT, raw)
+                # Seqlock validation
+                if (seq_head & 1) != 0:
+                    continue  # writer mid-write
+                if seq_head != seq_tail:
+                    continue  # torn: head/tail mismatch
+                # Re-read seq_head to check stability
+                shm.seek(0)
+                seq_check = _struct.unpack("=Q", shm.read(8))[0]
+                if seq_check != seq_head:
+                    continue  # seq changed during read
+                shm.close()
+                # Clamp trust to [0, 1] as defense-in-depth
+                trust = max(0.0, min(1.0, float(trust)))
+                return np.array([px, py, pz]), trust
+            except Exception:
+                continue
         shm.close()
-        return np.array([px, py, pz]), float(trust)
     except OSError:
-        return None, 0.0
+        pass
+    return None, 0.0
 
 
 # ── Covariance gating ─────────────────────────────────────────────────────────

@@ -5,6 +5,8 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 [![View Poster](https://img.shields.io/badge/View%20Poster-online-FFC627?style=flat&logo=githubpages)](https://rhutvik-pachghare1999.github.io/autonomous-drone-safety-architecture/)
 
+**[View Research Poster](https://rhutvik-pachghare1999.github.io/autonomous-drone-safety-architecture/)** — A0 landscape, latest results, figures, and architecture overview.
+
 A safety architecture for autonomous multirotors: every command an AI model
 or RL policy issues is projected through a closed-form control-barrier-function
 (HOCBF) filter before it can reach the motors. Around that kernel sit a

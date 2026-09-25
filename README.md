@@ -3,6 +3,7 @@
 [![Build Status](https://github.com/Rhutvik-pachghare1999/autonomous-drone-safety-architecture/actions/workflows/ci.yml/badge.svg)](https://github.com/Rhutvik-pachghare1999/autonomous-drone-safety-architecture/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+[![View Poster](https://img.shields.io/badge/View%20Poster-online-FFC627?style=flat&logo=githubpages)](https://rhutvik-pachghare1999.github.io/autonomous-drone-safety-architecture/)
 
 A safety architecture for autonomous multirotors: every command an AI model
 or RL policy issues is projected through a closed-form control-barrier-function

@@ -122,7 +122,7 @@ li{font-size:10px;margin-bottom:2px}
 <div class="hdr">
   <div>
     <div class="hdr-title">Autonomous Drone Safety Architecture:<br>A Hierarchical Control Framework for SITL Research</div>
-    <div class="hdr-sub">HOCBF₄ · 15-State EKF · Byzantine Fault-Tolerant Consensus · PPO RL · Zero Hardware Required</div>
+    <div class="hdr-sub">HOCBF₄ · 15-State EKF · Observability-Weighted Voting Consensus (HMAC-auth) · PPO RL · Zero Hardware Required</div>
     <div class="hdr-auth">Rhutvik Prashant Pachghare &nbsp;·&nbsp; Advisor: Prof. Shenghan Guo &nbsp;·&nbsp; Program Chair: Prof. Sangram Redkar</div>
   </div>
   <div class="hdr-right">
@@ -133,7 +133,7 @@ li{font-size:10px;margin-bottom:2px}
   </div>
 </div>
 <div class="gold-bar"></div>
-<div class="rq"><span>Research Question: </span>"Can a hierarchical architecture combining a deterministic safety filter, continuous EKF state estimation, and Byzantine fault-tolerant consensus enforce <em>quantifiable safety constraints</em> while maintaining autonomous adaptability — and what is the measurable computational cost of each constraint?"</div>
+<div class="rq"><span>Research Question: </span>"Can a hierarchical architecture combining a deterministic safety filter, continuous EKF state estimation, and observability-weighted consensus enforce <em>quantifiable safety constraints</em> while maintaining autonomous adaptability — and what is the measurable computational cost of each constraint?"</div>
 
 <div class="body">
 
@@ -149,7 +149,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="lyr l3"><div class="ln">3</div><div><div class="lnm">PPO Asymmetric Actor-Critic</div><div class="ld">Actor 13-dim noisy · Critic 17-dim privileged · ONNX 22KB</div></div></div>
       <div class="lyr l4"><div class="ln">4</div><div><div class="lnm">Safety Kernel (FSM — planned)</div><div class="ld">7 states · 24 transitions · P1–P7 specified · HOCBF₂ + HOCBF₄</div></div></div>
       <div class="lyr l5"><div class="ln">5</div><div><div class="lnm">Battery Model</div><div class="ld">5Ah 6S LiPo · Coulomb counting · 4th-order OCV · NASA validated</div></div></div>
-      <div class="lyr lx"><div class="ln" style="font-size:7px;font-weight:900">SVC</div><div><div class="lnm">Observability-Weighted HotStuff Consensus</div><div class="ld">EKF covariance → vote weight → /dev/shm IPC</div></div></div>
+      <div class="lyr lx"><div class="ln" style="font-size:7px;font-weight:900">SVC</div><div><div class="lnm">Observability-Weighted Consensus</div><div class="ld">EKF covariance → vote weight → HMAC-auth /dev/shm IPC</div></div></div>
     </div>
   </div>
 </div>
@@ -215,7 +215,7 @@ li{font-size:10px;margin-bottom:2px}
       <div style="background:#8C1D40;border:2px solid #FFC627;border-radius:5px;padding:7px 10px;margin-bottom:3px;text-align:center"><strong style="color:#FFC627;font-size:11px">HOCBF Safety Filter</strong> <span style="color:rgba(255,255,255,.8);font-size:9px">— clamp(T_nom, T_lb, T_max) · WCET = 2,725 ns</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:3px">
         <div style="background:#E8F5E9;border:1.2px solid #2E7D32;border-radius:4px;padding:4px 8px;text-align:center"><strong style="color:#1B5E20">15-State EKF</strong><br><span style="font-size:8.5px;color:#555">pz, vz, φ, θ, ω → feeds HOCBF</span></div>
-        <div style="background:#E0F2F1;border:1.2px solid #004D40;border-radius:4px;padding:4px 8px;text-align:center"><strong style="color:#004D40">BFT Consensus</strong><br><span style="font-size:8.5px;color:#555">w=exp(−σ²/2σ²_warn)</span></div>
+        <div style="background:#E0F2F1;border:1.2px solid #004D40;border-radius:4px;padding:4px 8px;text-align:center"><strong style="color:#004D40">Weighted Voting Consensus</strong><br><span style="font-size:8.5px;color:#555">w=exp(−σ²/2σ²_warn) + HMAC auth</span></div>
       </div>
       <div style="text-align:center;color:#888;margin:1px 0">↓ T_safe</div>
       <div style="background:#FCE4EC;border:1.5px solid #880E4F;border-radius:5px;padding:5px 10px;margin-bottom:3px;text-align:center"><strong style="color:#880E4F">Safety Kernel (DO-178C-inspired)</strong> — P1–P7 specified · 7 states · 24 transitions · FSM planned</div>
@@ -487,7 +487,7 @@ li{font-size:10px;margin-bottom:2px}
 </div>
 
 <div class="card img-card" style="flex:1">
-  <div class="ch p">Observability-Weighted HotStuff Consensus</div>
+  <div class="ch p">Observability-Weighted Voting Consensus (HMAC-auth)</div>
   <div class="cb" style="display:flex;flex-direction:column;padding:5px;gap:4px">
     <!-- Trust weight formula as simple visual -->
     <svg width="100%" height="30" viewBox="0 0 318 30" style="flex-shrink:0">
@@ -496,12 +496,12 @@ li{font-size:10px;margin-bottom:2px}
     </svg>
     <div class="mg" style="margin:4px 0;flex-shrink:0">
       <div class="m g"><div class="mv">100%</div><div class="ml">Commit Rate (100/100)</div></div>
-      <div class="m g"><div class="mv">100%</div><div class="ml">Byzantine Rejection</div></div>
+      <div class="m g"><div class="mv">100%</div><div class="ml">GPS-Denied Rejection</div></div>
       <div class="m b"><div class="mv">0.043ms</div><div class="ml">Mean Commit Compute Time</div></div>
       <div class="m p"><div class="mv">0.997</div><div class="ml">Mean Quorum Fraction</div></div>
     </div>
     <!-- Node trust weights bar chart — real data: w=exp(-σ²/2σ²_warn), σ²_warn=5.0 -->
-    <!-- Nodes: GPS active (σ²=0.25)→w=0.976, GPS degraded (σ²=8.0)→w=0.147, Byzantine (σ²=125)→w=0.008 -->
+    <!-- Nodes: GPS active (σ²=0.25)→w=0.976, GPS degraded (σ²=8.0)→w=0.147, GPS denied (σ²=125)→w=0.008 -->
     <svg viewBox="0 0 280 190" width="100%" style="display:block;flex:1;width:100%;height:100%;border:1px solid #ddd;border-radius:3px;background:#fff">
       <line x1="35" y1="10" x2="35" y2="155" stroke="#999" stroke-width="0.8"/>
       <line x1="35" y1="155" x2="270" y2="155" stroke="#999" stroke-width="0.8"/>
@@ -538,14 +538,14 @@ li{font-size:10px;margin-bottom:2px}
       <text x="186" y="131" text-anchor="middle" font-size="7" font-weight="700" fill="#E65100">0.147</text>
       <text x="186" y="168" text-anchor="middle" font-size="6" fill="#555">GPS</text>
       <text x="186" y="175" text-anchor="middle" font-size="6" fill="#555">degraded</text>
-      <!-- Node 4: Byzantine w=0.008 → bar height=0.008*145=1.2 → y=154 -->
+      <!-- Node 4: GPS denied w=0.008 → bar height=0.008*145=1.2 → y=154 -->
       <rect x="211" y="154" width="34" height="1" fill="#C62828" rx="1"/>
       <text x="228" y="151" text-anchor="middle" font-size="7" font-weight="700" fill="#C62828">0.008</text>
-      <text x="228" y="168" text-anchor="middle" font-size="6" fill="#555">Byzantine</text>
-      <text x="228" y="175" text-anchor="middle" font-size="6" fill="#555">(GPS denied)</text>
+      <text x="228" y="168" text-anchor="middle" font-size="6" fill="#555">GPS</text>
+      <text x="228" y="175" text-anchor="middle" font-size="6" fill="#555">denied</text>
       <text x="152" y="188" text-anchor="middle" font-size="7" fill="#333">Node Trust Weights (from EKF covariance)</text>
     </svg>
-    <div class="cap" style="flex-shrink:0">Node trust weights from EKF covariance. Byzantine node w=0.008 cannot reach 2/3 quorum threshold.</div>
+    <div class="cap" style="flex-shrink:0">Node trust weights from EKF covariance. GPS-denied node w=0.008 cannot reach 2/3 quorum threshold.</div>
   </div>
 </div>
 
@@ -571,13 +571,13 @@ li{font-size:10px;margin-bottom:2px}
 <div class="card">
   <div class="ch" style="background:#FFC627;color:#8C1D40;">Research Contributions</div>
   <div class="cb">
-    <div class="ct"><div class="cn">1</div><div class="cx"><strong>Hard-RT safety filter</strong> — HOCBF clamp, WCET=2,725ns (p99=31ns), EVT P=10⁻⁹ bound=1,733ns; FSM P1–P7 specified, verification planned</div></div>
+    <div class="ct"><div class="cn">1</div><div class="cx"><strong>Bounded-latency safety filter</strong> — HOCBF clamp, WCET=2,725ns (p99=31ns), EVT P=10⁻⁹ bound=1,733ns; FSM P1–P7 specified, verification planned</div></div>
     <div class="ct"><div class="cn">2</div><div class="cx"><strong>EKF observability Gramian</strong> — rank 6→4 under GPS denial, VIO restores rank, air-gap prevents confirmation bias</div></div>
     <div class="ct"><div class="cn">3</div><div class="cx"><strong>Battery EOL validation</strong> — spec model 4–6× wrong; poly-4 fit RMSE &lt;0.03Ah on NASA PCoE cells</div></div>
     <div class="ct"><div class="cn">4</div><div class="cx"><strong>HOCBF₄ symbolic derivation</strong> — full ZYX Euler kinematics via CasADi, control invariant set derived (formal proof planned)</div></div>
-    <div class="ct"><div class="cn">5</div><div class="cx"><strong>Observability-weighted BFT consensus</strong> — 100% commit, 100% Byzantine rejection under 20% packet loss</div></div>
+    <div class="ct"><div class="cn">5</div><div class="cx"><strong>Observability-weighted voting consensus</strong> — 100% commit, 100% GPS-denied rejection under 20% packet loss</div></div>
     <div class="ct"><div class="cn">6</div><div class="cx"><strong>1000-trial hallucination blocking</strong> — 100% survival, vz from −0.1 to −100 m/s, max correction 397N</div></div>
-    <div class="ct"><div class="cn">7</div><div class="cx"><strong>Headless SITL testbed</strong> — zero Gazebo/ROS/PX4/hardware dependencies, pytest 30/30 PASSED</div></div>
+    <div class="ct"><div class="cn">7</div><div class="cx"><strong>Headless SITL testbed</strong> — zero Gazebo/ROS/PX4/hardware dependencies, 68 pytest tests + 1 C watchdog test, CI green</div></div>
   </div>
 </div>
 

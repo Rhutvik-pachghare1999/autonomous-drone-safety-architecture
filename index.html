@@ -141,15 +141,15 @@ li{font-size:10px;margin-bottom:2px}
 <div class="col">
 
 <div class="card">
-  <div class="ch b">5-Layer Hierarchical Architecture · 10 Hz</div>
+  <div class="ch b">5-Layer Hierarchical Architecture (Simulation Rates)</div>
   <div class="cb">
     <div class="ls">
-      <div class="lyr l1"><div class="ln">1</div><div><div class="lnm">SE(3) Rigid-Body Physics Plant</div><div class="ld">RK4 · SO(3) projection · m=27g (Crazyflie 2.X USD model) · wind σ=0.05m/s</div></div></div>
-      <div class="lyr l2"><div class="ln">2</div><div><div class="lnm">15-State EKF Sensor Fusion</div><div class="ld">pos(3) vel(3) quat(4) bias(5) · GPS/IMU/Baro/VIO</div></div></div>
-      <div class="lyr l3"><div class="ln">3</div><div><div class="lnm">PPO Asymmetric Actor-Critic</div><div class="ld">Actor 13-dim noisy · Critic 17-dim privileged · ONNX 22KB</div></div></div>
+      <div class="lyr l1"><div class="ln">1</div><div><div class="lnm">SE(3) Rigid-Body Physics Plant</div><div class="ld">RK4 · SO(3) projection · m=27g (Crazyflie 2.X USD model) · wind σ=0.05m/s · 50 Hz</div></div></div>
+      <div class="lyr l2"><div class="ln">2</div><div><div class="lnm">15-State EKF Sensor Fusion</div><div class="ld">pos(3) vel(3) quat(4) bias(5) · GPS/IMU/Baro/VIO · 50 Hz</div></div></div>
+      <div class="lyr l3"><div class="ln">3</div><div><div class="lnm">PPO Asymmetric Actor-Critic</div><div class="ld">Actor 13-dim noisy · Critic 17-dim privileged · ONNX 22KB · optional hot path</div></div></div>
       <div class="lyr l4"><div class="ln">4</div><div><div class="lnm">Safety Kernel (FSM — planned)</div><div class="ld">7 states · 24 transitions · P1–P7 specified · HOCBF₂ + HOCBF₄</div></div></div>
-      <div class="lyr l5"><div class="ln">5</div><div><div class="lnm">Battery Model</div><div class="ld">5Ah 6S LiPo · Coulomb counting · 4th-order OCV · NASA validated</div></div></div>
-      <div class="lyr lx"><div class="ln" style="font-size:7px;font-weight:900">SVC</div><div><div class="lnm">Observability-Weighted Consensus</div><div class="ld">EKF covariance → vote weight → HMAC-auth /dev/shm IPC</div></div></div>
+      <div class="lyr l5"><div class="ln">5</div><div><div class="lnm">Battery Model</div><div class="ld">5Ah 6S LiPo · Coulomb counting · 4th-order OCV · fit to NASA PCoE cells</div></div></div>
+      <div class="lyr lx"><div class="ln" style="font-size:7px;font-weight:900">SVC</div><div><div class="lnm">Observability-Weighted Consensus</div><div class="ld">EKF covariance → vote weight → HMAC-auth /dev/shm IPC · ~2 Hz rounds</div></div></div>
     </div>
   </div>
 </div>
@@ -210,7 +210,7 @@ li{font-size:10px;margin-bottom:2px}
     <div style="font-size:9.5px">
       <div style="background:#F3E5F5;border:1.5px solid #6A1B9A;border-radius:5px;padding:5px 10px;margin-bottom:3px;text-align:center"><strong style="color:#4A148C">VLA Model</strong> — SmolVLM2 · Strategic Planner</div>
       <div style="text-align:center;color:#888;margin:1px 0">↓ vx, vy, vz</div>
-      <div style="background:#E3F2FD;border:1.5px solid #1565C0;border-radius:5px;padding:5px 10px;margin-bottom:3px;text-align:center"><strong style="color:#0D47A1">PPO RL Policy</strong> — ONNX 22KB · 2M steps · Actor 13-dim</div>
+      <div style="background:#E3F2FD;border:1.5px solid #1565C0;border-radius:5px;padding:5px 10px;margin-bottom:3px;text-align:center"><strong style="color:#0D47A1">PPO RL Policy</strong> — ONNX 22KB · Actor 13-dim · optional hot path</div>
       <div style="text-align:center;color:#888;margin:1px 0">↓ T_nom</div>
       <div style="background:#8C1D40;border:2px solid #FFC627;border-radius:5px;padding:7px 10px;margin-bottom:3px;text-align:center"><strong style="color:#FFC627;font-size:11px">HOCBF Safety Filter</strong> <span style="color:rgba(255,255,255,.8);font-size:9px">— clamp(T_nom, T_lb, T_max) · WCET = 2,725 ns</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:3px">
@@ -316,7 +316,7 @@ li{font-size:10px;margin-bottom:2px}
 <div class="col">
 
 <div class="card img-card">
-  <div class="ch t">Observability Gramian — GPS Denial Analysis</div>
+  <div class="ch t">Observability Gramian — GPS Denial Analysis (Simulation)</div>
   <div class="cb">
     <div class="mg3" style="margin-bottom:5px">
       <div class="m b"><div class="mv">6/15</div><div class="ml">GPS+IMU+Baro</div></div>
@@ -324,12 +324,12 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m g"><div class="mv">6/15</div><div class="ml">+VIO restored</div></div>
     </div>
     <img src="experiments/results/observability_panel2.png" alt="Observability Gramian">
-    <div class="cap">GPS denial drops rank 6→4 (px, py unobservable). VIO restores rank to 6. Yaw remains unobservable.</div>
+    <div class="cap">GPS denial drops rank 6→4 (px, py unobservable). VIO restores rank to 6. Yaw remains unobservable. Computed from simulated estimator covariance.</div>
   </div>
 </div>
 
 <div class="card img-card grow">
-  <div class="ch o">1000-Trial Adversarial Hallucination Blocking</div>
+  <div class="ch o">1000-Trial Adversarial Hallucination Blocking (Isaac Sim)</div>
   <div class="cb" style="display:flex;flex-direction:column;padding:5px;gap:4px">
     <div class="mg" style="margin-bottom:5px;flex-shrink:0">
       <div class="m g"><div class="mv">100%</div><div class="ml">Survival (1000/1000)</div></div>
@@ -338,12 +338,12 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m p"><div class="mv">−5.1N</div><div class="ml">T_nom at vz=−100m/s</div></div>
     </div>
     <img src="experiments/results/hallucination_1000.png" alt="Adversarial hallucination sweep">
-    <div class="cap" style="flex-shrink:0">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100 m/s: T_nom=−5.1 N → T_safe=0.60 N (T_max, least-violation fallback).</div>
+    <div class="cap" style="flex-shrink:0">T_nom (VLA, unsafe) vs T_safe (HOCBF corrected). At vz=−100 m/s: T_nom=−5.1 N → T_safe=0.60 N (T_max, least-violation fallback). Experimental result — simulation only (Isaac PhysX).</div>
   </div>
 </div>
 
 <div class="card img-card grow">
-  <div class="ch p">Observability-Weighted Voting Consensus (HMAC-auth)</div>
+  <div class="ch o">Observability-Weighted Voting Consensus (HMAC-auth) — 100 Rounds · 20% Packet Loss (Simulation)</div>
   <div class="cb" style="display:flex;flex-direction:column;padding:5px;gap:4px">
     <div class="mg" style="margin:4px 0;flex-shrink:0">
       <div class="m g"><div class="mv">100%</div><div class="ml">Commit Rate (100/100)</div></div>
@@ -352,7 +352,7 @@ li{font-size:10px;margin-bottom:2px}
       <div class="m p"><div class="mv">0.997</div><div class="ml">Mean Quorum Fraction</div></div>
     </div>
     <img src="experiments/results/consensus_fault.png" alt="Consensus under packet loss">
-    <div class="cap" style="flex-shrink:0">Node trust weights from EKF covariance. GPS-denied node w=0.008 cannot reach 2/3 quorum threshold. 20% packet loss, 100 rounds.</div>
+    <div class="cap" style="flex-shrink:0">Node trust weights from EKF covariance. GPS-denied node w=0.008 cannot reach 2/3 quorum threshold. Experimental result — simulated ZMQ network with timestamp-offset latency model.</div>
   </div>
 </div>
 
@@ -362,10 +362,10 @@ li{font-size:10px;margin-bottom:2px}
 <div class="col">
 
 <div class="card img-card">
-  <div class="ch g">Battery Aging — NASA PCoE Validation</div>
+  <div class="ch g">Battery Aging — Poly-4 Fit on NASA PCoE 18650 Cells</div>
   <div class="cb">
     <img src="experiments/results/battery_panel1.png" alt="Battery Validation">
-    <div class="cap">Poly-4 fit RMSE &lt;0.03Ah. Spec linear model predicts EOL at cycle 600 — real cells fail at 100–165 (4–6× error).</div>
+    <div class="cap">Poly-4 fit RMSE <0.03Ah on NASA PCoE dataset. Spec linear model predicts EOL at cycle 600 — real cells fail at 100–165 (4–6× error). Chemistry/capacity scaling to 6S LiPo unvalidated.</div>
     <table class="rt" style="margin-top:4px">
       <tr><th>Cell</th><th class="nr">RMSE Poly-4</th><th class="nr">EOL Actual→Spec</th></tr>
       <tr><td>B0005</td><td class="nr hi">0.016 Ah</td><td class="nr"><span class="hi">165</span>→<span class="lo">600</span></td></tr>
@@ -373,6 +373,7 @@ li{font-size:10px;margin-bottom:2px}
       <tr><td>B0007</td><td class="nr hi">0.014 Ah</td><td class="nr">—→<span class="lo">600</span></td></tr>
     </table>
   </div>
+</div>
 </div>
 
 <div class="card">
@@ -391,21 +392,21 @@ li{font-size:10px;margin-bottom:2px}
 <div class="card" style="flex:1">
   <div class="ch dk">References</div>
   <div class="cb" style="display:flex;flex-direction:column;justify-content:space-between;font-size:8.5px;color:#333;line-height:1.4">
-    <p>[1] Xiao &amp; Belta (2022). High-Order CBFs. <em>IEEE TAC</em>.</p>
+    <p>[1] Xiao & Belta (2022). High-Order CBFs. <em>IEEE TAC</em>.</p>
     <p>[2] Ames et al. (2019). Control Barrier Functions. <em>ECC</em>.</p>
     <p>[3] Geneva et al. (2020). OpenVINS. <em>ICRA</em>.</p>
     <p>[4] Lee et al. (2010). Geometric Tracking SE(3). <em>CDC</em>.</p>
-    <p>[5] Yin et al. (2019). HotStuff BFT Consensus. <em>PODC</em>.</p>
-    <p>[6] Saha &amp; Goebel (2007). NASA PCoE Battery Dataset.</p>
-    <p>[7] Krener &amp; Ide (2009). Measures of Unobservability. <em>CDC</em>.</p>
-    <p>[8] Markovic et al. (2021). ES-EKF GPS-Denied. <em>arXiv:2109.04908</em>.</p>
-    <p>[9] Foughali &amp; Zuepke (2022). Formal Verification RT Robots.</p>
-    <p>[10] Makoviychuk et al. (2021). Isaac Gym. <em>NeurIPS</em>.</p>
-    <p>[11] Burri et al. (2016). EuRoC MAV Datasets. <em>IJRR</em>.</p>
-    <p>[12] Tobin et al. (2017). Domain Randomization. <em>IROS</em>.</p>
-    <p>[13] Mahony et al. (2012). Multirotor Vehicles. <em>IEEE RAM</em>.</p>
-    <p>[14] Castro &amp; Liskov (1999). Practical BFT. <em>OSDI</em>.</p>
+    <p>[5] Saha & Goebel (2007). NASA PCoE Battery Dataset.</p>
+    <p>[6] Krener & Ide (2009). Measures of Unobservability. <em>CDC</em>.</p>
+    <p>[7] Markovic et al. (2021). ES-EKF GPS-Denied. <em>arXiv:2109.04908</em>.</p>
+    <p>[8] Foughali & Zuepke (2022). Formal Verification RT Robots.</p>
+    <p>[9] Makoviychuk et al. (2021). Isaac Gym. <em>NeurIPS</em>.</p>
+    <p>[10] Burri et al. (2016). EuRoC MAV Datasets. <em>IJRR</em>.</p>
+    <p>[11] Tobin et al. (2017). Domain Randomization. <em>IROS</em>.</p>
+    <p>[12] Mahony et al. (2012). Multirotor Vehicles. <em>IEEE RAM</em>.</p>
+    <p>[13] Castro & Liskov (1999). Practical BFT. <em>OSDI</em> — cited for contrast; this work uses weighted voting with HMAC auth.</p>
   </div>
+</div>
 </div>
 
 </div><!-- /col4 -->

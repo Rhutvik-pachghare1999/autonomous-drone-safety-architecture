@@ -25,13 +25,14 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:13px;li
 .rq{background:#1a0a10;color:#fff;padding:12px 28px;font-size:14px;font-style:italic;border-bottom:4px solid #FFC627}
 .rq span{color:#FFC627;font-weight:700;font-style:normal}
 
-/* BODY - column flow with visual alignment guides */
+/* BODY - flex columns with equal height via grid wrapper */
 .body{
   display:grid;
   grid-template-columns:1fr 1fr 1.2fr 1fr;
   gap:18px;
   width:1600px;
   padding:24px 24px 24px 24px;
+  align-items:start; /* align column tops */
 }
 .col{
   display:flex;
@@ -39,27 +40,12 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:13px;li
   gap:16px;
   background:#fafafa;
   padding:0;
+  min-height:0; /* allow flex to work */
 }
 .col:nth-child(2n){background:#f5f5f5}
 .col:last-child{}
 
-/* Horizontal alignment guides - visual only, spanning all columns */
-.section-guide{
-  grid-column: 1 / -1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #ddd 20%, #ddd 80%, transparent);
-  margin: 0;
-}
-
-/* Horizontal alignment guides - visual only, spanning all columns */
-.section-guide{
-  grid-column: 1 / -1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #ddd 20%, #ddd 80%, transparent);
-  margin: 0;
-}
-
-/* CARDS - natural height, flex column */
+/* CARDS */
 .card{
   border:1px solid #e0e0e0;
   border-radius:10px;
@@ -70,7 +56,6 @@ body{font-family:'Inter',sans-serif;background:#444;color:#111;font-size:13px;li
   background:#fff;
 }
 .card.grow{flex:1}
-
 .ch{
   padding:12px 16px;
   font-size:13px;
@@ -142,7 +127,7 @@ li{font-size:14px;margin-bottom:4px}
 .pt{min-width:26px;height:26px;background:#8C1D40;color:#fff;font-size:13px;font-weight:700;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:3px}
 .pt.b{background:#1565C0}
 
-/* IMAGE CARDS - result figures get full space, images fill container */
+/* IMAGE CARDS - result figures get full space */
 .card.img-card{min-width:0}
 .img-card .cb{padding:12px;display:flex;flex-direction:column;gap:8px}
 .img-card img{width:100%;height:auto;max-height:none;display:block;object-fit:contain;border-radius:5px;border:1px solid #ddd}
@@ -152,9 +137,10 @@ li{font-size:14px;margin-bottom:4px}
 .card.img-card.grow .cb{
   flex:1;
   display:grid;
-  grid-template-rows: auto 1fr auto;  /* header | image | caption */
+  grid-template-rows: auto minmax(0, 1fr) auto;  /* header | image (shrinkable) | caption */
   gap:8px;
   padding:0;
+  min-height:0;
 }
 .card.img-card.grow .ch{margin-bottom:0;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.05)}
 .card.img-card.grow .cb img{
@@ -215,10 +201,167 @@ li{font-size:14px;margin-bottom:4px}
 .img-card img{width:100%;height:auto;max-height:none;display:block;object-fit:contain;border-radius:5px;border:1px solid #ddd}
 .img-card .cap{font-size:13px;color:#555;text-align:center;font-style:italic;padding:6px 8px;line-height:1.5;flex-shrink:0}
 
-/* img-card.grow: allocate more space to image */
-.card.img-card.grow .cb{flex:1;display:flex;flex-direction:column}
-.card.img-card.grow .cb > *:not(img){flex-shrink:0}
-.card.img-card.grow .cb img{flex:1 1 auto;min-height:350px;max-height:750px}
+/* img-card.grow: allocate space with controlled flex distribution */
+.card.img-card.grow .cb{
+  flex:1;
+  display:grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;  /* header | image (shrinkable) | caption */
+  gap:8px;
+  padding:0;
+  min-height:0;
+}
+.card.img-card.grow .ch{margin-bottom:0;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.05)}
+.card.img-card.grow .cb img{
+  width:100%;
+  height:100%;
+  min-height:300px;
+  max-height:750px;
+  object-fit:contain;
+  border-radius:5px;
+  border:1px solid #ddd;
+}
+.card.img-card.grow .cap{
+  margin-top:0;
+  padding:8px 16px;
+  background:#fafafa;
+  border-top:1px solid #eee;
+}
+
+/* Metric labels */
+.ml{font-size:13px;color:#666;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+
+/* BADGES */
+.bpass{display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:700;background:#E8F5E9;color:#1B5E20;border:1px solid #A5D6A7}
+.bwarn{display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:700;background:#FFF8E1;color:#E65100;border:1px solid #FFE082}
+.bnew{display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:700;background:#F3E5F5;color:#4A148C;border:1px solid #CE93D8}
+
+/* TABLES */
+.rt{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px;table-layout:fixed}
+.rt th{background:#f0f0f0;padding:7px 9px;text-align:left;font-weight:700;border-bottom:1px solid #ddd;font-size:13px;color:#333}
+.rt td{padding:7px 9px;border-bottom:1px solid #f0f0f0;word-break:break-word}
+.rt tr:last-child td{border-bottom:none}
+.rt .nr{text-align:right;font-family:'JetBrains Mono',monospace;font-size:13px}
+.rt .hi{font-weight:700;color:#2E7D32}.rt .lo{color:#BF360C;font-weight:600}
+
+/* LAYERS */
+.ls{display:flex;flex-direction:column;gap:6px}
+.lyr{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:6px;border-left:6px solid;font-size:14px}
+.lyr .ln{font-weight:900;font-size:16px;min-width:22px;text-align:center;margin-top:1px}
+.lyr .lnm{font-weight:700;font-size:14px}
+.lyr .ld{font-size:13px;color:#555;margin-top:3px}
+.lyr.l1{background:#FFF8E1;border-color:#F57F17}
+.lyr.l2{background:#E3F2FD;border-color:#1565C0}
+.lyr.l3{background:#F3E5F5;border-color:#6A1B9A}
+.lyr.l4{background:#FCE4EC;border-color:#880E4F}
+.lyr.l5{background:#E8F5E9;border-color:#1B5E20}
+.lyr.lx{background:#E0F2F1;border-color:#00695C}
+
+/* PROPS */
+.pl{list-style:none;padding:0}
+.pl li{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #f2f2f2;font-size:14px}
+.pl li:last-child{border-bottom:none}
+.pt{min-width:26px;height:26px;background:#8C1D40;color:#fff;font-size:13px;font-weight:700;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:3px}
+.pt.b{background:#1565C0}
+
+/* IMAGE CARDS - result figures get full space */
+.card.img-card{min-width:0}
+.img-card .cb{padding:12px;display:flex;flex-direction:column;gap:8px}
+.img-card img{width:100%;height:auto;max-height:none;display:block;object-fit:contain;border-radius:5px;border:1px solid #ddd}
+.img-card .cap{font-size:13px;color:#555;text-align:center;font-style:italic;padding:6px 8px;line-height:1.5;flex-shrink:0}
+
+/* img-card.grow: allocate space with controlled flex distribution */
+.card.img-card.grow .cb{
+  flex:1;
+  display:grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;  /* header | image (shrinkable) | caption */
+  gap:8px;
+  padding:0;
+  min-height:0;
+}
+.card.img-card.grow .ch{margin-bottom:0;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.05)}
+.card.img-card.grow .cb img{
+  width:100%;
+  height:100%;
+  min-height:300px;
+  max-height:750px;
+  object-fit:contain;
+  border-radius:5px;
+  border:1px solid #ddd;
+}
+.card.img-card.grow .cap{
+  margin-top:0;
+  padding:8px 16px;
+  background:#fafafa;
+  border-top:1px solid #eee;
+}
+
+/* Metric labels */
+.ml{font-size:13px;color:#666;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+
+/* BADGES */
+.bpass{display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:700;background:#E8F5E9;color:#1B5E20;border:1px solid #A5D6A7}
+.bwarn{display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:700;background:#FFF8E1;color:#E65100;border:1px solid #FFE082}
+.bnew{display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:700;background:#F3E5F5;color:#4A148C;border:1px solid #CE93D8}
+
+/* TABLES */
+.rt{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px;table-layout:fixed}
+.rt th{background:#f0f0f0;padding:7px 9px;text-align:left;font-weight:700;border-bottom:1px solid #ddd;font-size:13px;color:#333}
+.rt td{padding:7px 9px;border-bottom:1px solid #f0f0f0;word-break:break-word}
+.rt tr:last-child td{border-bottom:none}
+.rt .nr{text-align:right;font-family:'JetBrains Mono',monospace;font-size:13px}
+.rt .hi{font-weight:700;color:#2E7D32}.rt .lo{color:#BF360C;font-weight:600}
+
+/* LAYERS */
+.ls{display:flex;flex-direction:column;gap:6px}
+.lyr{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:6px;border-left:6px solid;font-size:14px}
+.lyr .ln{font-weight:900;font-size:16px;min-width:22px;text-align:center;margin-top:1px}
+.lyr .lnm{font-weight:700;font-size:14px}
+.lyr .ld{font-size:13px;color:#555;margin-top:3px}
+.lyr.l1{background:#FFF8E1;border-color:#F57F17}
+.lyr.l2{background:#E3F2FD;border-color:#1565C0}
+.lyr.l3{background:#F3E5F5;border-color:#6A1B9A}
+.lyr.l4{background:#FCE4EC;border-color:#880E4F}
+.lyr.l5{background:#E8F5E9;border-color:#1B5E20}
+.lyr.lx{background:#E0F2F1;border-color:#00695C}
+
+/* PROPS */
+.pl{list-style:none;padding:0}
+.pl li{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #f2f2f2;font-size:14px}
+.pl li:last-child{border-bottom:none}
+.pt{min-width:26px;height:26px;background:#8C1D40;color:#fff;font-size:13px;font-weight:700;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:3px}
+.pt.b{background:#1565C0}
+
+/* IMAGE CARDS - result figures get full space */
+.card.img-card{min-width:0}
+.img-card .cb{padding:12px;display:flex;flex-direction:column;gap:8px}
+.img-card img{width:100%;height:auto;max-height:none;display:block;object-fit:contain;border-radius:5px;border:1px solid #ddd}
+.img-card .cap{font-size:13px;color:#555;text-align:center;font-style:italic;padding:6px 8px;line-height:1.5;flex-shrink:0}
+
+/* img-card.grow: allocate space with controlled flex distribution */
+.card.img-card.grow .cb{
+  flex:1;
+  display:grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;  /* header | image (shrinkable) | caption */
+  gap:8px;
+  padding:0;
+  min-height:0;
+}
+.card.img-card.grow .ch{margin-bottom:0;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.05)}
+.card.img-card.grow .cb img{
+  width:100%;
+  height:100%;
+  min-height:300px;
+  max-height:750px;
+  object-fit:contain;
+  border-radius:5px;
+  border:1px solid #ddd;
+}
+.card.img-card.grow .cap{
+  margin-top:0;
+  padding:8px 16px;
+  background:#fafafa;
+  border-top:1px solid #eee;
+}
 
 /* Metric labels */
 .ml{font-size:13px;color:#666;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
@@ -295,7 +438,7 @@ li{font-size:14px;margin-bottom:4px}
 
 <div class="body">
 
-<!-- COL 1 -->
+<!-- COL 1: Architecture & Safety -->
 <div class="col">
 
 <div class="card">
@@ -391,7 +534,6 @@ li{font-size:14px;margin-bottom:4px}
   </div>
 </div>
 
-<!-- ASU Sol WCET -->
 <div class="card img-card grow">
   <div class="ch t">WCET on ASU Sol — 100k Trials · AMD EPYC 7413 · taskset-pinned</div>
   <div class="cb">
@@ -402,10 +544,7 @@ li{font-size:14px;margin-bottom:4px}
 
 </div><!-- /col1 -->
 
-<!-- Section guide -->
-<div class="section-guide" style="grid-column: 1 / -1;"></div>
-
-<!-- COL 2 -->
+<!-- COL 2: HOCBF + WCET + EKF -->
 <div class="col">
 
 <div class="card">
@@ -470,12 +609,44 @@ li{font-size:14px;margin-bottom:4px}
   </div>
 </div>
 
+<div class="card img-card grow">
+  <div class="ch dk">WCET + EVT · 100k Trials · SCHED_FIFO · Core 2</div>
+  <div class="cb">
+    <div class="mg4" style="margin-bottom:8px;flex-shrink:0">
+      <div class="m g"><div class="mv">31 ns</div><div class="ml">P99</div></div>
+      <div class="m o"><div class="mv">2,725 ns</div><div class="ml">WCET</div></div>
+      <div class="m b"><div class="mv">1,733 ns</div><div class="ml">EVT P=10⁻⁹</div></div>
+      <div class="m t"><div class="mv">9.5 µs</div><div class="ml">OS Jitter Max</div></div>
+    </div>
+    <img src="experiments/results/wcet_evt.png" alt="WCET CCDF + Gumbel EVT">
+    <div class="cap">CCDF tail + Gumbel EVT extrapolation — P=10⁻⁹ bound = 1.733 µs (57× below 100 µs deadline). Generated by <code>experiments/exp_wcet_evt.py</code>.</div>
+  </div>
+</div>
+
+<div class="card" style="flex:1">
+  <div class="ch b">EKF Covariance Gating — Property P7</div>
+  <div class="cb" style="display:flex;flex-direction:column;gap:8px">
+    <div style="background:#E8F5E9;border:3px solid #2E7D32;border-radius:6px;padding:14px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center">
+      <strong style="color:#1B5E20;font-size:13px">NOMINAL</strong><br>
+      <span style="font-size:10.5px;color:#555">σ² < 5.0 m²</span>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#E65100;font-weight:700">GPS lost ↓</div>
+    <div style="background:#FFF8E1;border:3px solid #F57F17;border-radius:6px;padding:14px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center">
+      <strong style="color:#E65100;font-size:13px">DEGRADED</strong><br>
+      <span style="font-size:10.5px;color:#555">VIO · cycle 9</span>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#C62828;font-weight:700">σ² ≥ 25 m² ↓</div>
+    <div style="background:#FFEBEE;border:3px solid #C62828;border-radius:6px;padding:14px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center">
+      <strong style="color:#C62828;font-size:13px">COLLAPSED</strong><br>
+      <span style="font-size:10.5px;color:#555">P7 → RTL · cycle 26</span>
+    </div>
+    <p style="font-size:10.5px;color:#555;flex-shrink:0">VIO σ_v=0.10 m/s (OpenVINS EuRoC). Air-gap: physics plant writes ground-truth [vx,vy] to <span class="mono">/dev/shm/aisp_gt_state</span> — EKF reads only.</p>
+  </div>
+</div>
+
 </div><!-- /col2 -->
 
-<!-- Section guide -->
-<div class="section-guide" style="grid-column: 1 / -1;"></div>
-
-<!-- COL 3 -->
+<!-- COL 3: Results -->
 <div class="col">
 
 <div class="card img-card">
@@ -519,14 +690,6 @@ li{font-size:14px;margin-bottom:4px}
   </div>
 </div>
 
-</div><!-- /col3 -->
-
-<!-- Section guide -->
-<div class="section-guide" style="grid-column: 1 / -1;"></div>
-
-<!-- COL 4 -->
-<div class="col">
-
 <div class="card img-card">
   <div class="ch g">Battery Aging — Poly-4 Fit on NASA PCoE 18650 Cells</div>
   <div class="cb">
@@ -540,6 +703,11 @@ li{font-size:14px;margin-bottom:4px}
     </table>
   </div>
 </div>
+
+</div><!-- /col3 -->
+
+<!-- COL 4: VLA + Battery + Contributions + Refs -->
+<div class="col">
 
 <div class="card img-card">
   <div class="ch o">Rendered-Camera VLA Flight Loop — Isaac Sim 6.0.1 (Phase 5, Simulation)</div>
@@ -566,7 +734,7 @@ li{font-size:14px;margin-bottom:4px}
   </div>
 </div>
 
-<div class="card" style="flex:1">
+<div class="card">
   <div class="ch dk">References</div>
   <div class="cb" style="display:flex;flex-direction:column;justify-content:space-between;font-size:10.5px;color:#333;line-height:1.5">
     <p>[1] Xiao & Belta (2022). High-Order CBFs. <em>IEEE TAC</em>.</p>

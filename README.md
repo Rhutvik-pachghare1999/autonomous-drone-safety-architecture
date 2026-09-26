@@ -7,20 +7,21 @@
 
 **[View Research Poster](https://rhutvik-pachghare1999.github.io/autonomous-drone-safety-architecture/)** — A0 landscape, latest results, figures, and architecture overview.
 
-A safety architecture for autonomous multirotors: every command an AI model
-or RL policy issues is projected through a closed-form control-barrier-function
-(HOCBF) filter before it can reach the motors. Around that kernel sit a
-15-state EKF covariance-gating ladder, an HMAC-authenticated
+A safety architecture for autonomous multirotors: every high-level velocity command
+from an AI model or RL policy is intercepted and projected through a closed-form
+control-barrier-function (HOCBF) filter before it can reach the motors. Around
+that kernel sit a 15-state EKF covariance-gating ladder, an HMAC-authenticated
 observability-weighted swarm consensus protocol, and a bounded-latency
-real-time execution path (SCHED_FIFO userspace on Linux, 2,725 ns measured
-filter WCET over 100,000 cycles — a soft real-time budget enforced by O(1)
+execution path (SCHED_FIFO userspace on Linux, 2,725 ns observed maximum filter
+latency over 100,000 cycles — a soft real-time budget enforced by O(1)
 arithmetic, not a formal deadline guarantee).
 
-The vehicle under test is the real 27 g Crazyflie 2.X USD model in NVIDIA
+The vehicle under test is the 27 g Crazyflie 2.X USD model in NVIDIA
 Isaac Sim GPU PhysX; the command sources are a SmolVLM2-2.2B vision-language
 model and a PPO policy. This is a research prototype used to study how
-deterministic safety filters bound learned-model behavior in real time.
-It is not a certified flight controller.
+deterministic safety filters constrain the physical effect of potentially
+unsafe learned-model commands in simulation. It is not a certified flight
+controller, and no hardware validation has been performed.
 
 **At a glance** (every number below is regenerated from a committed artifact)
 
@@ -36,7 +37,7 @@ It is not a certified flight controller.
 
 ---
 
-## Headline result: isolation A/B on the real Crazyflie 2.X
+## Headline result: isolation A/B on the real Crazyflie 2.X (Simulation) (Simulation)
 
 SmolVLM2-2.2B (4-bit) pilots NVIDIA's 27 g Crazyflie 2.X USD asset on GPU
 PhysX; the HOCBF filter (mass 0.027 kg, T_max 0.60 N) sits between the model
@@ -154,13 +155,13 @@ to P = 10⁻⁹. Right: OS scheduler jitter against the 50 µs SLA.
 
 ![WCET on Sol: distribution with Gumbel fit, CCDF tail with EVT extrapolation, scheduler jitter](experiments/results/wcet_sol.png)
 
-### Adversarial command sweep
+### Adversarial command sweep (unsafe-command rejection)
 
 Nominal commands from −0.1 to −100 m/s commanded descent rate versus the
 filtered output. The filter clamps every infeasible command onto the safe
 set; the correction grows with command severity, up to 397.25 N.
 
-![Hallucination sweep: commanded versus filtered thrust over log-scaled descent rate](experiments/results/hallucination_1000.png)
+![Adversarial command sweep: commanded versus filtered thrust over log-scaled descent rate](experiments/results/hallucination_1000.png)
 
 ### Estimator observability
 
@@ -230,7 +231,7 @@ PYTHONPATH=. python3 -c "from src.utils.shm_bridge import VLASharedMemoryPublish
 build/sil_runner 20 /tmp/sil.csv
 
 # 4. Experiments that run locally
-PYTHONPATH=. python3 experiments/exp_hallucination_1000.py
+PYTHONPATH=. python3 experiments/exp_adversarial_1000.py
 PYTHONPATH=. python3 experiments/exp_wcet_evt.py
 PYTHONPATH=. python3 experiments/exp_observability_gramian.py
 PYTHONPATH=. python3 experiments/exp_consensus_fault.py
@@ -342,6 +343,33 @@ loops, VLA bridge (`transformers`, `torch`, `bitsandbytes`, GPU). See
   roughly 0.5 Hz equivalent command rate with state-derived imagery. The
   rendered camera is a simulated sensor product, not a physical camera;
   dive phases are scripted.
+
+---
+
+## What is implemented vs What is planned
+
+### Implemented and tested (CI-verified)
+
+- **HOCBF altitude safety filter** (C++ and C99): closed-form projection, WCET 2,725 ns observed max, infeasibility fallback, NaN/Inf rejection, post-saturation re-check.
+- **Stale-VLA watchdog**: STARTUP/FRESH/STALE state machine, seqlock-protected SHM read.
+- **EKF covariance gating**: 15-state EKF, P7 ladder (NOMINAL/DEGRADED/COLLAPSED), VIO injection with air-gap ground truth, covariance carry-forward.
+- **Observability-weighted voting consensus**: HMAC-SHA256 authentication, distance-based grouping (1 cm), trust-weighted mean agreement, quorum fraction output.
+- **EKF SHM writer**: seqlock writer for estimator snapshots, integrated into CovarianceGating.
+- **VLA bridge**: SmolVLM2-2.2B (4-bit) structured parsing, velocity bounds enforcement.
+- **Battery model**: Poly-4 fit on NASA PCoE 18650 cells, capacity fade validation.
+- **C99 RT benchmark**: 1 kHz loop, end-of-cycle latency measurement, deadline-miss detection, SCHED_FIFO verification, UDP send checking.
+- **Tests**: 68 pytest tests + 1 C watchdog test, CI green.
+
+### Planned / not yet implemented
+
+- **Formal verification**: P1–P7 properties specified in ROADMAP.md; no FSM/Z3 harness exists.
+- **Hardware validation**: No hardware-in-the-loop, no flight controller integration, no physical flight tests.
+- **Full HOCBF₄**: Currently implements altitude-only (relative degree 2); full rigid-body formulation planned.
+- **ONNX hot path**: Compiled out by default; observation space mismatch (trained on 13-dim, runs on 2-dim).
+- **Hardware sim-to-real**: No physical flight tests; zero-shot sim-to-real transfer not validated.
+- **Full BFT consensus**: Current system is weighted voting with HMAC auth, not Byzantine fault tolerance.
+- **Key rotation**: Single shared HMAC key; no key rotation or per-node keys.
+- **Real VLA hallucination mitigation**: Current experiment tests unsafe-command rejection; VLA itself refused dive prompts.
 
 ---
 

@@ -116,14 +116,14 @@
 - [x] OS jitter watchdog: max=7.3µs, 0 alerts above 50µs SLA
 
 ### 6.2 Safety Validation Experiments ✅ COMPLETE
-- [x] Exp 1: VLA hallucination blocking — 1000 trials, 100% survival, `hallucination_1000.png`
+- [x] Exp 1: adversarial command blocking — 1000 scripted trials (vz −0.1…−100 m/s, no live VLA inference), 100% survival, `hallucination_1000.png`
 - [x] Exp 2: HOCBF constraint satisfaction — 10,000 domain-rand trials, 0 violations
 - [x] Exp 3: Zero-shot sim-to-real robustness — ±40% mass, σ=2.0 wind
 - [x] Exp 4: weighted-voting consensus with a faulty outlier node — 100% commit, 100% outlier rejection (NOT a Byzantine threat model)
 - [x] Exp 5: NASA PCoE battery validation — B0005/B0006/B0007, RMSE poly-4=0.016 Ah
       **Key finding:** spec linear model predicts EOL at cycle 600; real cells hit EOL at
       cycle 100–165. Mission feasibility boundary is 4× tighter than the spec assumed.
-- [x] Exp 6: CasADi symbolic Lie derivatives — full Lf4h derived, invariant set PROVED
+- [x] Exp 6: CasADi symbolic Lie derivatives — full Lf4h derived; invariant-set feasibility checked numerically at boundary states (`lie_derivatives.json`; formal proof planned, see P1–P7 below)
 - [x] Exp 7: Empirical Observability Gramian — rank drops 6→4 under GPS denial
 
 ### 6.3 Comparative Analysis ✅ COMPLETE

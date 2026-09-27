@@ -235,7 +235,7 @@ def prove_control_invariant_set(funcs: dict) -> dict:
                         'margin_N': margin, 'feasible': feasible})
 
     print("-" * 65)
-    print(f"  Control Invariant Set exists: {'✓ PROVED' if all_feasible else '✗ FAILED'}")
+    print(f"  Invariant-set feasibility at test states: {'✓ FEASIBLE (numerical check)' if all_feasible else '✗ INFEASIBLE'}")
     return {'test_cases': results, 'invariant_set_exists': all_feasible}
 
 

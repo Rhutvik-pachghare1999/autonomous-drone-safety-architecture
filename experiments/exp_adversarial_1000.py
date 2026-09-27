@@ -1,19 +1,25 @@
 """
-1000-Trial Adversarial Hallucination Blocking
-==============================================
+1000-Trial Adversarial Command Blocking (Scripted Sweep)
+=========================================================
 The "killer plot" for the ICRA/IROS/RSS paper.
 
-Generates 1000 adversarial VLA commands spanning the full range of
-unsafe descent velocities (vz from -0.1 to -100 m/s) and shows:
+Generates 1000 scripted adversarial descent commands spanning the full
+range of unsafe descent velocities (vz from -0.1 to -100 m/s) and shows:
 
-  1. VLA nominal thrust T_nom  — what the foundation model would command
+  1. Nominal thrust T_nom — a P-gain thrust model reacting to each
+     adversarial vz command (what an unfiltered controller would emit)
   2. HOCBF corrected thrust T_safe — what the safety filter enforces
   3. 100% collision-free rate — T_safe always keeps h(x) = p_z >= 0
+
+Honesty note: the commands are SCRIPTED, not emitted by a live VLA —
+this experiment measures the HOCBF filter in isolation against a
+worst-case command sweep, not VLA behaviour. Live rendered-camera VLA
+flights are reported separately (vla_realcam_summary.json).
 
 Trial design:
   - 1000 trials: vz swept from -0.1 to -100 m/s (log scale)
   - Each trial: 50 physics steps at 50Hz (1 second of flight)
-  - Initial altitude: 2.0 m
+  - Initial altitude: 2.0 m, 2 kg quad (HOCBF params pinned below)
   - HOCBF filter applied at every step
   - Survival = final altitude > 0.1 m
 
@@ -41,7 +47,16 @@ DT      = 0.02    # 50 Hz physics
 STEPS   = 50      # 1 second per trial
 N       = 1000    # trials
 
-cbf = _hocbf.HOCBF()
+# Pin the 2 kg quad params explicitly — the module defaults are the
+# Crazyflie 2.X physical limits (mass 0.027 kg, T_max 0.60 N) and would
+# silently change this sweep's committed artifact (hallucination_1000.json).
+# Mirrors the 2 kg fixture in tests/test_hocbf.py.
+_p = _hocbf.HOCBFParams()
+_p.mass   = MASS
+_p.T_max  = 4.0 * MASS * GRAVITY   # 78.48 N — 4x hover for a 2 kg quad
+_p.alpha1 = 2.0
+_p.alpha2 = 1.0
+cbf = _hocbf.HOCBF(_p)
 
 
 def simulate_trial(vz_cmd: float, pz0: float = 2.0) -> dict:
@@ -85,7 +100,7 @@ def simulate_trial(vz_cmd: float, pz0: float = 2.0) -> dict:
 
 def run() -> dict:
     print('=' * 60)
-    print('Experiment 5: 1000-Trial Adversarial Hallucination Blocking')
+    print('Experiment 5: 1000-Trial Adversarial Command Blocking (scripted)')
     print('=' * 60)
 
     # 1000 adversarial vz commands: log-spaced from -0.1 to -100 m/s
@@ -141,15 +156,15 @@ def _plot(results: list, vz_commands: np.ndarray) -> None:
 
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
         fig.suptitle(
-            '1000-Trial Adversarial Hallucination Blocking\n'
-            'VLA Nominal Command (Unsafe) vs HOCBF Corrected Command (Safe)',
+            '1000-Trial Adversarial Command Blocking (Scripted vz Sweep)\n'
+            'Scripted Nominal Command (Unsafe) vs HOCBF Corrected Command (Safe)',
             fontsize=11
         )
 
         # ── Left: T_nom vs T_safe vs |vz_cmd| ────────────────────────────────
         ax = axes[0]
         ax.semilogx(vz_abs, T_nom,  'r-',  linewidth=2, alpha=0.8,
-                    label='T_nom (VLA — unsafe)')
+                    label='T_nom (scripted adversarial — unsafe)')
         ax.semilogx(vz_abs, T_safe, 'b-',  linewidth=2, alpha=0.9,
                     label='T_safe (HOCBF — corrected)')
         ax.axhline(T_hover, color='gray', linestyle=':', linewidth=1.5,
@@ -161,7 +176,7 @@ def _plot(results: list, vz_commands: np.ndarray) -> None:
                         label='HOCBF correction')
         ax.set_xlabel('|vz_cmd| (m/s)  [log scale]')
         ax.set_ylabel('Thrust (N)')
-        ax.set_title('Thrust Command: VLA vs HOCBF')
+        ax.set_title('Thrust Command: scripted adversarial vs HOCBF')
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
 
@@ -206,7 +221,7 @@ def _plot(results: list, vz_commands: np.ndarray) -> None:
         ax3.grid(True, alpha=0.3)
 
         # Annotate overall result
-        ax3.text(0.5, 0.15, '100% Collision-Free\n✓ PROVED',
+        ax3.text(0.5, 0.15, '100% Collision-Free\n✓ VERIFIED (1000 trials)',
                  transform=ax3.transAxes, ha='center', va='center',
                  fontsize=14, fontweight='bold', color='green',
                  bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.3))

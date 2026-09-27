@@ -4,6 +4,8 @@ with correct figure sizing so they fit poster cards without clipping.
 """
 import csv
 import json
+import os
+import sys
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -57,18 +59,27 @@ def regen_wcet():
 def regen_hallucination():
     # Reconstruct T_nom and T_safe from the same formula used in the experiment
     MASS, GRAVITY = 2.0, 9.81
-    T_MAX = 78.48
-    alpha1, alpha2 = 2.0, 1.0
     pz0, vz0 = 2.0, 0.0
+    T_MAX = 78.48
+
+    # Use the real filter (same params as experiments/exp_adversarial_1000.py,
+    # pinned explicitly because module defaults are Crazyflie 2.X) so the
+    # panel's T_safe floor matches the committed artifact exactly (16.87 N,
+    # not the hand-rolled 15.62 N that ignores the 1.08 conservatism factor).
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "src", "control"))
+    import hocbf
+    p = hocbf.HOCBFParams()
+    p.mass, p.T_max = MASS, T_MAX
+    p.alpha1, p.alpha2 = 2.0, 1.0
+    cbf = hocbf.HOCBF(p)
 
     vz_cmds = np.logspace(-1, 2, 1000) * -1  # -0.1 to -100 m/s
 
     T_noms, T_safes = [], []
     for vz_cmd in vz_cmds:
         T_nom = MASS * GRAVITY + MASS * vz_cmd * 2.0
-        # HOCBF2 lower bound: T_lb = m*(g - alpha1*vz - alpha2*pz)
-        T_lb = MASS * (GRAVITY - alpha1 * vz0 - alpha2 * pz0)
-        T_safe = float(np.clip(T_nom, T_lb, T_MAX))
+        T_safe = cbf.filter_thrust(pz0, vz0, 0.0, 0.0, T_nom)
         T_noms.append(T_nom)
         T_safes.append(T_safe)
 
@@ -77,7 +88,7 @@ def regen_hallucination():
     vz_abs = np.abs(vz_cmds)
 
     fig, ax = plt.subplots(figsize=(6, 5))
-    ax.semilogx(vz_abs, T_noms, 'r-', linewidth=2, label='T_nom (VLA — unsafe)')
+    ax.semilogx(vz_abs, T_noms, 'r-', linewidth=2, label='T_nom (scripted adversarial — unsafe)')
     ax.semilogx(vz_abs, T_safes, 'b-', linewidth=2, label='T_safe (HOCBF — corrected)')
     ax.axhline(MASS * GRAVITY, color='k', linestyle=':', linewidth=1,
                label=f'Hover thrust ({MASS*GRAVITY:.1f} N)')
@@ -91,7 +102,7 @@ def regen_hallucination():
 
     ax.set_xlabel('|vz_cmd| (m/s)  [log scale]')
     ax.set_ylabel('Thrust (N)')
-    ax.set_title('Thrust Command: VLA vs HOCBF')
+    ax.set_title('Thrust Command: scripted adversarial vs HOCBF')
     ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
 

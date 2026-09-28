@@ -23,14 +23,16 @@ Lie derivative chain:
     Lf4h = d/dt[psi3]  (full expression, no hover approximation)
     LgLf3h = [d(psi3)/d_T, d(psi3)/d_tau_x / Ixx, d(psi3)/d_tau_y / Iyy]
 
-Control Invariant Set Proof:
+Control Invariant Set — Numerical Feasibility Check:
     The set C = {x : psi0 >= 0, psi1 >= -v_max, psi2 >= -a_max, psi3 >= -j_max}
     is forward-invariant if for every x on the boundary, there exists a
     feasible control u in [T_min, T_max] x [-tau_max, tau_max]^2 such that
     the HOCBF4 condition holds.
 
-    We prove this by evaluating the minimum required thrust T_lb at the
-    worst-case state (maximum velocity, maximum tilt) and showing T_lb < T_max.
+    We check this numerically by evaluating the minimum required thrust T_lb
+    at the worst-case states (maximum velocity, maximum tilt) and testing
+    T_lb < T_max — a numerical feasibility check, not a formal proof
+    (a formal proof is planned; see ROADMAP.md).
 
 References:
     Xiao & Belta (2022). High-Order Control Barrier Functions. IEEE TAC.
@@ -157,10 +159,10 @@ def derive_lie_chain():
     }
 
 
-def prove_control_invariant_set(funcs: dict) -> dict:
+def evaluate_control_invariant_set_feasibility(funcs: dict) -> dict:
     """
-    Prove the control invariant set C exists by showing that at every
-    boundary state in the flight envelope, a feasible control exists.
+    Check invariant-set feasibility numerically: at every
+    boundary state in the flight envelope, test whether a feasible control exists.
 
     Boundary states tested:
       - Maximum descent velocity (vz = -V_MAX)
@@ -219,7 +221,7 @@ def prove_control_invariant_set(funcs: dict) -> dict:
 
     results = []
     all_feasible = True
-    print("\n── Control Invariant Set Feasibility Proof ──────────────────────")
+    print("\n── Control Invariant Set — Numerical Feasibility Check ──────────")
     print(f"{'State':<28} {'T_lb':>8} {'T_max':>8} {'Margin':>8} {'Feasible':>9}")
     print("-" * 65)
 
@@ -318,8 +320,8 @@ def main():
     print(f"  g_tau_x     = {float(funcs['F_gx'](*tilt_args)):.6f}")
     print(f"  g_tau_y     = {float(funcs['F_gy'](*tilt_args)):.6f}")
 
-    # Control invariant set proof
-    proof = prove_control_invariant_set(funcs)
+    # Control invariant set — numerical feasibility check
+    feasibility = evaluate_control_invariant_set_feasibility(funcs)
 
     # Plot
     plot_lie_chain(funcs)
@@ -334,7 +336,7 @@ def main():
             'psi3': float(funcs['F_psi3'](*hover_args)),
             'Lf4h': float(funcs['F_Lf4h'](*hover_args)),
         },
-        'invariant_set_proof': proof,
+        'invariant_set_proof': feasibility,
         'parameters': {'mass': M, 'g': G, 'Ixx': IXX, 'Iyy': IYY, 'Izz': IZZ,
                        'T_max': T_MAX, 'tau_max': TAU_MAX},
     }
@@ -342,7 +344,7 @@ def main():
     with open(path, 'w') as f:
         json.dump(out, f, indent=2)
     print(f'\nResults saved: {path}')
-    return proof['invariant_set_exists']
+    return feasibility['invariant_set_exists']
 
 
 if __name__ == '__main__':

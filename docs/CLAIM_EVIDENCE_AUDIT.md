@@ -17,10 +17,11 @@ Last updated: 2026-09-27.
 
 | Claim | Source location | Evidence | Status |
 |---|---|---|---|
-| `pytest tests/` passes | `pyproject.toml`, `tests/conftest.py`, `tests/*.py` | `python3 -m pytest tests/ -q` → 39 passed | verified |
+| `pytest tests/` passes | `pyproject.toml`, `tests/conftest.py`, `tests/*.py` | `python3 -m pytest tests/ -q` → 68 passed (re-verified 2026-09-27; CI green on 27f7ac7) | verified |
 | `import hocbf` works on fresh clone | `tests/conftest.py` (adds `src/control` to `sys.path`) | `pytest tests/test_hocbf.py` imports module successfully | verified |
 | C99 safety filter compiles without ONNX | `src/rt/safety_filter.c` | `gcc -O3 -DNO_ONNX -o /tmp/sf src/rt/safety_filter.c -lm -lrt && /tmp/sf 1000 0` | verified |
 | CMake/pybind11 build works | `CMakeLists.txt` | `mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j2 && make install` | verified |
+| ROADMAP listed "[ ] Create Python bindings via pybind11" as open | `ROADMAP.md` | The `hocbf` pybind11 extension is built by CMake in CI and exercised by `tests/test_hocbf.py` + `tests/test_hocbf_py_matches_cpp.py`; checkbox completed 2026-09-27 | corrected (2026-09-27) |
 | No secrets in git history | `.env.example`, `.gitignore`, `docs/SECURITY_NOTES.md` | `git log --all -- .env` returns nothing; grep for API keys/tokens in tracked files found none | verified |
 
 ## HOCBF safety filter
@@ -98,6 +99,7 @@ Last updated: 2026-09-27.
 | Claim | Source location | Evidence | Status |
 |---|---|---|---|
 | P1–P5 are proven invariants | Previously in `README.md` | **No FSM/Z3 code exists.** Corrected in `README.md` and `ROADMAP.md` | stale → now planned |
+| `exp_lie_derivatives.py` still used proof language ("Control Invariant Set Proof", `prove_control_invariant_set`, "Feasibility Proof" runtime heading) | `experiments/exp_lie_derivatives.py` | Renamed 2026-09-27: function → `evaluate_control_invariant_set_feasibility`, headings/docstring → "Numerical Feasibility Check"; JSON keys (`invariant_set_proof`, `invariant_set_exists`) left unchanged so the committed `lie_derivatives.json` stays reproducible without a CasADi re-run | corrected (2026-09-27) |
 | P6 behaviour (NaN/Inf inputs rejected) implemented and tested | `src/control/hocbf.cpp`, `src/rt/safety_filter.c`, `tests/test_input_validation.py` | 17 pytest cases pass. Note: this is the filter's fail-safe behaviour, not a formal proof of a P6 invariant — no FSM/Z3 harness exists | verified (behaviour only) |
 | P7: EKF covariance collapse triggers RTL | `src/estimation/ekf_gating.py` | `p7_triggered` is set; RTL FSM action not implemented | partial / implemented-unvalidated |
 | Full FSM with Z3/BFS proof | `ROADMAP.md` § "Formal verification roadmap" | No implementation; listed as future work | planned |
@@ -110,6 +112,13 @@ Last updated: 2026-09-27.
 | README shows "WCET 2,725 ns" static badge | Old `README.md` | Removed; WCET is now documented with evidence links | stale |
 | `docs/LATENCY_BUDGET.md` referenced `latency_histogram.png` and `cyclictest_cdf.png` | Old `docs/LATENCY_BUDGET.md` | Images do not exist in repo; references removed, uncommitted cyclictest data labelled as local-only | stale → corrected |
 | README said worst corrected command was 78.5 N | Old `README.md` | Reconciled to experiment output: T_safe = 16.9 N, correction = 397.25 N | stale → corrected |
+| `index.html` repeated the WCET+EVT and EKF Covariance Gating cards (each appeared twice in COL 2) | `index.html` | Duplicate pair removed 2026-09-27; each card appears once | corrected (2026-09-27) |
+| `index.html` omitted the headline Crazyflie isolation A/B result | `index.html`, `experiments/results/crazyflie_vla_iso500.json` | Added 2026-09-27 as the first Results card: OFF 0/500 vs ON 500/500, mean min-altitude 0.803 m, 73.8% steps filtered, Wilson CIs — from the attribution-grade isolation run (`sim/hocbf_crazyflie_iso.py`), not the superseded controller-substituted `crazyflie_vla_ab500.json` | corrected (2026-09-27) |
+| `index.html` Research Contributions line said "1000-trial hallucination blocking" | `index.html` | Renamed 2026-09-27 to "1000-trial scripted adversarial command sweep" (commands are scripted; no live-VLA claim) | corrected (2026-09-27) |
+| Standalone "WCET" labels in `index.html` | `index.html` | Relabeled 2026-09-27 to "Observed Max Latency" with a measured-evidence qualifier (not a formal universal worst-case bound) | corrected (2026-09-27) |
+| ROADMAP 6.1 latency metrics were stale (WCET=4.82µs, P99.99=70ns, EVT=340ns, jitter max=7.3µs) | `ROADMAP.md` §6.1 | Synced 2026-09-27 to `wcet_evt.json`: observed max 2,725 ns, p99=31 ns, p99.99=80 ns, EVT P=10⁻⁹ bound=1,733 ns; jitter max 9.5 µs (p99=11 ns) | corrected (2026-09-27) |
+| ROADMAP §1.1 note cited the superseded `crazyflie_vla_ab500.json` as the headline A/B artifact | `ROADMAP.md` §1.1 | Re-pointed 2026-09-27 to the attribution-grade isolation run `experiments/results/crazyflie_vla_iso500.json` (superseded run kept as history only) | corrected (2026-09-27) |
+| README headline duplicated "(Simulation) (Simulation)" | `README.md` | Typo fixed 2026-09-27 → "(Simulation)" | corrected (2026-09-27) |
 
 ## Security
 
@@ -125,8 +134,9 @@ Last updated: 2026-09-27.
 - **Verified:** 25 (incl. 1 verified + scoped; e2e re-verified 2026-09-25 PM under fail-closed+authenticated path)
 - **Corrected 2026-09-24:** infeasible fallback hover → T_max; C/C++ NaN infeasible-branch parity; consensus vote dedupe; SHM seqlock torn-read
 - **Corrected 2026-09-27:** adversarial sweep pinned to explicit 2 kg HOCBF params (Crazyflie 2.X module defaults would not reproduce the committed artifact — JSON now re-verified byte-identical from a fresh build); hallucination plot + panel relabeled (VLA → scripted adversarial; PROVED → VERIFIED); `ROADMAP.md` Exp 6 "invariant set PROVED" → numerical feasibility check (formal proof planned); `exp_lie_derivatives.py` summary print PROVED → FEASIBLE; `index.html` adversarial card re-pointed from Crazyflie-scale ISAAC SIL numbers to its own 2 kg artifact
+- **Corrected 2026-09-27 (consistency pass 2):** `exp_lie_derivatives.py` proof language → numerical-feasibility wording (function `evaluate_control_invariant_set_feasibility`, docstring, runtime heading; JSON keys unchanged for artifact reproducibility); ROADMAP 6.1 latency metrics synced to `wcet_evt.json` (observed max 2,725 ns, p99=31 ns, EVT P=10⁻⁹ bound=1,733 ns; jitter 9.5 µs); ROADMAP pybind11 checkbox completed; ROADMAP §1.1 note re-pointed from superseded `ab500` to isolation `iso500` artifact; ROADMAP video-demo item de-hallucinated; `index.html` duplicate WCET+EVT/EKF cards removed, headline Crazyflie isolation A/B card added (`iso500`), "hallucination blocking" contributions line renamed, WCET labels → observed max latency; README "(Simulation) (Simulation)" typo; this audit's pytest count updated 39 → 68
 - **Corrected 2026-09-25 AM:** EKF SHM trust inversion; consensus hashing; peer trust validation; quorum-derived weight; consensus SHM seqlock; VLA velocity limits; EKF state contract; post-mixer CBF check
 - **Corrected 2026-09-25 PM (fresh audit):** EKF synthetic fallback → fail-closed; mmap seek/read → slice access (thread misalignment); EKF sit-out cadence; quantization grouping → distance-based; HMAC authenticated membership; consensus SHM write observability; RT end-of-cycle measurement boundary; single ONNX inference/cycle; strict RT exit criteria; UDP send checks; affinity≠isolation
 - **Implemented-unvalidated:** 3 (ONNX hot-path, HOCBF4 full validation, full FSM/Z3 proof)
 - **Planned:** 1 (full FSM/Z3 proof)
-- **Stale → corrected/removed:** 6
+- **Stale → corrected/removed:** 15

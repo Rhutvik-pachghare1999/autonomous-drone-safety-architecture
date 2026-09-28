@@ -37,7 +37,7 @@ controller, and no hardware validation has been performed.
 
 ---
 
-## Headline result: isolation A/B on the real Crazyflie 2.X (Simulation) (Simulation)
+## Headline result: isolation A/B on the real Crazyflie 2.X (Simulation)
 
 SmolVLM2-2.2B (4-bit) pilots NVIDIA's 27 g Crazyflie 2.X USD asset on GPU
 PhysX; the HOCBF filter (mass 0.027 kg, T_max 0.60 N) sits between the model

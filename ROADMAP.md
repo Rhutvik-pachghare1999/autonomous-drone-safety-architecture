@@ -15,15 +15,17 @@
 
 > Note: earlier `isaac_sil_*` A/B numbers (86%/16%) were flown on a **2 kg cuboid point-mass
 > surrogate**, not the real vehicle, and are **superseded** by the real Crazyflie 2.X result:
-> a **500-episode randomized A/B (ASU Sol, Isaac 5.1 GPU PhysX): filter OFF 0% vs ON 100%
-> survival** (`experiments/results/crazyflie_vla_ab500.json`, see `docs/REAL_CRAZYFLIE_VLA_SIM.md`).
+> a **500-episode paired isolation A/B (ASU Sol, Isaac GPU PhysX): filter OFF 0/500 vs ON
+> 500/500 survival** (`experiments/results/crazyflie_vla_iso500.json`, see `README.md`).
+> Single-variable design — only the CBF thrust projection differs between arms; the earlier
+> controller-substituted run (`crazyflie_vla_ab500.json`) is kept as history only.
 
 ### 1.2 High-Order Control Barrier Function (HOCBF)
 - [x] Mathematically derive HOCBF for quadrotor (relative degree 2)
 - [ ] Map position constraints → roll/pitch/thrust acceleration limits (altitude channel done; full 3D pending)
 - [ ] Implement OSQP-based QP solver (current: analytical 1-var QP, no OSQP dependency)
 - [x] Port to **C++** for deterministic microsecond latency (pybind11 module, re-parameterized for 27 g Crazyflie)
-- [ ] Create Python bindings via `pybind11`
+- [x] Create Python bindings via `pybind11` — `hocbf` extension built by CMake in CI, exercised by `tests/test_hocbf.py` + `tests/test_hocbf_py_matches_cpp.py`
 
 ### 1.3 Formal Safety Kernel (planned — not yet implemented)
 - [ ] Design 7-state FSM encoding P1–P7
@@ -111,9 +113,9 @@
 ## Phase 6: Benchmarking & Data Collection (Weeks 11-12)
 
 ### 6.1 Latency Profiling ✅ COMPLETE
-- [x] HOCBF C filter: WCET=4.82µs, P99.99=70ns, EVT Gumbel bound (P=1e-9)=340ns
+- [x] HOCBF C filter: observed max latency 2,725 ns (100k trials), p99=31 ns, p99.99=80 ns, EVT Gumbel P=10⁻⁹ bound=1,733 ns — measured timing evidence, not a formal universal worst-case bound
 - [x] 100,000-trial benchmark: `experiments/results/wcet_evt.json`, `wcet_evt.png`
-- [x] OS jitter watchdog: max=7.3µs, 0 alerts above 50µs SLA
+- [x] OS jitter watchdog: max=9.5µs (p99=11 ns), 0 alerts above 50µs SLA
 
 ### 6.2 Safety Validation Experiments ✅ COMPLETE
 - [x] Exp 1: adversarial command blocking — 1000 scripted trials (vz −0.1…−100 m/s, no live VLA inference), 100% survival, `hallucination_1000.png`
@@ -168,7 +170,7 @@ The following properties are the *intended* invariants for a future FSM/Z3 verif
 ### 7.2 Supplementary Materials
 - [ ] Open-source codebase on GitHub
 - [ ] Docker container for reproducibility
-- [ ] Video demonstrations: VLA hallucination blocking, swarm consensus
+- [ ] Video demonstrations: adversarial command blocking, swarm consensus
 - [ ] Appendix: Formal proofs, hyperparameters, hardware specs
 
 ---

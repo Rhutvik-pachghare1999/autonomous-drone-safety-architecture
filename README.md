@@ -33,11 +33,11 @@ controller, and no hardware validation has been performed.
 | Adversarial command sweep, 1,000 cases | 100% survival | `experiments/results/hallucination_1000.json` |
 | End-to-end swarm flight (GPS denied at t = 2 s) | error bounded 0.192 m vs 0.880 m ego-only | `experiments/results/consensus_ekf_flight.json` |
 | Live rendered-camera VLA flight, 216 queries | 100% structured parses, 0 crashes | `experiments/results/vla_realcam_summary.json` |
-| Test suite | 68 pytest tests + C watchdog test, CI green | `tests/`, `tests/watchdog_test.c` |
+| Test suite | 69 pytest tests + C watchdog test, CI green | `tests/`, `tests/watchdog_test.c` |
 
 ---
 
-## Headline result: isolation A/B on the real Crazyflie 2.X (Simulation)
+## Headline result: paired Isaac Sim stress test (Crazyflie 2.X model)
 
 SmolVLM2-2.2B (4-bit) pilots NVIDIA's 27 g Crazyflie 2.X USD asset on GPU
 PhysX; the HOCBF filter (mass 0.027 kg, T_max 0.60 N) sits between the model
@@ -157,6 +157,10 @@ to P = 10⁻⁹. Right: OS scheduler jitter against the 50 µs SLA.
 
 ### Adversarial command sweep (unsafe-command rejection)
 
+**Scope and reproducibility:** This 1,000-command sweep uses a scripted one-dimensional **2 kg point-mass** model with a one-second final-altitude threshold; it is **not** an Isaac Sim/Crazyflie or hardware flight test, nor a universal collision-freedom proof. Rerun with `PYTHONPATH=. python3 experiments/exp_adversarial_1000.py` after the documented CMake build. The filter mass and 78.48 N thrust ceiling are explicitly set by the experiment, not inherited from the Crazyflie defaults. See the [results JSON](experiments/results/hallucination_1000.json) and [source](experiments/exp_adversarial_1000.py).
+
+
+
 Nominal commands from −0.1 to −100 m/s commanded descent rate versus the
 filtered output. The filter clamps every infeasible command onto the safe
 set; the correction grows with command severity, up to 397.25 N.
@@ -221,7 +225,7 @@ mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release && make -j2 && make install
 cd ..
 
-# 2. Test suite — expect 68 passed
+# 2. Test suite — expect 69 passed
 PYTHONPATH=. python3 -m pytest tests/ -q
 
 # 3. C watchdog test + SIL replay
@@ -271,7 +275,7 @@ loops, VLA bridge (`transformers`, `torch`, `bitsandbytes`, GPU). See
 | `experiments/` | Reproducible experiments; results committed under `experiments/results/` |
 | `slurm/` | ASU Sol job scripts and environment notes |
 | `docs/` | `WCET_BENCHMARK.md`, `LATENCY_BUDGET.md`, `ARCHITECTURE.md`, `CLAIM_EVIDENCE_AUDIT.md`, `REAL_CRAZYFLIE_VLA_SIM.md` |
-| `tests/` | 68 pytest tests + `watchdog_test.c` |
+| `tests/` | 69 pytest tests + `watchdog_test.c` |
 
 ---
 
@@ -358,7 +362,7 @@ loops, VLA bridge (`transformers`, `torch`, `bitsandbytes`, GPU). See
 - **VLA bridge**: SmolVLM2-2.2B (4-bit) structured parsing, velocity bounds enforcement.
 - **Battery model**: Poly-4 fit on NASA PCoE 18650 cells, capacity fade validation.
 - **C99 RT benchmark**: 1 kHz loop, end-of-cycle latency measurement, deadline-miss detection, SCHED_FIFO verification, UDP send checking.
-- **Tests**: 68 pytest tests + 1 C watchdog test, CI green.
+- **Tests**: 69 pytest tests + 1 C watchdog test, CI green.
 
 ### Planned / not yet implemented
 

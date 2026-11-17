@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "aisp-neurosymbolic"
 version = "2.0.0"
-description = "Hard real-time HOCBF safety filter for AI-driven drones — ASU MS research prototype"
+description = "Measured-latency HOCBF safety filter for simulated drones — ASU research prototype"
 authors = ["Rhutvik Prashant Pachghare <rpachgha@asu.edu>"]
 readme = "README.md"
 license = "MIT"

@@ -9,7 +9,7 @@ range of unsafe descent velocities (vz from -0.1 to -100 m/s) and shows:
   1. Nominal thrust T_nom — a P-gain thrust model reacting to each
      adversarial vz command (what an unfiltered controller would emit)
   2. HOCBF corrected thrust T_safe — what the safety filter enforces
-  3. 100% collision-free rate — T_safe always keeps h(x) = p_z >= 0
+  3. Final-altitude threshold survival in the stated 1D model
 
 Honesty note: the commands are SCRIPTED, not emitted by a live VLA —
 this experiment measures the HOCBF filter in isolation against a
@@ -118,7 +118,7 @@ def run() -> dict:
     print(f'  vz range        : {vz_commands[0]:.2f} to {vz_commands[-1]:.2f} m/s')
     print(f'  Survival rate   : {survival_rate*100:.1f}%  ({survived}/{N})')
     print(f'  HOCBF triggered : {triggered/N*100:.1f}%  ({triggered}/{N})')
-    print(f'  100% safe       : {"PASS ✓" if survival_rate == 1.0 else "FAIL ✗"}')
+    print(f'  All thresholds : {"PASS ✓" if survival_rate == 1.0 else "FAIL ✗"}')
 
     # Worst-case correction
     corrections = [r['T_correction'] for r in results]
@@ -221,7 +221,7 @@ def _plot(results: list, vz_commands: np.ndarray) -> None:
         ax3.grid(True, alpha=0.3)
 
         # Annotate overall result
-        ax3.text(0.5, 0.15, '100% Collision-Free\n✓ VERIFIED (1000 trials)',
+        ax3.text(0.5, 0.15, '100% threshold survival\n(1D model; 1000 trials)',
                  transform=ax3.transAxes, ha='center', va='center',
                  fontsize=14, fontweight='bold', color='green',
                  bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.3))

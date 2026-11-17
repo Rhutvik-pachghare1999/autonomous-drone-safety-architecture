@@ -9,7 +9,7 @@ values are:
 - **planned** — specified in design docs or roadmap, but not implemented.
 - **stale** — previously claimed, now removed or corrected.
 
-Last updated: 2026-09-27.
+Last updated: 2026-11-17 (adds explicit mismatch-regression guard; prior history retained).
 
 ---
 
@@ -17,7 +17,7 @@ Last updated: 2026-09-27.
 
 | Claim | Source location | Evidence | Status |
 |---|---|---|---|
-| `pytest tests/` passes | `pyproject.toml`, `tests/conftest.py`, `tests/*.py` | `python3 -m pytest tests/ -q` → 68 passed (re-verified 2026-09-27; CI green on 27f7ac7) | verified |
+| `pytest tests/` passes | `pyproject.toml`, `tests/conftest.py`, `tests/*.py` | `python3 -m pytest tests/ -q` → 69 passed locally on 2026-11-17 (includes a new explicit 2 kg/HOCBF thrust-contract regression guard; CI pending) | verified |
 | `import hocbf` works on fresh clone | `tests/conftest.py` (adds `src/control` to `sys.path`) | `pytest tests/test_hocbf.py` imports module successfully | verified |
 | C99 safety filter compiles without ONNX | `src/rt/safety_filter.c` | `gcc -O3 -DNO_ONNX -o /tmp/sf src/rt/safety_filter.c -lm -lrt && /tmp/sf 1000 0` | verified |
 | CMake/pybind11 build works | `CMakeLists.txt` | `mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j2 && make install` | verified |

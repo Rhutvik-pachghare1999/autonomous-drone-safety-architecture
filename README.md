@@ -7,21 +7,19 @@
 
 **[View Research Poster](https://rhutvik-pachghare1999.github.io/autonomous-drone-safety-architecture/)** — A0 landscape, latest results, figures, and architecture overview.
 
-A safety architecture for autonomous multirotors: every high-level velocity command
-from an AI model or RL policy is intercepted and projected through a closed-form
-control-barrier-function (HOCBF) filter before it can reach the motors. Around
-that kernel sit a 15-state EKF covariance-gating ladder, an HMAC-authenticated
-observability-weighted swarm consensus protocol, and a bounded-latency
-execution path (SCHED_FIFO userspace on Linux, 2,725 ns observed maximum filter
-latency over 100,000 cycles — a soft real-time budget enforced by O(1)
-arithmetic, not a formal deadline guarantee).
+A learned controller can issue a command that a quadrotor should not follow.
+I built this to test a specific idea: keep the controller, but add a
+deterministic safety check before its thrust command reaches the motors.
 
-The vehicle under test is the 27 g Crazyflie 2.X USD model in NVIDIA
-Isaac Sim GPU PhysX; the command sources are a SmolVLM2-2.2B vision-language
-model and a PPO policy. This is a research prototype used to study how
-deterministic safety filters constrain the physical effect of potentially
-unsafe learned-model commands in simulation. It is not a certified flight
-controller, and no hardware validation has been performed.
+The core is a C++ higher-order control barrier function (HOCBF) filter.
+Around it are a 15-state EKF with covariance-based gating, a watchdog,
+and an authenticated swarm-consensus experiment. The filter has a measured
+userspace latency profile; this is not a formal hard real-time guarantee.
+
+I tested the 27 g Crazyflie 2.X model in Isaac Sim, including paired runs with
+scripted unsafe descent commands. The repository has the controller, physics
+experiments, logs, and code to check the results. This is simulation research,
+not a hardware-certified flight controller.
 
 **At a glance** (every number below is regenerated from a committed artifact)
 
